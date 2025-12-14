@@ -1,0 +1,166 @@
+TOTD FLASHBACK — EVENT SPECS (copy/paste)
+
+1) High-level concept
+- TOTD Flashback is a Trackmania charity speedrun marathon celebrating the release of the 2000th Track of the Day (TOTD 2000) on Dec 21, 2025 and the 26th birthday of Rastats, the organiser of the TOTD Flashback.
+- Charity: Save the Children via Tiltify.
+- Goal: Finish every Track of the Day going backwards from the newest to the oldest (main progression = descending TOTD index).
+
+2) Dates / duration
+- Event window: 21 Dec 2025 21:00 CET → 24 Dec 2025 18:00 CET (69 hours total).
+- Start is right after the end of the BIG Trackmania Cup organized by GranaDy.
+
+3) Teams
+- 4 teams total (Team 1–Team 4 for now), adjustable depending on the number of applicants..
+- Teams are formed by the organizer + staff (not automatically).
+- Players can join as a group / with friends, but final assignment is staff-driven to ensure full coverage.
+
+4) Core gameplay rules
+- Main progression is “highest uncompleted TOTD index” (go backwards).
+- If a team jumps away due to a penalty (e.g., Russian Roulette / Back to the Future), once the penalty ends the team resumes on the uncompleted TOTD with the highest index.
+- PC ONLY (Openplanet plugin not available on consoles).
+
+5) Shift / rest rules (anti-burnout)
+- A player can play for a maximum of 3 hours per session.
+- After 3 hours, they must hand off to a teammate.
+- If no teammate is available, the current player must take a minimum 10-minute break before starting a new 3-hour session.
+
+6) Streaming rules
+- Each team must have at least one Twitch POV live at all times (a few minutes of downtime is allowed for technical issues).
+- A player may play off-stream ONLY if a teammate streams that player’s POV (relay / screen share / capture).
+- There will be an official restream with casters on: https://twitch.tv/rastats
+
+7) Donation system overview (Tiltify)
+- Each team has its own Tiltify fundraising page.
+- When someone donates, they:
+  A) donate to a chosen team page (this increases that team’s fundraising total → used for shield milestones)
+  B) select a penalty reward and choose which OTHER team to punish (target team)
+- If the target team is currently shielded, the penalty is blocked and LOST (donation still counts for charity and for the donor team’s shield total).
+- Otherwise the penalty is applied (or queued) depending on the target team’s active penalties and waitlist.
+- The other option (only used if first solution is way too hard to implement) is to have a single fundraising page and the team to punish is determined by the last digit of the donation amount : 51.04€ punishes Team 4, 0 or 5-9 as last digit punish a random team.
+The second to last digit determines which team the player support and enable the counting of the donations for each team for the shield feature. 50.14€ punishes Team 4 and increases the virtual fundraising prizepool of team 1.
+If the second to last digit is 0 or 5-9, the donation is split evenly to the virtual fundraising prizepool of the 4 teams. We adapt this system to fewer or more teams if needed.
+
+8) Active penalties + waitlist rules
+- Each team can have at most 2 ACTIVE penalties at the same time.
+- If a new penalty is triggered while the team already has 2 active penalties, it goes into a WAITLIST (not blocked).
+- Waitlist capacity = 2 penalties max.
+- Waitlist priority:
+  - Slot #1 is always the strongest penalty.
+  - Strength is based on the minimum donation amount (higher € = higher priority).
+  - The waitlist is kept sorted by strength at all times.
+- If the waitlist is full (2 penalties) and a new penalty is triggered:
+  - If the new penalty is stronger than the weakest waitlisted one → it replaces the weakest one.
+  - Otherwise → the new penalty is discarded (lost).
+- Important: If a shield is active, a newly triggered penalty is blocked and lost (NOT queued).
+- Big Shield clears the waitlist.
+
+9) When penalties start (timing)
+- If a penalty is triggered while a team is currently playing a map, the penalty starts from the NEXT map load (never mid-map).
+
+10) Shields (automatic, based on team fundraising totals)
+Shields are automatic “milestone rewards” for the TEAM YOU DONATE TO (not the punished team).
+They trigger when the team fundraising total crosses milestones AND the cooldown allows it.
+
+A) Small Shield
+- Milestone: every 100€ (except when it’s also a multiple of 500€; Big Shield takes priority)
+- Duration: 10 minutes
+- Effect: blocks ALL NEW penalties during its duration
+- Does NOT cancel penalties already active
+- Does NOT clear the waitlist
+- Cooldown after trigger: 1 hour (cannot trigger again during cooldown)
+- Shields are not stackable; no shield queueing.
+
+B) Big Shield
+- Milestone: every 500€
+- Duration: 30 minutes
+- Effect:
+  - cancels ALL currently active penalties
+  - clears the waitlist
+  - blocks ALL NEW penalties during its duration
+- Cooldown after trigger: 4 hours (cannot trigger again during cooldown)
+- Priority: at totals that are multiples of 500€, Big Shield overrides Small Shield.
+
+Special interaction (Big Shield vs Back to the Future)
+- If Big Shield triggers while Back to the Future is ongoing:
+  - All maps with an index HIGHER than the team’s current map are re-validated as completed,
+  - the back to the future penalty is cancelled
+  - the team resumes on the uncompleted map with the highest index.
+
+11) Penalties list (names, tiers, minimum donation amounts, behavior)
+Penalties are Tiltify rewards with minimum donation amounts. Amounts define tier + priority.
+
+LIGHT
+1) Russian Roulette — 5€
+- Play 1 random TOTD that the team has NOT completed yet.
+- After finishing it, resume on the highest uncompleted TOTD index.
+- Counts as 1 active penalty while it’s in effect.
+
+2) Camera Shuffle — 10€
+- Applies to the next 1 map only.
+- No max duration.
+- On each checkpoint, the player must manually switch camera.
+- Allowed camera pool: Cam 1, Alt Cam 1, Cam 2, Alt Cam 2, Cam 3, Cam 7.
+- If the map has 6+ checkpoints, force using 6 different cameras (no repeats until all used once).
+- Ends when the map is finished.
+
+3) Cursed Controller — 15€
+- Applies to the next 1 TOTD only.
+- No max duration.
+- Player must use the weirdest/cursed input device they own to finish that TOTD.
+- Ends when the map is finished.
+
+MEDIUM
+4) Clean Run Only — 25€
+- “No respawn” rule.
+- Applies to the next 3 maps.
+- Global max duration: 10 minutes total.
+- The player must finish without respawning to checkpoints. If they respawn, they must restart the map.
+- If the 10-minute cap is reached, the player can finish normally and the penalty ends.
+
+5) Pedal to the Metal — 35€
+- Applies to the next 3 maps.
+- Global max duration: 10 minutes total.
+- Always full throttle (accelerator must stay pressed), no braking, no releasing throttle.
+- Turning is allowed (including in the air).
+- If the 10-minute cap is reached, the player can finish normally and the penalty ends.
+
+6) Tunnel Vision — 50€
+- Requires the built-in Finetuner plugin.
+- Set visibility to “2 blocks” (value 60 in the plugin settings) and try to finish the next map under those conditions.
+- After 10 minutes without a finish, visibility may be restored to normal to finish the map.
+- (Overall cap: 10 minutes “challenge time”; after that, normal visibility is allowed.)
+- Ends when the map is finished.
+
+HEAVY
+7) Player Switch — 75€
+- Immediate forced player swap within the team.
+- If no teammate is available, the current player must take a 10-minute pause.
+- Additionally: the team’s 10 most recently completed TOTDs become “uncompleted” again.
+- The current player must re-finish them in ascending index order (lowest → highest) for up to 10 maps.
+- After the switch/pause, resume on the highest uncompleted TOTD index.
+
+8) Can’t Turn Right — 100€
+- Applies to the next 1 map only.
+- Max duration: 10 minutes.
+- The player is not allowed to steer right (no right input).
+- After 10 minutes, normal driving is allowed to finish the map.
+
+9) AT or Bust — 200€
+- Applies to the next map.
+- Duration: 20 minutes.
+- During those 20 minutes, the team cannot leave the current map unless they beat Author Time on that map.
+- the penalty and author time restriction stays active on all maps played during these 20 minutes
+- At the end of 20 minutes, the penalty ends (if AT not achieved, the map may remain uncompleted and the team can finish it with no time restriction and move on).
+
+10) Back to the Future — 500€
+- The team’s 50 most recently completed TOTDs become “uncompleted” again.
+- The current player must re-finish them in ascending index order (lowest → highest) for up to 50 maps.
+- After completing those re-dos, resume on the highest uncompleted TOTD index.
+- If Big Shield triggers during this penalty: cancel it using the special rule described above.
+
+12) Notes / assumptions (if you need to implement logic)
+- “Most recently completed TOTDs” refers to completion history order (not necessarily the highest indices).
+- “Highest uncompleted TOTD index” is the default resume rule after any penalty.
+- Penalties always start on next map load if a map is already being played.
+- Shields do not stack and do not queue. If a milestone is crossed during cooldown, it does not trigger another shield until cooldown is over (next eligible milestone).
+- If a team is shielded, new penalties are blocked and lost (not queued).
