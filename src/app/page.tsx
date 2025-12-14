@@ -1,6 +1,8 @@
 // src/app/page.tsx
 
 import Link from "next/link";
+import CountdownTimer from "@/components/CountdownTimer";
+import TwitchEmbed from "@/components/TwitchEmbed";
 
 export default function HomePage() {
   return (
@@ -40,6 +42,14 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Countdown Timer */}
+      <section style={{ marginBottom: 32 }}>
+        <CountdownTimer />
+      </section>
+
+      {/* Twitch Stream - set isVisible={true} when event starts */}
+      <TwitchEmbed channel="rastats" isVisible={false} />
 
       {/* Event Info */}
       <section style={{
