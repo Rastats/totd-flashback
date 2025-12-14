@@ -48,6 +48,25 @@ export default function HomePage() {
         <CountdownTimer />
       </section>
 
+      {/* The Goal */}
+      <section style={{
+        padding: 24,
+        background: "#12121a",
+        borderRadius: 12,
+        border: "1px solid #2a2a3a",
+        marginBottom: 32,
+      }}>
+        <h2 style={{ fontSize: 24, marginBottom: 16 }}>🎯 The Goal</h2>
+        <p style={{ lineHeight: 1.7, marginBottom: 16 }}>
+          Finish <strong>every Track of the Day</strong> going backwards from the newest (TOTD #2000) to the oldest (TOTD #1).
+          Teams race against time while viewers can donate to trigger <strong>penalties</strong> that spice up the challenge!
+        </p>
+        <p style={{ lineHeight: 1.7, opacity: 0.8 }}>
+          Donations also unlock <strong>shields</strong> to protect your favorite team.
+          All proceeds go to Save the Children UK.
+        </p>
+      </section>
+
       {/* Twitch Stream - set isVisible={true} when event starts */}
       <TwitchEmbed channel="rastats" isVisible={false} />
 
@@ -109,25 +128,6 @@ export default function HomePage() {
         </a>
         <p style={{ opacity: 0.7, marginTop: 8, fontSize: 14 }}>
           Live commentary from our casters throughout the event
-        </p>
-      </section>
-
-      {/* Concept */}
-      <section style={{
-        padding: 24,
-        background: "#12121a",
-        borderRadius: 12,
-        border: "1px solid #2a2a3a",
-        marginBottom: 32,
-      }}>
-        <h2 style={{ fontSize: 24, marginBottom: 16 }}>🎯 The Goal</h2>
-        <p style={{ lineHeight: 1.7, marginBottom: 16 }}>
-          Finish <strong>every Track of the Day</strong> going backwards from the newest (TOTD #2000) to the oldest (TOTD #1).
-          Teams race against time while viewers can donate to trigger <strong>penalties</strong> that spice up the challenge!
-        </p>
-        <p style={{ lineHeight: 1.7, opacity: 0.8 }}>
-          Donations also unlock <strong>shields</strong> to protect your favorite team.
-          All proceeds go to Save the Children UK.
         </p>
       </section>
 

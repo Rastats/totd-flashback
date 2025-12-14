@@ -124,7 +124,7 @@ export default function DonationNotifications() {
                             fontSize: 14,
                             color: "#4ade80",
                         }}>
-                            📈 {donation.teamSupported}
+                            💰 {donation.teamSupported}
                         </div>
                     )}
                 </div>
