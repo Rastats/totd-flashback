@@ -91,59 +91,40 @@ export default function DonationNotifications() {
                         opacity: 1 - index * 0.15,
                     }}
                 >
-                    {/* Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 14, opacity: 0.7 }}>💚 New Donation!</span>
-                        <span style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
-                            {donation.currency}{donation.amount.toFixed(2)}
-                        </span>
+                    {/* Line 1: New Donation! */}
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6, color: "#4ade80" }}>
+                        💚 New Donation!
                     </div>
 
-                    {/* Donor name */}
-                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                        {donation.donorName}
+                    {/* Line 2: Amount - Donor Name */}
+                    <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>
+                        £{donation.amount.toFixed(2)} - {donation.donorName}
                     </div>
 
-                    {/* Team info */}
-                    {(donation.teamSupported || donation.teamPunished) && (
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 13 }}>
-                            {donation.teamSupported && (
-                                <span style={{
-                                    padding: "4px 8px",
-                                    background: "#22543d",
-                                    borderRadius: 4,
-                                    color: "#4ade80",
-                                }}>
-                                    ⬆️ {donation.teamSupported}
-                                </span>
-                            )}
-                            {donation.teamPunished && (
-                                <span style={{
-                                    padding: "4px 8px",
-                                    background: "#4a1a1a",
-                                    borderRadius: 4,
-                                    color: "#f87171",
-                                }}>
-                                    ⬇️ {donation.teamPunished}
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Penalty */}
-                    {donation.penalty && (
+                    {/* Line 3: Penalty → Team punished */}
+                    {donation.penalty && donation.teamPunished && (
                         <div style={{
-                            marginTop: 8,
                             padding: "6px 10px",
                             background: "#4a1a2a",
                             borderRadius: 6,
-                            fontSize: 13,
-                            color: "#f472b6",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
+                            fontSize: 14,
+                            color: "#f87171",
+                            marginBottom: 8,
                         }}>
-                            ⚡ {donation.penalty}
+                            {donation.penalty} → {donation.teamPunished}
+                        </div>
+                    )}
+
+                    {/* Line 4: Bank emoji + Team supported */}
+                    {donation.teamSupported && (
+                        <div style={{
+                            padding: "6px 10px",
+                            background: "#1a3a2a",
+                            borderRadius: 6,
+                            fontSize: 14,
+                            color: "#4ade80",
+                        }}>
+                            📈 {donation.teamSupported}
                         </div>
                     )}
                 </div>
