@@ -80,7 +80,7 @@ export default function HomePage() {
       }}>
         <h2 style={{ fontSize: 24, marginBottom: 16 }}>📅 Event Details</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Start</div>
             <div style={{ fontSize: 18, fontWeight: 500 }}>Dec 21, 2025 • 21:00 CET</div>
@@ -94,7 +94,7 @@ export default function HomePage() {
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Teams</div>
             <div style={{ fontSize: 18, fontWeight: 500 }}>4 Teams</div>
-            <div style={{ fontSize: 13, opacity: 0.6 }}>Staff-assigned for full coverage</div>
+            <div style={{ fontSize: 13, opacity: 0.6 }}>Staff-assigned + player affinities</div>
           </div>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Charity</div>
