@@ -70,6 +70,10 @@ export default function CaptainPage() {
     const [assignments, setAssignments] = useState<Record<number, TeamSlotAssignment>>({});
     const [error, setError] = useState<string | null>(null);
 
+    // Bulk state
+    const [bulkStart, setBulkStart] = useState(0);
+    const [bulkEnd, setBulkEnd] = useState(0);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -123,9 +127,39 @@ export default function CaptainPage() {
         }
     };
 
+    // Calculate availability for bulk range
+    const getBulkAvailability = (player: PlayerSummary) => {
+        if (!bulkStart && bulkStart !== 0) return { status: 'unknown', text: '', score: -1 };
+
+        let availableCount = 0;
+        let total = 0;
+
+        // Ensure start <= end
+        const s = Math.min(bulkStart, bulkEnd);
+        const e = Math.max(bulkStart, bulkEnd);
+
+        for (let i = s; i <= e; i++) {
+            total++;
+            if (!isUnavailable(player, i)) {
+                availableCount++;
+            }
+        }
+
+        if (availableCount === total) return { status: 'full', text: '✅', score: 2 };
+        if (availableCount === 0) return { status: 'none', text: '🔴', score: 0 };
+        return { status: 'partial', text: `⚠️ (${availableCount}/${total})`, score: 1 };
+    };
+
     if (loading) return <div style={{ padding: 20, color: "#fff" }}>Loading...</div>;
     if (error) return <div style={{ padding: 20, color: "#f87171" }}>Error: {error}</div>;
     if (!data) return <div style={{ padding: 20, color: "#f87171" }}>Team not found</div>;
+
+    // Sort players for bulk dropdown
+    const sortedPlayers = [...data.players].sort((a, b) => {
+        const scoreA = getBulkAvailability(a).score;
+        const scoreB = getBulkAvailability(b).score;
+        return scoreB - scoreA; // Highest score first
+    });
 
     return (
         <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto", color: "#e2e8f0", fontFamily: "sans-serif" }}>
@@ -152,7 +186,11 @@ export default function CaptainPage() {
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
                     <div>
                         <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>From</label>
-                        <select id="bulk-start" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                        <select
+                            value={bulkStart}
+                            onChange={(e) => setBulkStart(parseInt(e.target.value))}
+                            style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}
+                        >
                             {Array.from({ length: HOURS }).map((_, i) => (
                                 <option key={i} value={i}>{getSlotTime(i)}</option>
                             ))}
@@ -160,7 +198,11 @@ export default function CaptainPage() {
                     </div>
                     <div>
                         <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>To (Inclusive)</label>
-                        <select id="bulk-end" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                        <select
+                            value={bulkEnd}
+                            onChange={(e) => setBulkEnd(parseInt(e.target.value))}
+                            style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}
+                        >
                             {Array.from({ length: HOURS }).map((_, i) => (
                                 <option key={i} value={i}>{getSlotTime(i)}</option>
                             ))}
@@ -168,32 +210,41 @@ export default function CaptainPage() {
                     </div>
                     <div>
                         <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Main Player</label>
-                        <select id="bulk-main" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 150 }}>
+                        <select id="bulk-main" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 200 }}>
                             <option value="">-- No Change --</option>
                             <option value="clear">❌ Clear Assignment</option>
-                            {data.players.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}</option>
-                            ))}
+                            {sortedPlayers.map(p => {
+                                const avail = getBulkAvailability(p);
+                                return (
+                                    <option key={p.id} value={p.id}>
+                                        {avail.text} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <div>
                         <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Backup Player</label>
-                        <select id="bulk-sub" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 150 }}>
+                        <select id="bulk-sub" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 200 }}>
                             <option value="">-- No Change --</option>
                             <option value="clear">❌ Clear Assignment</option>
-                            {data.players.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}</option>
-                            ))}
+                            {sortedPlayers.map(p => {
+                                const avail = getBulkAvailability(p);
+                                return (
+                                    <option key={p.id} value={p.id}>
+                                        {avail.text} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <button
                         onClick={() => {
-                            const start = parseInt((document.getElementById("bulk-start") as HTMLSelectElement).value);
-                            const end = parseInt((document.getElementById("bulk-end") as HTMLSelectElement).value);
+                            const start = Math.min(bulkStart, bulkEnd);
+                            const end = Math.max(bulkStart, bulkEnd);
                             const main = (document.getElementById("bulk-main") as HTMLSelectElement).value;
                             const sub = (document.getElementById("bulk-sub") as HTMLSelectElement).value;
 
-                            if (start > end) return alert("Start time must be before end time");
                             if (!main && !sub) return;
 
                             setAssignments(prev => {
@@ -201,7 +252,6 @@ export default function CaptainPage() {
                                 for (let i = start; i <= end; i++) {
                                     const current = next[i] || { mainPlayerId: null, subPlayerId: null };
                                     if (main) next[i] = { ...current, mainPlayerId: main === "clear" ? null : main };
-                                    // Re-read current or strictly sequential? We updated next[i] so use that
                                     if (sub) next[i] = { ...next[i], subPlayerId: sub === "clear" ? null : sub };
                                 }
                                 return next;
