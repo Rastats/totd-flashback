@@ -353,6 +353,9 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                     <div style={{ fontSize: 14, opacity: 0.85, marginTop: 6, color: "#a5b4fc" }}>
                         ≈ {formatEUR(finalAmount)} • {formatUSD(finalAmount)}
                     </div>
+                    <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
+                        Pence encode: .{supportTeam}{penalizeTeam} ({supportTeam === 0 ? "Random" : `Team ${supportTeam}`} / {penalizeTeam === 0 ? "Random" : `Team ${penalizeTeam}`})
+                    </div>
                 </div>
 
                 {/* Actions */}
