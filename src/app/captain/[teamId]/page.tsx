@@ -146,6 +146,74 @@ export default function CaptainPage() {
                 </button>
             </div>
 
+            {/* BULK ACTIONS */}
+            <div style={{ background: "#1e293b", padding: 16, borderRadius: 8, marginBottom: 20 }}>
+                <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>⚡ Bulk Assignment</h3>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>From</label>
+                        <select id="bulk-start" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            {Array.from({ length: HOURS }).map((_, i) => (
+                                <option key={i} value={i}>{getSlotTime(i)}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>To (Inclusive)</label>
+                        <select id="bulk-end" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            {Array.from({ length: HOURS }).map((_, i) => (
+                                <option key={i} value={i}>{getSlotTime(i)}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Main Player</label>
+                        <select id="bulk-main" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 150 }}>
+                            <option value="">-- No Change --</option>
+                            <option value="clear">❌ Clear Assignment</option>
+                            {data.players.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Backup Player</label>
+                        <select id="bulk-sub" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 150 }}>
+                            <option value="">-- No Change --</option>
+                            <option value="clear">❌ Clear Assignment</option>
+                            {data.players.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const start = parseInt((document.getElementById("bulk-start") as HTMLSelectElement).value);
+                            const end = parseInt((document.getElementById("bulk-end") as HTMLSelectElement).value);
+                            const main = (document.getElementById("bulk-main") as HTMLSelectElement).value;
+                            const sub = (document.getElementById("bulk-sub") as HTMLSelectElement).value;
+
+                            if (start > end) return alert("Start time must be before end time");
+                            if (!main && !sub) return;
+
+                            setAssignments(prev => {
+                                const next = { ...prev };
+                                for (let i = start; i <= end; i++) {
+                                    const current = next[i] || { mainPlayerId: null, subPlayerId: null };
+                                    if (main) next[i] = { ...current, mainPlayerId: main === "clear" ? null : main };
+                                    // Re-read current or strictly sequential? We updated next[i] so use that
+                                    if (sub) next[i] = { ...next[i], subPlayerId: sub === "clear" ? null : sub };
+                                }
+                                return next;
+                            });
+                        }}
+                        style={{ padding: "8px 16px", background: "#f59e0b", color: "#000", fontWeight: "bold", borderRadius: 4, border: "none", cursor: "pointer" }}
+                    >
+                        Apply to Range
+                    </button>
+                </div>
+            </div>
+
             <div style={{ background: "#1e293b", borderRadius: 8, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
