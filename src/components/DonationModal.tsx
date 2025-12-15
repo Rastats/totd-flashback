@@ -119,23 +119,23 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
             <div
                 style={{
                     background: "#1a1a2e",
-                    borderRadius: 10,
-                    padding: 16,
-                    maxWidth: 440,
+                    borderRadius: 12,
+                    padding: 20,
+                    maxWidth: 480,
                     width: "100%",
-                    maxHeight: "90vh",
+                    maxHeight: "85vh",
                     overflowY: "auto",
                     border: "1px solid #3a3a4a",
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 style={{ fontSize: 17, marginBottom: 12, textAlign: "center" }}>
+                <h2 style={{ fontSize: 20, marginBottom: 16, textAlign: "center" }}>
                     💰 Make a Donation to Save the Children UK
                 </h2>
 
                 {/* Base Amount */}
-                <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: "block", marginBottom: 4, fontWeight: 500, fontSize: 13 }}>
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         Base Amount (£)
                     </label>
                     <input
@@ -145,29 +145,29 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                         onChange={(e) => setBaseAmount(parseInt(e.target.value) || 1)}
                         style={{
                             width: "100%",
-                            padding: "8px 12px",
+                            padding: "12px 16px",
                             background: "#0a0a12",
                             border: "1px solid #3a3a4a",
-                            borderRadius: 6,
+                            borderRadius: 8,
                             color: "#fff",
-                            fontSize: 16,
+                            fontSize: 18,
                             textAlign: "center",
                         }}
                     />
-                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                         {[5, 10, 25, 50, 100, 200, 500].map((preset) => (
                             <button
                                 key={preset}
                                 type="button"
                                 onClick={() => setBaseAmount(preset)}
                                 style={{
-                                    padding: "4px 10px",
+                                    padding: "6px 12px",
                                     background: baseAmount === preset ? "#f59e0b" : "#2a2a3a",
                                     border: "none",
                                     borderRadius: 4,
                                     color: "#fff",
                                     cursor: "pointer",
-                                    fontSize: 12,
+                                    fontSize: 13,
                                 }}
                             >
                                 £{preset}
@@ -177,11 +177,11 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 </div>
 
                 {/* Support Team */}
-                <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: "block", marginBottom: 4, fontWeight: 500, fontSize: 13 }}>
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         🛡️ Team to Support (for shields)
                     </label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
                         {TEAMS.map((team) => (
                             <button
                                 key={team.id}
@@ -193,13 +193,13 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                                     }
                                 }}
                                 style={{
-                                    padding: "6px 4px",
+                                    padding: "10px 6px",
                                     background: supportTeam === team.id ? `${team.color}33` : "#0a0a12",
                                     border: supportTeam === team.id ? `2px solid ${team.color}` : "1px solid #3a3a4a",
-                                    borderRadius: 6,
+                                    borderRadius: 8,
                                     color: "#fff",
                                     cursor: "pointer",
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: supportTeam === team.id ? 600 : 400,
                                 }}
                             >
@@ -210,11 +210,11 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 </div>
 
                 {/* Penalize Team */}
-                <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: "block", marginBottom: 4, fontWeight: 500, fontSize: 13 }}>
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         ⚠️ Team to Penalize
                     </label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
                         {TEAMS.map((team) => {
                             const isSameAsSupport = team.id !== 0 && team.id === supportTeam;
                             return (
@@ -223,13 +223,13 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                                     type="button"
                                     onClick={() => !isSameAsSupport && setPenalizeTeam(team.id)}
                                     style={{
-                                        padding: "6px 4px",
+                                        padding: "10px 6px",
                                         background: penalizeTeam === team.id ? `${team.color}33` : "#0a0a12",
                                         border: penalizeTeam === team.id ? `2px solid ${team.color}` : "1px solid #3a3a4a",
-                                        borderRadius: 6,
+                                        borderRadius: 8,
                                         color: "#fff",
                                         cursor: isSameAsSupport ? "not-allowed" : "pointer",
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         fontWeight: penalizeTeam === team.id ? 600 : 400,
                                         opacity: isSameAsSupport ? 0.4 : 1,
                                     }}
@@ -244,21 +244,21 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                 {/* Team Summary */}
                 <div style={{
-                    padding: 6,
+                    padding: 8,
                     background: "#0a0a12",
-                    borderRadius: 4,
-                    marginBottom: 10,
-                    fontSize: 11,
+                    borderRadius: 6,
+                    marginBottom: 14,
+                    fontSize: 12,
                     textAlign: "center",
                 }}>
                     Support{" "}
                     <strong style={{ color: TEAMS.find(t => t.id === supportTeam)?.color }}>
-                        {supportTeam === 0 ? "Random" : `Team ${supportTeam}`}
+                        {supportTeam === 0 ? "Random team" : `Team ${supportTeam}`}
                     </strong>
                     {" • "}
                     Penalize{" "}
                     <strong style={{ color: TEAMS.find(t => t.id === penalizeTeam)?.color }}>
-                        {penalizeTeam === 0 ? "Random" : `Team ${penalizeTeam}`}
+                        {penalizeTeam === 0 ? "Random team" : `Team ${penalizeTeam}`}
                     </strong>
                 </div>
 
@@ -294,34 +294,34 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                     return (
                         <div style={{
-                            padding: 10,
+                            padding: 12,
                             background: `${tierColors[triggeredPenalty.tier]}11`,
-                            borderRadius: 6,
-                            marginBottom: 10,
+                            borderRadius: 8,
+                            marginBottom: 14,
                             textAlign: "center",
                             border: `1px solid ${tierColors[triggeredPenalty.tier]}44`,
                         }}>
-                            <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
+                            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
                                 Penalty triggered:
                             </div>
                             <div style={{
-                                fontSize: 16,
+                                fontSize: 20,
                                 fontWeight: 700,
                                 color: tierColors[triggeredPenalty.tier],
-                                marginBottom: 2,
+                                marginBottom: 4,
                             }}>
                                 🎯 {triggeredPenalty.name}
                             </div>
                             <div style={{
-                                fontSize: 11,
+                                fontSize: 13,
                                 opacity: 0.8,
-                                marginBottom: 4,
+                                marginBottom: 8,
                             }}>
                                 {triggeredPenalty.tooltip}
                             </div>
                             <div style={{
-                                fontSize: 10,
-                                padding: "2px 6px",
+                                fontSize: 11,
+                                padding: "4px 8px",
                                 background: `${tierColors[triggeredPenalty.tier]}22`,
                                 borderRadius: 4,
                                 display: "inline-block",
@@ -338,18 +338,18 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                 {/* Final Amount Display */}
                 <div style={{
-                    padding: 10,
+                    padding: 12,
                     background: "linear-gradient(135deg, #f59e0b22, #d9770622)",
-                    borderRadius: 6,
-                    marginBottom: 10,
+                    borderRadius: 8,
+                    marginBottom: 12,
                     textAlign: "center",
                     border: "1px solid #f59e0b44",
                 }}>
-                    <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 2 }}>Amount to donate on Tiltify:</div>
-                    <div style={{ fontSize: 26, fontWeight: 700, color: "#f59e0b" }}>
+                    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Amount to donate on Tiltify:</div>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: "#f59e0b" }}>
                         {formatGBP(finalAmount)}
                     </div>
-                    <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2, color: "#a5b4fc" }}>
+                    <div style={{ fontSize: 14, opacity: 0.85, marginTop: 6, color: "#a5b4fc" }}>
                         ≈ {formatEUR(finalAmount)} • {formatUSD(finalAmount)}
                     </div>
                     <button
@@ -359,19 +359,19 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                             alert("Amount copied: " + finalAmount.toFixed(2));
                         }}
                         style={{
-                            marginTop: 8,
-                            padding: "6px 12px",
+                            marginTop: 12,
+                            padding: "8px 16px",
                             background: "#2a2a3a",
                             border: "1px solid #4a4a5a",
-                            borderRadius: 4,
+                            borderRadius: 6,
                             color: "#fff",
                             cursor: "pointer",
-                            fontSize: 11,
+                            fontSize: 13,
                         }}
                     >
                         📋 Copy amount
                     </button>
-                    <div style={{ fontSize: 10, opacity: 0.6, marginTop: 6 }}>
+                    <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
                         Pence encode: .{supportTeam}{penalizeTeam} ({supportTeam === 0 ? "Random" : `Team ${supportTeam}`} / {penalizeTeam === 0 ? "Random" : `Team ${penalizeTeam}`})
                     </div>
                 </div>
