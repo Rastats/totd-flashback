@@ -68,6 +68,7 @@ export default function CaptainPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [assignments, setAssignments] = useState<Record<number, TeamSlotAssignment>>({});
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -77,9 +78,13 @@ export default function CaptainPage() {
                     const json = await res.json();
                     setData(json);
                     setAssignments(json.planning.slots || {});
+                } else {
+                    const text = await res.text();
+                    setError(`Failed to load team data (${res.status}): ${text}`);
                 }
             } catch (err) {
                 console.error(err);
+                setError(err instanceof Error ? err.message : "Network error");
             } finally {
                 setLoading(false);
             }
@@ -119,6 +124,7 @@ export default function CaptainPage() {
     };
 
     if (loading) return <div style={{ padding: 20, color: "#fff" }}>Loading...</div>;
+    if (error) return <div style={{ padding: 20, color: "#f87171" }}>Error: {error}</div>;
     if (!data) return <div style={{ padding: 20, color: "#f87171" }}>Team not found</div>;
 
     return (
