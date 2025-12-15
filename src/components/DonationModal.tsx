@@ -130,7 +130,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 24, marginBottom: 24, textAlign: "center" }}>
-                    💰 Make a Donation
+                    💰 Make a Donation to Save the Children UK
                 </h2>
 
                 {/* Base Amount */}
