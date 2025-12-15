@@ -213,15 +213,19 @@ export default function AdminPage() {
 
         approvedPlayers.forEach(player => {
             if (!player.teamAssignment) return;
-            // This is simplified - in production would do proper timezone conversion
             player.availability.forEach(slot => {
-                // Map slot to hour index (simplified)
                 const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
-                const startOffset = dayIndex === 0 ? 0 : (dayIndex * 24) - 3; // Adjust for 21:00 start
                 for (let h = slot.startHour; h < slot.endHour; h++) {
-                    const hourIndex = startOffset + (h - 21 + 24) % 24;
+                    let hourIndex: number;
+                    if (dayIndex === 0) {
+                        // Dec 21: only hours 21-23 are valid (indices 0-2)
+                        hourIndex = h - 21;
+                    } else {
+                        // Dec 22: 3 + h, Dec 23: 27 + h, Dec 24: 51 + h
+                        hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+                    }
                     if (hourIndex >= 0 && hourIndex < 69 && player.teamAssignment) {
                         coverage[player.teamAssignment][hourIndex]++;
                     }
