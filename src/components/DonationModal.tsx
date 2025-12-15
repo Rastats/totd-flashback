@@ -119,9 +119,9 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
             <div
                 style={{
                     background: "#1a1a2e",
-                    borderRadius: 16,
-                    padding: 32,
-                    maxWidth: 500,
+                    borderRadius: 12,
+                    padding: 20,
+                    maxWidth: 480,
                     width: "100%",
                     maxHeight: "90vh",
                     overflowY: "auto",
@@ -129,12 +129,12 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 style={{ fontSize: 24, marginBottom: 24, textAlign: "center" }}>
+                <h2 style={{ fontSize: 20, marginBottom: 16, textAlign: "center" }}>
                     💰 Make a Donation to Save the Children UK
                 </h2>
 
                 {/* Base Amount */}
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 16 }}>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         Base Amount (£)
                     </label>
@@ -177,7 +177,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 </div>
 
                 {/* Support Team */}
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 14 }}>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         🛡️ Team to Support (for shields)
                     </label>
@@ -211,7 +211,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                 </div>
 
                 {/* Penalize Team */}
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 14 }}>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
                         ⚠️ Team to Penalize
                     </label>
@@ -245,11 +245,11 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                 {/* Team Summary */}
                 <div style={{
-                    padding: 10,
+                    padding: 8,
                     background: "#0a0a12",
-                    borderRadius: 8,
-                    marginBottom: 24,
-                    fontSize: 13,
+                    borderRadius: 6,
+                    marginBottom: 14,
+                    fontSize: 12,
                     textAlign: "center",
                 }}>
                     Support{" "}
@@ -295,10 +295,10 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                     return (
                         <div style={{
-                            padding: 16,
+                            padding: 12,
                             background: `${tierColors[triggeredPenalty.tier]}11`,
                             borderRadius: 8,
-                            marginBottom: 24,
+                            marginBottom: 14,
                             textAlign: "center",
                             border: `1px solid ${tierColors[triggeredPenalty.tier]}44`,
                         }}>
@@ -339,10 +339,10 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
                 {/* Final Amount Display */}
                 <div style={{
-                    padding: 16,
+                    padding: 12,
                     background: "linear-gradient(135deg, #f59e0b22, #d9770622)",
                     borderRadius: 8,
-                    marginBottom: 16,
+                    marginBottom: 12,
                     textAlign: "center",
                     border: "1px solid #f59e0b44",
                 }}>
