@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { convertToParisTime } from '@/lib/timezone-utils';
 
 export async function POST(request: NextRequest) {
     try {
@@ -29,20 +30,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: casterError.message }, { status: 400 });
         }
 
-        // Insert availability slots
+        // Insert availability slots - convert to Paris time
         if (availability && availability.length > 0) {
+            const userTimezone = formData.timezone || 'Europe/Paris';
+
             const slots = availability.map((slot: {
                 date: string;
                 startHour: number;
                 endHour: number;
                 preference: string;
-            }) => ({
-                caster_id: caster.id,
-                date: slot.date,
-                start_hour: slot.startHour,
-                end_hour: slot.endHour,
-                preference: slot.preference,
-            }));
+            }) => {
+                const startInParis = convertToParisTime(slot.date, slot.startHour, userTimezone);
+                const endInParis = convertToParisTime(slot.date, slot.endHour, userTimezone);
+
+                return {
+                    caster_id: caster.id,
+                    date: startInParis.date,
+                    start_hour: startInParis.hour,
+                    end_hour: endInParis.hour === 0 ? 24 : endInParis.hour,
+                    preference: slot.preference,
+                };
+            });
 
             const { error: slotsError } = await supabase
                 .from('availability_slots')
