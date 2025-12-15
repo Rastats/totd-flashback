@@ -353,28 +353,6 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                     <div style={{ fontSize: 14, opacity: 0.85, marginTop: 6, color: "#a5b4fc" }}>
                         ≈ {formatEUR(finalAmount)} • {formatUSD(finalAmount)}
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            navigator.clipboard.writeText(finalAmount.toFixed(2));
-                            alert("Amount copied: " + finalAmount.toFixed(2));
-                        }}
-                        style={{
-                            marginTop: 12,
-                            padding: "8px 16px",
-                            background: "#2a2a3a",
-                            border: "1px solid #4a4a5a",
-                            borderRadius: 6,
-                            color: "#fff",
-                            cursor: "pointer",
-                            fontSize: 13,
-                        }}
-                    >
-                        📋 Copy amount
-                    </button>
-                    <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
-                        Pence encode: .{supportTeam}{penalizeTeam} ({supportTeam === 0 ? "Random" : `Team ${supportTeam}`} / {penalizeTeam === 0 ? "Random" : `Team ${penalizeTeam}`})
-                    </div>
                 </div>
 
                 {/* Actions */}
