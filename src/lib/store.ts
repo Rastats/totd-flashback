@@ -127,3 +127,46 @@ export async function deleteCaster(id: string): Promise<boolean> {
     await fs.writeFile(CASTERS_FILE, JSON.stringify(filtered, null, 2));
     return true;
 }
+
+// TEAMS PLANNING
+
+const TEAMS_FILE = path.join(DATA_DIR, 'teams.json');
+
+import { TeamPlanning, TeamSlotAssignment } from './types';
+
+export async function getTeamPlanning(teamId: string): Promise<TeamPlanning> {
+    await ensureDataDir();
+    try {
+        const data = await fs.readFile(TEAMS_FILE, 'utf-8');
+        const allTeams: TeamPlanning[] = JSON.parse(data);
+        const team = allTeams.find(t => t.teamId === teamId);
+
+        if (team) return team;
+
+        // Return default empty structure if not found
+        return { teamId, slots: {} };
+    } catch {
+        return { teamId, slots: {} };
+    }
+}
+
+export async function updateTeamPlanning(teamId: string, slots: Record<number, TeamSlotAssignment>): Promise<TeamPlanning> {
+    await ensureDataDir();
+    let allTeams: TeamPlanning[] = [];
+    try {
+        const data = await fs.readFile(TEAMS_FILE, 'utf-8');
+        allTeams = JSON.parse(data);
+    } catch {
+        allTeams = [];
+    }
+
+    const index = allTeams.findIndex(t => t.teamId === teamId);
+    if (index !== -1) {
+        allTeams[index] = { ...allTeams[index], slots };
+    } else {
+        allTeams.push({ teamId, slots });
+    }
+
+    await fs.writeFile(TEAMS_FILE, JSON.stringify(allTeams, null, 2));
+    return allTeams.find(t => t.teamId === teamId)!;
+}

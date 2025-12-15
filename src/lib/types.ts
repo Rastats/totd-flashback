@@ -93,3 +93,14 @@ export interface ApplicationSummary {
     createdAt: string;
     teamAssignment?: TeamAssignment;
 }
+
+// Team Planning
+export interface TeamSlotAssignment {
+    mainPlayerId: string | null;
+    subPlayerId: string | null;
+}
+
+export interface TeamPlanning {
+    teamId: string;
+    slots: Record<number, TeamSlotAssignment>; // Key is hourIndex (0-68)
+}
