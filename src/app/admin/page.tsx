@@ -159,7 +159,7 @@ export default function AdminPage() {
             let valuableHours = 0;
 
             playerHours.forEach(hour => {
-                const currentCoverage = coverage[team][hour];
+                const currentCoverage = coverage[team][hour].count;
                 if (currentCoverage === 0) {
                     gapsFilled++; // Filling a gap = very valuable
                     valuableHours += 3;
@@ -204,15 +204,17 @@ export default function AdminPage() {
     // Coverage calculation
     const getCoverage = () => {
         const approvedPlayers = players.filter(p => p.status === "approved");
-        const teams = ["team1", "team2", "team3", "team4"] as const;
-        const hours = Array.from({ length: 69 }, (_, i) => i); // 69 hours
+        const teams = ["team1", "team2", "team3", "team4", "joker"] as const;
 
-        const coverage: Record<string, number[]> = {};
-        teams.forEach(t => { coverage[t] = Array(69).fill(0); });
-        coverage["joker"] = Array(69).fill(0);
+        const coverage: Record<string, { count: number, names: string[] }[]> = {};
+        [...teams].forEach(t => {
+            coverage[t] = Array.from({ length: 69 }, () => ({ count: 0, names: [] }));
+        });
 
         approvedPlayers.forEach(player => {
-            if (!player.teamAssignment) return;
+            const team = player.teamAssignment;
+            if (!team) return;
+
             player.availability.forEach(slot => {
                 const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
                 if (dayIndex === -1) return;
@@ -226,8 +228,9 @@ export default function AdminPage() {
                         // Dec 22: 3 + h, Dec 23: 27 + h, Dec 24: 51 + h
                         hourIndex = 3 + ((dayIndex - 1) * 24) + h;
                     }
-                    if (hourIndex >= 0 && hourIndex < 69 && player.teamAssignment) {
-                        coverage[player.teamAssignment][hourIndex]++;
+                    if (hourIndex >= 0 && hourIndex < 69 && coverage[team]) {
+                        coverage[team][hourIndex].count++;
+                        coverage[team][hourIndex].names.push(player.trackmaniaName || player.discordUsername);
                     }
                 }
             });
@@ -239,14 +242,13 @@ export default function AdminPage() {
     // Caster coverage calculation
     const getCasterCoverage = () => {
         const approvedCasters = casters.filter(c => c.status === "approved");
-        const hours = Array.from({ length: 69 }, () => 0);
+        const hours = Array.from({ length: 69 }, () => ({ count: 0, names: [] as string[] }));
 
         approvedCasters.forEach(caster => {
             caster.availability.forEach(slot => {
                 const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
-                const startOffset = dayIndex === 0 ? 0 : (dayIndex * 24) - 21;
                 for (let h = slot.startHour; h < slot.endHour; h++) {
                     let hourIndex: number;
                     if (dayIndex === 0) {
@@ -255,7 +257,8 @@ export default function AdminPage() {
                         hourIndex = 3 + ((dayIndex - 1) * 24) + h;
                     }
                     if (hourIndex >= 0 && hourIndex < 69) {
-                        hours[hourIndex]++;
+                        hours[hourIndex].count++;
+                        hours[hourIndex].names.push(caster.displayName || caster.discordUsername);
                     }
                 }
             });
@@ -598,6 +601,22 @@ export default function AdminPage() {
                                             </button>
                                         )}
                                     </div>
+
+                                    <div style={{ marginTop: 16 }}>
+                                        <strong>Availability ({caster.availability.length} slots):</strong>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                                            {caster.availability.map((slot, i) => (
+                                                <span key={i} style={{
+                                                    padding: "4px 8px",
+                                                    background: "#2a3a4a",
+                                                    borderRadius: 4,
+                                                    fontSize: 12,
+                                                }}>
+                                                    {slot.date.slice(5)} {slot.startHour}:00-{slot.endHour}:00
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -649,18 +668,20 @@ export default function AdminPage() {
                                                 <td style={{ padding: 8, fontWeight: 500, position: "sticky", left: 0, background: "#0a0a0f" }}>
                                                     {team === "joker" ? "🃏 Joker" : `Team ${team.replace("team", "")}`}
                                                 </td>
-                                                {coverage[team].map((count, i) => {
+                                                {coverage[team].map((data, i) => {
+                                                    const count = data.count;
                                                     let bg = "#4a1a1a"; // red - no coverage
                                                     if (count === 1) bg = "#4a3a1a"; // yellow - fragile
                                                     if (count >= 2) bg = "#1a4a2a"; // green - covered
 
                                                     return (
-                                                        <td key={i} style={{
+                                                        <td key={i} title={data.names.join(", ")} style={{
                                                             padding: 2,
                                                             background: bg,
                                                             textAlign: "center",
                                                             color: count > 0 ? "#fff" : "#666",
                                                             fontSize: 10,
+                                                            cursor: count > 0 ? "help" : "default",
                                                         }}>
                                                             {count > 0 ? count : ""}
                                                         </td>
@@ -713,18 +734,20 @@ export default function AdminPage() {
                                             <td style={{ padding: 8, fontWeight: 500, position: "sticky", left: 0, background: "#0a0a0f" }}>
                                                 🎙️ Casters
                                             </td>
-                                            {casterCoverage.map((count, i) => {
+                                            {casterCoverage.map((data, i) => {
+                                                const count = data.count;
                                                 let bg = "#4a1a1a"; // red - no coverage
                                                 if (count === 1) bg = "#4a3a1a"; // yellow - fragile
                                                 if (count >= 2) bg = "#1a4a2a"; // green - covered
 
                                                 return (
-                                                    <td key={i} style={{
+                                                    <td key={i} title={data.names.join(", ")} style={{
                                                         padding: 2,
                                                         background: bg,
                                                         textAlign: "center",
                                                         color: count > 0 ? "#fff" : "#666",
                                                         fontSize: 10,
+                                                        cursor: count > 0 ? "help" : "default",
                                                     }}>
                                                         {count > 0 ? count : ""}
                                                     </td>
@@ -744,8 +767,8 @@ export default function AdminPage() {
                             const gaps: string[] = [];
 
                             ["team1", "team2", "team3", "team4"].forEach(team => {
-                                coverage[team].forEach((count, hour) => {
-                                    if (count === 0) {
+                                coverage[team].forEach((data, hour) => {
+                                    if (data.count === 0) {
                                         const day = Math.floor(hour / 24) + 1;
                                         const h = (21 + hour) % 24;
                                         gaps.push(`${team.replace("team", "Team ")}: Day ${day}, ${h}:00`);
