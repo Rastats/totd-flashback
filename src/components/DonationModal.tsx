@@ -81,9 +81,10 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
     const GBP_TO_USD = 1.27; // approximate
 
     const handleDonate = () => {
-        // Build Tiltify URL or redirect
+        // Build Tiltify URL with amount parameter to auto-select "Other" and pre-fill
         const tiltifyBaseUrl = "https://donate.tiltify.com/0ce3def0-c80a-4581-b888-a8c89c1d16c9/details";
-        window.open(tiltifyBaseUrl, "_blank");
+        const tiltifyUrl = `${tiltifyBaseUrl}?amount=${finalAmount.toFixed(2)}`;
+        window.open(tiltifyUrl, "_blank");
         onClose();
     };
 
