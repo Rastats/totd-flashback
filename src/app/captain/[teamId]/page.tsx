@@ -185,7 +185,7 @@ export default function CaptainPage() {
                 <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>⚡ Bulk Assignment</h3>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
                     <div>
-                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>From</label>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>First Slot</label>
                         <select
                             value={bulkStart}
                             onChange={(e) => setBulkStart(parseInt(e.target.value))}
@@ -197,7 +197,9 @@ export default function CaptainPage() {
                         </select>
                     </div>
                     <div>
-                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>To (Inclusive)</label>
+                        <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>
+                            Last Slot <span style={{ color: "#64748b", fontWeight: "normal" }}>({Math.abs(bulkEnd - bulkStart) + 1} slots)</span>
+                        </label>
                         <select
                             value={bulkEnd}
                             onChange={(e) => setBulkEnd(parseInt(e.target.value))}
