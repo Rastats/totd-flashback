@@ -19,7 +19,7 @@ export default function Header() {
                 padding: "12px 24px",
             }}>
                 <nav style={{
-                    maxWidth: 1100,
+                    maxWidth: 900,
                     margin: "0 auto",
                     display: "flex",
                     justifyContent: "space-between",
