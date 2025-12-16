@@ -393,26 +393,72 @@ export default function LeaderboardPage() {
                                 {teams.map((team, i) => {
                                     // Calculate fake position based on mapsFinished
                                     const percent = (team.mapsFinished / team.totalMaps) * 100;
+                                    const isTop = i % 2 === 0;
+
                                     return (
                                         <div key={team.id} style={{
                                             position: "absolute",
                                             left: `${percent}%`,
-                                            top: -6 + (i % 2 === 0 ? -15 : 15), // stagger
-                                            transform: "translateX(-50%)",
+                                            top: "50%",
+                                            transform: "translate(-50%, -50%)",
                                             display: "flex",
-                                            flexDirection: "column",
                                             alignItems: "center",
-                                            zIndex: 5
+                                            justifyContent: "center",
+                                            zIndex: 5,
+                                            width: 0,
+                                            height: 0
                                         }}>
+                                            {/* The Dot */}
                                             <div style={{
+                                                position: "absolute",
                                                 width: 12,
                                                 height: 12,
                                                 borderRadius: "50%",
                                                 background: team.color,
                                                 border: "2px solid #fff",
-                                                boxShadow: "0 0 10px " + team.color
+                                                boxShadow: "0 0 10px " + team.color,
+                                                zIndex: 10
                                             }} />
-                                            <div style={{ fontSize: 10, marginTop: 4, color: team.color, fontWeight: "bold" }}>{team.name}</div>
+
+                                            {/* Connector & Label */}
+                                            <div style={{
+                                                position: "absolute",
+                                                [isTop ? "bottom" : "top"]: 10, // Start offset from the dot
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                whiteSpace: "nowrap"
+                                            }}>
+                                                {isTop ? (
+                                                    /* Label Above */
+                                                    <>
+                                                        <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginBottom: 2 }}>{team.name}</div>
+                                                        <div style={{ width: 2, height: 20, background: team.color }}></div>
+                                                        {/* Arrow Tip Down */}
+                                                        <div style={{
+                                                            width: 0, height: 0,
+                                                            borderLeft: "4px solid transparent",
+                                                            borderRight: "4px solid transparent",
+                                                            borderTop: `4px solid ${team.color}`,
+                                                            marginBottom: -2
+                                                        }}></div>
+                                                    </>
+                                                ) : (
+                                                    /* Label Below */
+                                                    <>
+                                                        {/* Arrow Tip Up */}
+                                                        <div style={{
+                                                            width: 0, height: 0,
+                                                            borderLeft: "4px solid transparent",
+                                                            borderRight: "4px solid transparent",
+                                                            borderBottom: `4px solid ${team.color}`,
+                                                            marginTop: -2
+                                                        }}></div>
+                                                        <div style={{ width: 2, height: 20, background: team.color }}></div>
+                                                        <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginTop: 2 }}>{team.name}</div>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
