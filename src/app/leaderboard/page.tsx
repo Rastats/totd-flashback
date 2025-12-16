@@ -114,7 +114,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
 const INITIAL_FEED: FeedEvent[] = [
     { id: "1", type: "month_finish", message: "Team 1 completed August 2021! 📅", teamId: "team1", timestamp: "14:05" },
     { id: "2", type: "donation_milestone", message: "We reached £1,500 raised! 🎉", timestamp: "14:04" },
-    { id: "3", type: "shield_cooldown", message: "Team 2 Shield Cooldown expired", teamId: "team2", timestamp: "14:03" },
+    { id: "3", type: "shield_cooldown", message: "Team 2 Shield Cooldown expired (Ready to use)", teamId: "team2", timestamp: "14:03" },
     { id: "4", type: "penalty", message: "Team 2 : 'Tunnel Vision' activated by anon (£20)", teamId: "team2", timestamp: "14:01" },
     { id: "5", type: "shield", message: "Team 4 bought a Small Shield", teamId: "team4", timestamp: "13:58" },
 ];
