@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
       {/* Hero */}
-      <section style={{ textAlign: "center", marginBottom: 55 }}>
+      <section style={{ textAlign: "center", marginBottom: 32 }}>
         <h1 style={{ fontSize: 55, marginBottom: 18, background: "linear-gradient(135deg, #60a5fa, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           TOTD Flashback
         </h1>
@@ -49,7 +49,7 @@ export default function HomePage() {
       </section>
 
       {/* Countdown Timer */}
-      <section style={{ marginBottom: 32 }}>
+      <section style={{ marginBottom: 20 }}>
         <CountdownTimer />
       </section>
 
@@ -59,7 +59,7 @@ export default function HomePage() {
         background: "#12121a",
         borderRadius: 12,
         border: "1px solid #2a2a3a",
-        marginBottom: 32,
+        marginBottom: 24,
       }}>
         <h2 style={{ fontSize: 24, marginBottom: 16 }}>🎯 The Goal</h2>
         <p style={{ lineHeight: 1.7, marginBottom: 16 }}>
