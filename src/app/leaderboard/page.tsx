@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Footer from "@/components/Footer";
+// Footer removed to avoid duplication
 import { totds } from "@/data/totds";
-import { getMapThumbnailUrl } from "@/utils/mapUtils";
+import { getMapThumbnailUrl, getTrackmaniaIoUrl } from "@/utils/mapUtils";
 
 // --- Types (Dummy Data) ---
 type TeamId = "team1" | "team2" | "team3" | "team4";
@@ -19,6 +19,7 @@ interface TeamStatus {
     currentMap: {
         name: string;
         authorName: string; // Added authorName
+        mapUid: string; // Added mapUid for linking
         date: string; // "July 2021"
         authorTime: string;
         thumbnailUrl: string; // generated from UID
@@ -73,9 +74,10 @@ const INITIAL_TEAMS: TeamStatus[] = [
         currentMap: {
             name: TEAM1_MAP.name,
             authorName: TEAM1_MAP.authorName,
+            mapUid: TEAM1_MAP.mapUid,
             date: TEAM1_MAP.date,
             authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId)
+            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId) // Use mapId (UUID) for thumbnail
         },
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
@@ -91,6 +93,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
         currentMap: {
             name: TEAM2_MAP.name,
             authorName: TEAM2_MAP.authorName,
+            mapUid: TEAM2_MAP.mapUid,
             date: TEAM2_MAP.date,
             authorTime: formatAuthorTime(TEAM2_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapId)
@@ -109,6 +112,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
         currentMap: {
             name: TEAM3_MAP.name,
             authorName: TEAM3_MAP.authorName,
+            mapUid: TEAM3_MAP.mapUid,
             date: TEAM3_MAP.date,
             authorTime: formatAuthorTime(TEAM3_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapId)
@@ -127,6 +131,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
         currentMap: {
             name: TEAM4_MAP.name,
             authorName: TEAM4_MAP.authorName,
+            mapUid: TEAM4_MAP.mapUid,
             date: TEAM4_MAP.date,
             authorTime: formatAuthorTime(TEAM4_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapId)
@@ -205,34 +210,46 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 
             {/* Map Info */}
             <div style={{ padding: 16, flex: 1 }}>
-                <div style={{
-                    aspectRatio: "16/9",
-                    background: "#0f172a",
-                    borderRadius: 8,
-                    marginBottom: 12,
-                    overflow: "hidden",
-                    position: "relative"
-                }}>
-                    {/* Placeholder for map image */}
+                <a
+                    href={getTrackmaniaIoUrl(team.currentMap.mapUid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                >
                     <div style={{
-                        width: "100%",
-                        height: "100%",
-                        background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
-                        backgroundColor: "#000",
-                    }} />
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
-                        <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {team.currentMap.name}
-                        </div>
-                        <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 2 }}>
-                            by {team.currentMap.authorName}
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.8 }}>
-                            <span>{team.currentMap.date}</span>
-                            <span>AT: {team.currentMap.authorTime}</span>
+                        aspectRatio: "16/9",
+                        background: "#0f172a",
+                        borderRadius: 8,
+                        marginBottom: 12,
+                        overflow: "hidden",
+                        position: "relative",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        transition: "transform 0.2s"
+                    }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                    >
+                        {/* Placeholder for map image */}
+                        <div style={{
+                            width: "100%",
+                            height: "100%",
+                            background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
+                            backgroundColor: "#000",
+                        }} />
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
+                            <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {team.currentMap.name}
+                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 2 }}>
+                                by {team.currentMap.authorName}
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.8 }}>
+                                <span>{team.currentMap.date}</span>
+                                <span>AT: {team.currentMap.authorTime}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </a>
 
                 {/* Status Section */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -331,9 +348,9 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* Center: Timer */}
-                    <div style={{ textAlign: "center", background: "#1e293b", padding: "16px 32px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 4 }}>Time Remaining</div>
-                        <div style={{ fontSize: 42, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                    <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
+                        <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
                             {formatCountdown(timeLeftMs)}
                         </div>
                     </div>
@@ -427,7 +444,6 @@ export default function LeaderboardPage() {
                 </div>
             </main>
 
-            <Footer />
         </div>
     );
 }
