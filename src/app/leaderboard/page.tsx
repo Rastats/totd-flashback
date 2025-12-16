@@ -75,7 +75,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             authorName: TEAM1_MAP.authorName,
             date: TEAM1_MAP.date,
             authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId) // Use mapId (UUID) for thumbnail
+            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId)
         },
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
