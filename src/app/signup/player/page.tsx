@@ -448,6 +448,7 @@ export default function PlayerSignupPage() {
                                     </div>
                                     {availability
                                         .filter((s) => s.date === day.date)
+                                        .sort((a, b) => a.startHour - b.startHour)
                                         .map((slot) => (
                                             <div key={slot.id} style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
                                                 <select
