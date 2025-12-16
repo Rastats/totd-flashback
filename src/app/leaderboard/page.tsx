@@ -246,7 +246,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                                 <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
                                     by {team.currentMap.authorName}
                                 </span>
-                                <span style={{ whiteSpace: "nowrap" }}>{team.currentMap.date}</span>
+                                <span style={{ whiteSpace: "nowrap", fontSize: "1.25em" }}>{team.currentMap.date}</span>
                             </div>
                         </div>
                     </div>
@@ -351,13 +351,7 @@ export default function LeaderboardPage() {
                         <p style={{ opacity: 0.6, marginTop: 4, fontSize: 14 }}>TOTD Flashback Event • Real-time tracking</p>
                     </div>
 
-                    {/* Center: Timer */}
-                    <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
-                        <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
-                            {formatCountdown(timeLeftMs)}
-                        </div>
-                    </div>
+
 
                     {/* Right: Empty (for balance) */}
                     <div></div>
@@ -496,30 +490,40 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* RIGHT COLUMN: Event Feed */}
-                    <div style={{
-                        background: "#1e293b",
-                        borderRadius: 12,
-                        border: "1px solid #334155",
-                        padding: 16,
-                        height: "fit-content",
-                        maxHeight: "800px",
-                        position: "sticky",
-                        top: 24
-                    }}>
-                        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {feed.map(event => (
-                                <div key={event.id} style={{
-                                    paddingRight: 8,
-                                    borderLeft: `3px solid ${event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff"}`,
-                                    paddingLeft: 12
-                                }}>
-                                    <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{event.timestamp}</div>
-                                    <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-                                        {event.message}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div style={{
+                            background: "#1e293b",
+                            borderRadius: 12,
+                            border: "1px solid #334155",
+                            padding: 16,
+                            height: "fit-content",
+                            maxHeight: "800px",
+                            position: "sticky",
+                            top: 24
+                        }}>
+                            <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {feed.map(event => (
+                                    <div key={event.id} style={{
+                                        paddingRight: 8,
+                                        borderLeft: `3px solid ${event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff"}`,
+                                        paddingLeft: 12
+                                    }}>
+                                        <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{event.timestamp}</div>
+                                        <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                                            {event.message}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Timer moved below feed */}
+                        <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+                            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
+                            <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                                {formatCountdown(timeLeftMs)}
+                            </div>
                         </div>
                     </div>
                 </div>
