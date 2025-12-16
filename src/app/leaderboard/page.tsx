@@ -363,25 +363,22 @@ export default function LeaderboardPage() {
                     {/* LEFT COLUMN: Teams Grid & Timeline */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
 
-                        {/* Teams Grid (4 columns now since Joker removed) */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-                            {teams.map(team => (
-                                <TeamCard key={team.id} team={team} />
-                            ))}
-                        </div>
-
                         {/* Visual Timeline (Static Mockup) */}
                         <div style={{ background: "#1e293b", padding: 24, borderRadius: 12, border: "1px solid #334155" }}>
-                            <h3 style={{ margin: "0 0 16px 0", fontSize: 18 }}>Event Timeline</h3>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                <h3 style={{ margin: 0, fontSize: 18 }}>Event Timeline</h3>
+                                <div style={{ fontSize: 12, opacity: 0.6 }}>Progress towards July 2020</div>
+                            </div>
+
                             <div style={{ position: "relative", height: 40, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
                                 {/* Timeline Track */}
                                 <div style={{ position: "absolute", left: 10, right: 10, height: 4, background: "#334155", borderRadius: 2 }}></div>
 
-                                {/* 2020 Marker */}
-                                <div style={{ position: "absolute", left: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>July 2020</div>
+                                {/* Start Marker (Dec 2025) */}
+                                <div style={{ position: "absolute", left: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>Dec 2025</div>
 
-                                {/* 2025 Marker */}
-                                <div style={{ position: "absolute", right: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>Dec 2025</div>
+                                {/* End Marker (July 2020) */}
+                                <div style={{ position: "absolute", right: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>July 2020</div>
 
                                 {/* Team Markers */}
                                 {teams.map((team, i) => {
@@ -395,7 +392,8 @@ export default function LeaderboardPage() {
                                             transform: "translateX(-50%)",
                                             display: "flex",
                                             flexDirection: "column",
-                                            alignItems: "center"
+                                            alignItems: "center",
+                                            zIndex: 5
                                         }}>
                                             <div style={{
                                                 width: 12,
@@ -411,6 +409,13 @@ export default function LeaderboardPage() {
                                 })}
                             </div>
                             <div style={{ height: 20 }}></div>
+                        </div>
+
+                        {/* Teams Grid (4 columns now since Joker removed) */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                            {teams.map(team => (
+                                <TeamCard key={team.id} team={team} />
+                            ))}
                         </div>
                     </div>
 
