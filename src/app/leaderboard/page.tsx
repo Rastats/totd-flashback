@@ -245,9 +245,8 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                             <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 2 }}>
                                 by {team.currentMap.authorName}
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.8 }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 12, opacity: 0.8 }}>
                                 <span>{team.currentMap.date}</span>
-                                <span>AT: {team.currentMap.authorTime}</span>
                             </div>
                         </div>
                     </div>
@@ -373,21 +372,21 @@ export default function LeaderboardPage() {
                         </div>
 
                         {/* Visual Timeline (Static Mockup) */}
-                        <div style={{ background: "#1e293b", padding: 16, borderRadius: 12, border: "1px solid #334155" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                                <h3 style={{ margin: 0, fontSize: 18 }}>Event Timeline</h3>
-                                <div style={{ fontSize: 12, opacity: 0.6 }}>Progress towards July 2020</div>
+                        <div style={{ background: "#1e293b", padding: "16px 16px 40px 16px", borderRadius: 12, border: "1px solid #334155" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <h3 style={{ margin: 0, fontSize: 16 }}>Event Timeline</h3>
+                                <div style={{ fontSize: 11, opacity: 0.6 }}>Progress towards July 2020</div>
                             </div>
 
-                            <div style={{ position: "relative", height: 40, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
+                            <div style={{ position: "relative", height: 32, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
                                 {/* Timeline Track */}
                                 <div style={{ position: "absolute", left: 10, right: 10, height: 4, background: "#334155", borderRadius: 2 }}></div>
 
                                 {/* Start Marker (Dec 2025) */}
-                                <div style={{ position: "absolute", left: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>Dec 2025</div>
+                                <div style={{ position: "absolute", left: "2%", top: 34, fontSize: 10, opacity: 0.5 }}>Dec 2025</div>
 
                                 {/* End Marker (July 2020) */}
-                                <div style={{ position: "absolute", right: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>July 2020</div>
+                                <div style={{ position: "absolute", right: "2%", top: 34, fontSize: 10, opacity: 0.5 }}>July 2020</div>
 
                                 {/* Team Markers */}
                                 {teams.map((team, i) => {
@@ -430,12 +429,24 @@ export default function LeaderboardPage() {
                                                 display: "flex",
                                                 flexDirection: "column",
                                                 alignItems: "center",
-                                                whiteSpace: "nowrap"
+                                                whiteSpace: "nowrap",
+                                                zIndex: 20
                                             }}>
                                                 {isTop ? (
                                                     /* Label Above */
                                                     <>
-                                                        <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginBottom: 2 }}>{team.name}</div>
+                                                        <div style={{
+                                                            fontSize: 10,
+                                                            color: team.color,
+                                                            fontWeight: "bold",
+                                                            marginBottom: 2,
+                                                            background: "rgba(0, 0, 0, 0.8)",
+                                                            padding: "2px 6px",
+                                                            borderRadius: 4,
+                                                            border: `1px solid ${team.color}44`
+                                                        }}>
+                                                            {team.name}
+                                                        </div>
                                                         <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
                                                         {/* Arrow Tip Down */}
                                                         <div style={{
@@ -458,7 +469,18 @@ export default function LeaderboardPage() {
                                                             marginTop: -2
                                                         }}></div>
                                                         <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
-                                                        <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginTop: 2 }}>{team.name}</div>
+                                                        <div style={{
+                                                            fontSize: 10,
+                                                            color: team.color,
+                                                            fontWeight: "bold",
+                                                            marginTop: 2,
+                                                            background: "rgba(0, 0, 0, 0.8)",
+                                                            padding: "2px 6px",
+                                                            borderRadius: 4,
+                                                            border: `1px solid ${team.color}44`
+                                                        }}>
+                                                            {team.name}
+                                                        </div>
                                                     </>
                                                 )}
                                             </div>
@@ -466,7 +488,7 @@ export default function LeaderboardPage() {
                                     );
                                 })}
                             </div>
-                            <div style={{ height: 20 }}></div>
+                            <div style={{ height: 16 }}></div>
                         </div>
                     </div>
 
