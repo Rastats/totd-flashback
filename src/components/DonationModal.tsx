@@ -168,7 +168,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                                     borderRadius: 4,
                                     color: "#fff",
                                     cursor: "pointer",
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     flex: 1,
                                     minWidth: 0,
                                 }}
