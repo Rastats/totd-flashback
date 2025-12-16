@@ -593,6 +593,8 @@ export default function PlayerSignupPage() {
                             checked={formData.pcConfirmed}
                             onChange={(e) => setFormData({ ...formData, pcConfirmed: e.target.checked })}
                             required
+                            onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity("Please check this box to continue")}
+                            onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
                         />
                         <span>I confirm I play Trackmania on PC *</span>
                     </label>
