@@ -18,6 +18,7 @@ interface TeamStatus {
     totalMaps: number; // e.g. 1500
     currentMap: {
         name: string;
+        authorName: string; // Added authorName
         date: string; // "July 2021"
         authorTime: string;
         thumbnailUrl: string; // generated from UID
@@ -71,9 +72,10 @@ const INITIAL_TEAMS: TeamStatus[] = [
         totalMaps: totds.length,
         currentMap: {
             name: TEAM1_MAP.name,
+            authorName: TEAM1_MAP.authorName,
             date: TEAM1_MAP.date,
             authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapUid)
+            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId) // Use mapId (UUID) for thumbnail
         },
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
@@ -88,9 +90,10 @@ const INITIAL_TEAMS: TeamStatus[] = [
         totalMaps: totds.length,
         currentMap: {
             name: TEAM2_MAP.name,
+            authorName: TEAM2_MAP.authorName,
             date: TEAM2_MAP.date,
             authorTime: formatAuthorTime(TEAM2_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapUid)
+            thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapId)
         },
         activeShield: null,
         activePenalties: [{ name: "Tunnel Vision", timeLeft: 145 }],
@@ -105,9 +108,10 @@ const INITIAL_TEAMS: TeamStatus[] = [
         totalMaps: totds.length,
         currentMap: {
             name: TEAM3_MAP.name,
+            authorName: TEAM3_MAP.authorName,
             date: TEAM3_MAP.date,
             authorTime: formatAuthorTime(TEAM3_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapUid)
+            thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapId)
         },
         activeShield: null,
         activePenalties: [],
@@ -122,9 +126,10 @@ const INITIAL_TEAMS: TeamStatus[] = [
         totalMaps: totds.length,
         currentMap: {
             name: TEAM4_MAP.name,
+            authorName: TEAM4_MAP.authorName,
             date: TEAM4_MAP.date,
             authorTime: formatAuthorTime(TEAM4_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapUid)
+            thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapId)
         },
         activeShield: null,
         activePenalties: [{ name: "Camera Shuffle", timeLeft: 800 }],
@@ -213,11 +218,14 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                         width: "100%",
                         height: "100%",
                         background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
-                        opacity: 0.6
+                        backgroundColor: "#000",
                     }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
                         <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {team.currentMap.name}
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 2 }}>
+                            by {team.currentMap.authorName}
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.8 }}>
                             <span>{team.currentMap.date}</span>

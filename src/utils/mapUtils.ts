@@ -3,10 +3,11 @@ export const getMapUrl = (mapUid: string): string => {
     return `https://trackmania.exchange/s/tr/${mapUid}`;
 };
 
-export const getMapThumbnailUrl = (mapUid: string): string => {
-    // Common pattern using trackmania.io for convenience, though dependent on their cache.
-    // Alternatively, we could fetch from TMX API if this proves unreliable.
-    return `https://trackmania.io/img/maps/${mapUid}.jpg`;
+// Using the UUID (mapId) is essentially how we get the storage object directly often.
+// If mapUid is passed, it might not work with this specific URL.
+// We'll trust the user's data provides the UUID in the 'mapId' field of totds.ts
+export const getMapThumbnailUrl = (mapId: string): string => {
+    return `https://core.trackmania.nadeo.live/storageObjects/${mapId}.jpg`;
 };
 
 export const getMapDownloadUrl = (mapUid: string): string => {
