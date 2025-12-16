@@ -267,9 +267,9 @@ export default function PlayerSignupPage() {
     const updateSlot = (id: string, field: keyof AvailabilityEntry, value: number | string) => {
         let updatedSlots = availability.map((s) => (s.id === id ? { ...s, [field]: value } : s));
 
-        // If changing startHour, ensure endHour is still valid (> startHour)
+        // If changing startHour, always adjust endHour to be 1h after (user can then modify if needed)
         const updatedSlot = updatedSlots.find(s => s.id === id)!;
-        if (field === "startHour" && updatedSlot.endHour <= (value as number)) {
+        if (field === "startHour") {
             updatedSlots = updatedSlots.map(s =>
                 s.id === id ? { ...s, endHour: (value as number) + 1 } : s
             );
