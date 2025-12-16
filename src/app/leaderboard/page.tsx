@@ -90,7 +90,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
         name: "Team 2",
         rank: 2,
         color: "#a78bfa",
-        mapsFinished: TOTAL_MAPS - 449, // 1551
+        mapsFinished: TOTAL_MAPS - 449 + 5, // 1551 + 5 (Russian Roulette bonus)
         totalMaps: TOTAL_MAPS,
         currentMap: {
             name: TEAM2_MAP.name,
