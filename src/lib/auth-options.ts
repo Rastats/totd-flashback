@@ -1,8 +1,11 @@
+import { supabase } from "@/lib/supabase";
 import DiscordProvider from "next-auth/providers/discord";
 import type { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, Account, Profile } from "next-auth";
 
-// Admin Discord IDs (can access /admin page)
-const ADMIN_IDS = ["217672821831237643"]; // Rastats
+// Admin Discord IDs (always allow Rastats)
+const ADMIN_IDS = ["217672821831237643"];
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -12,15 +15,33 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, account, profile }) {
+        async jwt({ token, account, profile }: { token: JWT, account: Account | null, profile?: Profile }) {
             if (account && profile) {
-                token.discordId = (profile as any).id;
+                const discordId = (profile as any).id;
+                token.discordId = discordId;
                 token.username = (profile as any).username;
-                token.isAdmin = ADMIN_IDS.includes((profile as any).id);
+
+                // Check if admin (hardcoded or in DB)
+                let isAdmin = ADMIN_IDS.includes(discordId);
+
+                if (!isAdmin) {
+                    try {
+                        const { data } = await supabase
+                            .from('admins')
+                            .select('discord_id')
+                            .eq('discord_id', discordId)
+                            .single();
+                        if (data) isAdmin = true;
+                    } catch (e) {
+                        console.error("Error checking admin status:", e);
+                    }
+                }
+
+                token.isAdmin = isAdmin;
             }
             return token;
         },
-        async session({ session, token }) {
+        async session({ session, token }: { session: Session, token: JWT }) {
             if (session.user) {
                 (session.user as any).discordId = token.discordId;
                 (session.user as any).username = token.username;

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-const ADMIN_KEY = "totd-admin-2025";
+import { isAdmin } from '@/lib/auth';
 
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const adminKey = request.headers.get("x-admin-key");
-        if (adminKey !== ADMIN_KEY) {
+        const isUserAdmin = await isAdmin();
+        if (!isUserAdmin) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
