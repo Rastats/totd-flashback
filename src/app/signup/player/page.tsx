@@ -73,58 +73,119 @@ export default function PlayerSignupPage() {
     const hoursOptions = getHoursOptions();
     const previousTimezone = useRef<string>("");
 
-    // Convert availability slots when timezone changes
+    // Convert availability slots when timezone changes (with proper day-crossing support)
     useEffect(() => {
         const oldTz = previousTimezone.current;
         const newTz = formData.timezone;
 
         if (oldTz && newTz && oldTz !== newTz && availability.length > 0) {
-            // Convert each slot's hours from old timezone to new timezone
-            const convertedSlots = availability.map(slot => {
-                // Create a date in the old timezone for this slot
+            const newEventDays = getEventDays(newTz);
+
+            // Convert each slot's date+hours from old timezone to new timezone
+            const convertedSlots: AvailabilityEntry[] = [];
+
+            for (const slot of availability) {
                 const [year, month, day] = slot.date.split('-').map(Number);
 
-                // Get the UTC offset difference between timezones for this date
-                const testDate = new Date(year, month - 1, day, slot.startHour);
+                // Create a "wall clock" time in the old timezone and find its UTC equivalent
+                // We do this by finding what UTC time displays as the slot's start hour in oldTz
+                // Approach: create a Date, format it in oldTz, and adjust until it matches
 
-                const oldFormatter = new Intl.DateTimeFormat('en-US', {
+                // Step 1: Estimate UTC time for this slot's start hour in old timezone
+                // Create a date at midnight UTC for this day
+                const baseUtc = new Date(Date.UTC(year, month - 1, day, slot.startHour, 0, 0));
+
+                // Get what hour this UTC time shows in the old timezone
+                const oldTzFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: oldTz,
-                    hour: 'numeric',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
                     hour12: false,
                 });
-                const newFormatter = new Intl.DateTimeFormat('en-US', {
+
+                // Parse the old timezone display to find the offset
+                const oldParts = oldTzFormatter.formatToParts(baseUtc);
+                const oldDisplayHour = parseInt(oldParts.find(p => p.type === 'hour')?.value || '0');
+                const oldDisplayDay = parseInt(oldParts.find(p => p.type === 'day')?.value || '1');
+
+                // Calculate hours difference: if oldTz shows 12 when we set UTC to slot.startHour,
+                // we need to adjust by (slot.startHour - oldDisplayHour)
+                const hourAdjustment = slot.startHour - oldDisplayHour;
+                const dayAdjustment = day - oldDisplayDay;
+
+                // Create the actual UTC time that corresponds to this slot in the old timezone
+                const startUtc = new Date(baseUtc.getTime() + (hourAdjustment + dayAdjustment * 24) * 60 * 60 * 1000);
+                const endUtc = new Date(startUtc.getTime() + (slot.endHour - slot.startHour) * 60 * 60 * 1000);
+
+                // Now convert this UTC time to the new timezone
+                const newTzFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: newTz,
-                    hour: 'numeric',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
                     hour12: false,
                 });
 
-                // Calculate hour offset by comparing the same UTC time in both zones
-                const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-                const oldHour = parseInt(oldFormatter.format(utcDate));
-                const newHour = parseInt(newFormatter.format(utcDate));
-                const hourOffset = newHour - oldHour;
+                const startParts = newTzFormatter.formatToParts(startUtc);
+                const endParts = newTzFormatter.formatToParts(endUtc);
 
-                // Apply offset to start and end hours
-                let newStartHour = slot.startHour + hourOffset;
-                let newEndHour = slot.endHour + hourOffset;
+                const newStartYear = parseInt(startParts.find(p => p.type === 'year')?.value || '2025');
+                const newStartMonth = parseInt(startParts.find(p => p.type === 'month')?.value || '1');
+                const newStartDay = parseInt(startParts.find(p => p.type === 'day')?.value || '1');
+                const newStartHour = parseInt(startParts.find(p => p.type === 'hour')?.value || '0');
 
-                // Clamp to valid hours (0-24)
-                newStartHour = Math.max(0, Math.min(23, newStartHour));
-                newEndHour = Math.max(1, Math.min(24, newEndHour));
+                const newEndYear = parseInt(endParts.find(p => p.type === 'year')?.value || '2025');
+                const newEndMonth = parseInt(endParts.find(p => p.type === 'month')?.value || '1');
+                const newEndDay = parseInt(endParts.find(p => p.type === 'day')?.value || '1');
+                const newEndHour = parseInt(endParts.find(p => p.type === 'hour')?.value || '0');
 
-                // Ensure end > start
-                if (newEndHour <= newStartHour) {
-                    newEndHour = newStartHour + 1;
+                const newStartDate = `${newStartYear}-${String(newStartMonth).padStart(2, '0')}-${String(newStartDay).padStart(2, '0')}`;
+                const newEndDate = `${newEndYear}-${String(newEndMonth).padStart(2, '0')}-${String(newEndDay).padStart(2, '0')}`;
+
+                // Check if this slot still falls within the event days for the new timezone
+                const startDayInfo = newEventDays.find(d => d.date === newStartDate);
+
+                if (startDayInfo) {
+                    // If end is on a different day than start, we need to split or clamp
+                    if (newStartDate === newEndDate) {
+                        // Same day - simple case
+                        convertedSlots.push({
+                            ...slot,
+                            date: newStartDate,
+                            startHour: Math.max(startDayInfo.startHour, newStartHour),
+                            endHour: Math.min(startDayInfo.endHour, newEndHour === 0 ? 24 : newEndHour),
+                        });
+                    } else {
+                        // Slot crosses midnight in new timezone - clamp to end of start day
+                        convertedSlots.push({
+                            ...slot,
+                            date: newStartDate,
+                            startHour: Math.max(startDayInfo.startHour, newStartHour),
+                            endHour: startDayInfo.endHour, // End at midnight
+                        });
+
+                        // Add continuation on new day if it exists in event days
+                        const endDayInfo = newEventDays.find(d => d.date === newEndDate);
+                        if (endDayInfo && newEndHour > endDayInfo.startHour) {
+                            convertedSlots.push({
+                                id: `${slot.id}-cont`,
+                                date: newEndDate,
+                                startHour: endDayInfo.startHour,
+                                endHour: Math.min(endDayInfo.endHour, newEndHour === 0 ? 24 : newEndHour),
+                                preference: slot.preference,
+                            });
+                        }
+                    }
                 }
+            }
 
-                return {
-                    ...slot,
-                    startHour: newStartHour,
-                    endHour: newEndHour,
-                };
-            });
+            // Filter out invalid slots (where end <= start)
+            const validSlots = convertedSlots.filter(s => s.endHour > s.startHour);
 
-            setAvailability(convertedSlots);
+            setAvailability(validSlots);
         }
 
         previousTimezone.current = newTz;
