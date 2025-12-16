@@ -239,14 +239,14 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                             backgroundColor: "#000",
                         }} />
                         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.8)" }}>
-                            <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 1 }}>
                                 {team.currentMap.name}
                             </div>
-                            <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 0 }}>
-                                by {team.currentMap.authorName}
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 12, opacity: 0.8 }}>
-                                <span>{team.currentMap.date}</span>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, opacity: 0.8 }}>
+                                <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
+                                    by {team.currentMap.authorName}
+                                </span>
+                                <span style={{ whiteSpace: "nowrap" }}>{team.currentMap.date}</span>
                             </div>
                         </div>
                     </div>
