@@ -177,15 +177,61 @@ export default function CasterSignupPage() {
     const addAvailabilitySlot = (date: string) => {
         // Find the day to get valid start/end hours
         const day = eventDays.find(d => d.date === date);
-        const newStart = day?.startHour ?? 21;
-        const newEnd = Math.min((day?.startHour ?? 21) + 3, day?.endHour ?? 24);
-        const slotsOnDay = availability.filter(s => s.date === date);
+        if (!day) return;
+
+        const slotsOnDay = availability.filter(s => s.date === date).sort((a, b) => a.startHour - b.startHour);
+
+        // Find the next available slot that doesn't overlap
+        let newStart = day.startHour;
+        let newEnd = Math.min(newStart + 3, day.endHour);
+
+        // If there are existing slots, try to find a gap or start after the last one
+        if (slotsOnDay.length > 0) {
+            let foundSlot = false;
+
+            // First, check if we can fit before the first slot
+            if (slotsOnDay[0].startHour >= day.startHour + 1) {
+                newStart = day.startHour;
+                newEnd = Math.min(newStart + 3, slotsOnDay[0].startHour);
+                if (newEnd > newStart) {
+                    foundSlot = true;
+                }
+            }
+
+            // Check gaps between slots
+            if (!foundSlot) {
+                for (let i = 0; i < slotsOnDay.length - 1; i++) {
+                    const gapStart = slotsOnDay[i].endHour;
+                    const gapEnd = slotsOnDay[i + 1].startHour;
+                    if (gapEnd - gapStart >= 1) {
+                        newStart = gapStart;
+                        newEnd = Math.min(gapStart + 3, gapEnd);
+                        foundSlot = true;
+                        break;
+                    }
+                }
+            }
+
+            // If no gap found, try after the last slot
+            if (!foundSlot) {
+                const lastSlot = slotsOnDay[slotsOnDay.length - 1];
+                if (lastSlot.endHour < day.endHour) {
+                    newStart = lastSlot.endHour;
+                    newEnd = Math.min(newStart + 3, day.endHour);
+                } else {
+                    setError("No more available time on this day");
+                    return;
+                }
+            }
+        }
+
+        // Final check for overlap
         const hasOverlap = slotsOnDay.some(s =>
             (newStart < s.endHour && newEnd > s.startHour)
         );
 
-        if (hasOverlap) {
-            setError("This slot overlaps with an existing slot on the same day");
+        if (hasOverlap || newEnd <= newStart) {
+            setError("No more available time on this day");
             return;
         }
 
