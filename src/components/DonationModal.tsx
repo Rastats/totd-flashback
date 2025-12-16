@@ -155,20 +155,22 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
                             textAlign: "center",
                         }}
                     />
-                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {[5, 10, 25, 50, 100, 200, 500].map((preset) => (
+                    <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "nowrap", justifyContent: "space-between" }}>
+                        {[5, 10, 15, 25, 35, 50, 75, 100, 200, 500].map((preset) => (
                             <button
                                 key={preset}
                                 type="button"
                                 onClick={() => setBaseAmount(preset)}
                                 style={{
-                                    padding: "6px 12px",
+                                    padding: "5px 6px",
                                     background: baseAmount === preset ? "#f59e0b" : "#2a2a3a",
                                     border: "none",
                                     borderRadius: 4,
                                     color: "#fff",
                                     cursor: "pointer",
-                                    fontSize: 13,
+                                    fontSize: 11,
+                                    flex: 1,
+                                    minWidth: 0,
                                 }}
                             >
                                 £{preset}
