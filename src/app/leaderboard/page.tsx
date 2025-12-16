@@ -1,4 +1,3 @@
-```
 "use client";
 
 import { useState, useEffect } from "react";
@@ -123,7 +122,7 @@ const INITIAL_FEED: FeedEvent[] = [
 const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${ mins }:${ secs.toString().padStart(2, '0') } `;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
 const formatCountdown = (ms: number) => {
@@ -132,7 +131,7 @@ const formatCountdown = (ms: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
-    return `${ hours }h ${ mins }m ${ secs.toString().padStart(2, '0') } s`;
+    return `${hours}h ${mins}m ${secs.toString().padStart(2, '0')}s`;
 };
 
 // --- Components ---
@@ -142,7 +141,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
         <div style={{
             background: "#1e293b",
             borderRadius: 12,
-            border: `2px solid ${ team.color } `,
+            border: `2px solid ${team.color}`,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -179,20 +178,20 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 
             {/* Map Info */}
             <div style={{ padding: 16, flex: 1 }}>
-                <div style={{ 
-                    aspectRatio: "16/9", 
-                    background: "#0f172a", 
-                    borderRadius: 8, 
-                    marginBottom: 12, 
+                <div style={{
+                    aspectRatio: "16/9",
+                    background: "#0f172a",
+                    borderRadius: 8,
+                    marginBottom: 12,
                     overflow: "hidden",
                     position: "relative"
                 }}>
                     {/* Placeholder for map image */}
-                    <div style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        background: `url(${ team.currentMap.thumbnailUrl }) center / cover no - repeat`,
-                        opacity: 0.6 
+                    <div style={{
+                        width: "100%",
+                        height: "100%",
+                        background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
+                        opacity: 0.6
                     }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
                         <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -235,7 +234,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                             <div style={{ fontSize: 13, opacity: 0.5, fontStyle: "italic" }}>None</div>
                         )}
                     </div>
-                    
+
                     {/* Queue */}
                     {team.penaltyQueue > 0 && (
                         <div style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center" }}>
@@ -268,7 +267,7 @@ export default function LeaderboardPage() {
         updateTimer(); // initial
         const timer = setInterval(() => {
             updateTimer();
-            
+
             // Randomly decrease shield/penalty timers for demo
             setTeams(prevTeams => prevTeams.map(team => ({
                 ...team,
@@ -283,13 +282,13 @@ export default function LeaderboardPage() {
     return (
         <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
             {/* Header removed, using global layout */}
-            
+
             <main style={{ padding: "48px 24px 24px", maxWidth: 1600, margin: "0 auto" }}>
                 {/* Dashboard Header - Centered Timer */}
-                <div style={{ 
-                    display: "grid", 
-                    gridTemplateColumns: "1fr auto 1fr", 
-                    alignItems: "center", 
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto 1fr",
+                    alignItems: "center",
                     marginBottom: 48,
                     gap: 16
                 }}>
@@ -316,7 +315,7 @@ export default function LeaderboardPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
                     {/* LEFT COLUMN: Teams Grid & Timeline */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-                        
+
                         {/* Teams Grid (4 columns now since Joker removed) */}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                             {teams.map(team => (
@@ -330,10 +329,10 @@ export default function LeaderboardPage() {
                             <div style={{ position: "relative", height: 40, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
                                 {/* Timeline Track */}
                                 <div style={{ position: "absolute", left: 10, right: 10, height: 4, background: "#334155", borderRadius: 2 }}></div>
-                                
+
                                 {/* 2020 Marker */}
                                 <div style={{ position: "absolute", left: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>July 2020</div>
-                                
+
                                 {/* 2025 Marker */}
                                 <div style={{ position: "absolute", right: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>Dec 2025</div>
 
@@ -342,20 +341,20 @@ export default function LeaderboardPage() {
                                     // Calculate fake position based on mapsFinished
                                     const percent = (team.mapsFinished / team.totalMaps) * 100;
                                     return (
-                                        <div key={team.id} style={{ 
-                                            position: "absolute", 
-                                            left: `${ percent }% `, 
+                                        <div key={team.id} style={{
+                                            position: "absolute",
+                                            left: `${percent}%`,
                                             top: -6 + (i % 2 === 0 ? -15 : 15), // stagger
                                             transform: "translateX(-50%)",
                                             display: "flex",
                                             flexDirection: "column",
                                             alignItems: "center"
                                         }}>
-                                            <div style={{ 
-                                                width: 12, 
-                                                height: 12, 
-                                                borderRadius: "50%", 
-                                                background: team.color, 
+                                            <div style={{
+                                                width: 12,
+                                                height: 12,
+                                                borderRadius: "50%",
+                                                background: team.color,
                                                 border: "2px solid #fff",
                                                 boxShadow: "0 0 10px " + team.color
                                             }} />
@@ -369,10 +368,10 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* RIGHT COLUMN: Event Feed */}
-                    <div style={{ 
-                        background: "#1e293b", 
-                        borderRadius: 12, 
-                        border: "1px solid #334155", 
+                    <div style={{
+                        background: "#1e293b",
+                        borderRadius: 12,
+                        border: "1px solid #334155",
                         padding: 16,
                         height: "fit-content",
                         maxHeight: "800px",
@@ -382,9 +381,9 @@ export default function LeaderboardPage() {
                         <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {feed.map(event => (
-                                <div key={event.id} style={{ 
-                                    paddingRight: 8, 
-                                    borderLeft: `3px solid ${ event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff" } `,
+                                <div key={event.id} style={{
+                                    paddingRight: 8,
+                                    borderLeft: `3px solid ${event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff"}`,
                                     paddingLeft: 12
                                 }}>
                                     <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{event.timestamp}</div>
@@ -397,9 +396,8 @@ export default function LeaderboardPage() {
                     </div>
                 </div>
             </main>
-            
+
             <Footer />
         </div>
     );
 }
-```
