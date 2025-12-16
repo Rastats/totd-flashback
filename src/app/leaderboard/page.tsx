@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { totds } from "@/data/totds";
+import { getMapThumbnailUrl } from "@/utils/mapUtils";
 
 // --- Types (Dummy Data) ---
 type TeamId = "team1" | "team2" | "team3" | "team4";
@@ -18,7 +20,7 @@ interface TeamStatus {
         name: string;
         date: string; // "July 2021"
         authorTime: string;
-        thumbnailUrl: string; // placeholder
+        thumbnailUrl: string; // generated from UID
     };
     activeShield: {
         type: "small" | "big";
@@ -39,7 +41,26 @@ interface FeedEvent {
     timestamp: string; // "14:02"
 }
 
-// --- Dummy Data ---
+// Helper to format Author Time (ms -> mm:ss.ms)
+const formatAuthorTime = (ms: number): string => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    const milliseconds = ms % 1000;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+};
+
+// --- Initial Data (Using Real TOTD Data) ---
+// We pick specific maps to match the "progress" of each team for the demo
+const getTotdByIndex = (index: number) => {
+    const safeIndex = Math.min(Math.max(0, index - 1), totds.length - 1); // 1-based index to 0-based
+    return totds[safeIndex];
+};
+
+const TEAM1_MAP = getTotdByIndex(453); // Map #453
+const TEAM2_MAP = getTotdByIndex(449); // Map #449
+const TEAM3_MAP = getTotdByIndex(431); // Map #431
+const TEAM4_MAP = getTotdByIndex(416); // Map #416
+
 const INITIAL_TEAMS: TeamStatus[] = [
     {
         id: "team1",
@@ -47,12 +68,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         rank: 1,
         color: "#60a5fa",
         mapsFinished: 452,
-        totalMaps: 1500,
+        totalMaps: totds.length,
         currentMap: {
-            name: "TOTD #453 - Canyon Drift",
-            date: "September 2021",
-            authorTime: "00:42.123",
-            thumbnailUrl: "https://via.placeholder.com/300x169/1e293b/FFFFFF?text=Map+Thumbnail"
+            name: TEAM1_MAP.name,
+            date: TEAM1_MAP.date,
+            authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
+            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapUid)
         },
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
@@ -64,12 +85,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         rank: 2,
         color: "#a78bfa",
         mapsFinished: 448,
-        totalMaps: 1500,
+        totalMaps: totds.length,
         currentMap: {
-            name: "TOTD #449 - Grass Temple",
-            date: "September 2021",
-            authorTime: "00:38.991",
-            thumbnailUrl: "https://via.placeholder.com/300x169/1e293b/FFFFFF?text=Map+Thumbnail"
+            name: TEAM2_MAP.name,
+            date: TEAM2_MAP.date,
+            authorTime: formatAuthorTime(TEAM2_MAP.authorTime),
+            thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapUid)
         },
         activeShield: null,
         activePenalties: [{ name: "Tunnel Vision", timeLeft: 145 }],
@@ -81,12 +102,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         rank: 3,
         color: "#f472b6",
         mapsFinished: 430,
-        totalMaps: 1500,
+        totalMaps: totds.length,
         currentMap: {
-            name: "TOTD #431 - Ice Slide",
-            date: "August 2021",
-            authorTime: "00:51.000",
-            thumbnailUrl: "https://via.placeholder.com/300x169/1e293b/FFFFFF?text=Map+Thumbnail"
+            name: TEAM3_MAP.name,
+            date: TEAM3_MAP.date,
+            authorTime: formatAuthorTime(TEAM3_MAP.authorTime),
+            thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapUid)
         },
         activeShield: null,
         activePenalties: [],
@@ -98,12 +119,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         rank: 4,
         color: "#34d399",
         mapsFinished: 415,
-        totalMaps: 1500,
+        totalMaps: totds.length,
         currentMap: {
-            name: "TOTD #416 - Dirt Valley",
-            date: "August 2021",
-            authorTime: "00:44.555",
-            thumbnailUrl: "https://via.placeholder.com/300x169/1e293b/FFFFFF?text=Map+Thumbnail"
+            name: TEAM4_MAP.name,
+            date: TEAM4_MAP.date,
+            authorTime: formatAuthorTime(TEAM4_MAP.authorTime),
+            thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapUid)
         },
         activeShield: null,
         activePenalties: [{ name: "Camera Shuffle", timeLeft: 800 }],
