@@ -63,21 +63,23 @@ const TEAM2_MAP = getTotdByIndex(449); // Map #449
 const TEAM3_MAP = getTotdByIndex(431); // Map #431
 const TEAM4_MAP = getTotdByIndex(416); // Map #416
 
+const TOTAL_MAPS = 2000;
+
 const INITIAL_TEAMS: TeamStatus[] = [
     {
         id: "team1",
         name: "Team 1",
         rank: 1,
         color: "#60a5fa",
-        mapsFinished: 452,
-        totalMaps: totds.length,
+        mapsFinished: TOTAL_MAPS - 453, // 1547
+        totalMaps: TOTAL_MAPS,
         currentMap: {
             name: TEAM1_MAP.name,
             authorName: TEAM1_MAP.authorName,
             mapUid: TEAM1_MAP.mapUid,
             date: TEAM1_MAP.date,
             authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId) // Use mapId (UUID) for thumbnail
+            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId)
         },
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
@@ -88,8 +90,8 @@ const INITIAL_TEAMS: TeamStatus[] = [
         name: "Team 2",
         rank: 2,
         color: "#a78bfa",
-        mapsFinished: 448,
-        totalMaps: totds.length,
+        mapsFinished: TOTAL_MAPS - 449, // 1551
+        totalMaps: TOTAL_MAPS,
         currentMap: {
             name: TEAM2_MAP.name,
             authorName: TEAM2_MAP.authorName,
@@ -107,8 +109,8 @@ const INITIAL_TEAMS: TeamStatus[] = [
         name: "Team 3",
         rank: 3,
         color: "#f472b6",
-        mapsFinished: 430,
-        totalMaps: totds.length,
+        mapsFinished: TOTAL_MAPS - 431, // 1569
+        totalMaps: TOTAL_MAPS,
         currentMap: {
             name: TEAM3_MAP.name,
             authorName: TEAM3_MAP.authorName,
@@ -126,8 +128,8 @@ const INITIAL_TEAMS: TeamStatus[] = [
         name: "Team 4",
         rank: 4,
         color: "#34d399",
-        mapsFinished: 415,
-        totalMaps: totds.length,
+        mapsFinished: TOTAL_MAPS - 416, // 1584
+        totalMaps: TOTAL_MAPS,
         currentMap: {
             name: TEAM4_MAP.name,
             authorName: TEAM4_MAP.authorName,
