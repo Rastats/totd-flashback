@@ -394,6 +394,9 @@ export default function LeaderboardPage() {
                                     // Calculate fake position based on mapsFinished
                                     const percent = (team.mapsFinished / team.totalMaps) * 100;
                                     const isTop = i % 2 === 0;
+                                    // Stagger heights: Teams 1&2 (i=0,1) get longer arrows to be outer
+                                    // Teams 3&4 (i=2,3) get shorter arrows to be inner
+                                    const arrowHeight = (i < 2) ? 35 : 20;
 
                                     return (
                                         <div key={team.id} style={{
@@ -433,7 +436,7 @@ export default function LeaderboardPage() {
                                                     /* Label Above */
                                                     <>
                                                         <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginBottom: 2 }}>{team.name}</div>
-                                                        <div style={{ width: 2, height: 20, background: team.color }}></div>
+                                                        <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
                                                         {/* Arrow Tip Down */}
                                                         <div style={{
                                                             width: 0, height: 0,
@@ -454,7 +457,7 @@ export default function LeaderboardPage() {
                                                             borderBottom: `4px solid ${team.color}`,
                                                             marginTop: -2
                                                         }}></div>
-                                                        <div style={{ width: 2, height: 20, background: team.color }}></div>
+                                                        <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
                                                         <div style={{ fontSize: 10, color: team.color, fontWeight: "bold", marginTop: 2 }}>{team.name}</div>
                                                     </>
                                                 )}
