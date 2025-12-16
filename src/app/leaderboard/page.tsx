@@ -201,7 +201,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
             </div>
 
             {/* Header */}
-            <div style={{ padding: 16, background: "rgba(0,0,0,0.2)", textAlign: "center", borderBottom: "1px solid #334155" }}>
+            <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", textAlign: "center", borderBottom: "1px solid #334155" }}>
                 <h3 style={{ margin: 0, fontSize: 24, fontWeight: "bold", color: team.color }}>{team.name}</h3>
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
                     {team.mapsFinished} / {team.totalMaps} maps
@@ -209,7 +209,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
             </div>
 
             {/* Map Info */}
-            <div style={{ padding: 16, flex: 1 }}>
+            <div style={{ padding: 12, flex: 1 }}>
                 <a
                     href={getTrackmaniaIoUrl(team.currentMap.mapUid)}
                     target="_blank"
@@ -330,13 +330,13 @@ export default function LeaderboardPage() {
         <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
             {/* Header removed, using global layout */}
 
-            <main style={{ padding: "48px 24px 24px", maxWidth: 1600, margin: "0 auto" }}>
+            <main style={{ padding: "24px", maxWidth: 1600, margin: "0 auto" }}>
                 {/* Dashboard Header - Centered Timer */}
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "1fr auto 1fr",
                     alignItems: "center",
-                    marginBottom: 48,
+                    marginBottom: 24,
                     gap: 16
                 }}>
                     {/* Left: Title */}
@@ -361,10 +361,17 @@ export default function LeaderboardPage() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
                     {/* LEFT COLUMN: Teams Grid & Timeline */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                        {/* Teams Grid (4 columns now since Joker removed) */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                            {teams.map(team => (
+                                <TeamCard key={team.id} team={team} />
+                            ))}
+                        </div>
 
                         {/* Visual Timeline (Static Mockup) */}
-                        <div style={{ background: "#1e293b", padding: 24, borderRadius: 12, border: "1px solid #334155" }}>
+                        <div style={{ background: "#1e293b", padding: 16, borderRadius: 12, border: "1px solid #334155" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                                 <h3 style={{ margin: 0, fontSize: 18 }}>Event Timeline</h3>
                                 <div style={{ fontSize: 12, opacity: 0.6 }}>Progress towards July 2020</div>
@@ -409,13 +416,6 @@ export default function LeaderboardPage() {
                                 })}
                             </div>
                             <div style={{ height: 20 }}></div>
-                        </div>
-
-                        {/* Teams Grid (4 columns now since Joker removed) */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-                            {teams.map(team => (
-                                <TeamCard key={team.id} team={team} />
-                            ))}
                         </div>
                     </div>
 
