@@ -181,23 +181,43 @@ export default function CasterSignupPage() {
 
         const slotsOnDay = availability.filter(s => s.date === date).sort((a, b) => a.startHour - b.startHour);
 
-        let newStart: number;
-        let newEnd: number;
+        let newStart: number | null = null;
+        let newEnd: number | null = null;
 
         if (slotsOnDay.length > 0) {
-            // Start 1h after the end of the latest slot
+            // First try: 1h after the end of the latest slot
             const lastSlot = slotsOnDay[slotsOnDay.length - 1];
-            newStart = lastSlot.endHour + 1;
-            newEnd = newStart + 1;
+            if (lastSlot.endHour + 1 < day.endHour) {
+                newStart = lastSlot.endHour + 1;
+                newEnd = Math.min(newStart + 1, day.endHour);
+            }
 
-            // Check if this fits within the day
-            if (newStart >= day.endHour) {
+            // If no room after last slot, search for gaps
+            if (newStart === null) {
+                // Check if we can fit before the first slot
+                if (slotsOnDay[0].startHour >= day.startHour + 1) {
+                    newStart = day.startHour;
+                    newEnd = Math.min(newStart + 1, slotsOnDay[0].startHour);
+                }
+            }
+
+            // Check gaps between slots
+            if (newStart === null) {
+                for (let i = 0; i < slotsOnDay.length - 1; i++) {
+                    const gapStart = slotsOnDay[i].endHour;
+                    const gapEnd = slotsOnDay[i + 1].startHour;
+                    if (gapEnd - gapStart >= 1) {
+                        newStart = gapStart;
+                        newEnd = Math.min(gapStart + 1, gapEnd);
+                        break;
+                    }
+                }
+            }
+
+            if (newStart === null || newEnd === null) {
                 setError("No more available time on this day");
                 return;
             }
-
-            // Clamp end to day.endHour
-            newEnd = Math.min(newEnd, day.endHour);
         } else {
             // No existing slots - add first 1h slot at day start
             newStart = day.startHour;
@@ -206,7 +226,7 @@ export default function CasterSignupPage() {
 
         // Final check for overlap
         const hasOverlap = slotsOnDay.some(s =>
-            (newStart < s.endHour && newEnd > s.startHour)
+            (newStart! < s.endHour && newEnd! > s.startHour)
         );
 
         if (hasOverlap || newEnd <= newStart) {
@@ -316,11 +336,6 @@ export default function CasterSignupPage() {
             <h1 style={{ fontSize: 32, marginBottom: 8 }}>Sign Up as Caster</h1>
             <p style={{ opacity: 0.85, marginBottom: 32 }}>Apply to cast on the official TOTD Flashback stream.</p>
 
-            {error && (
-                <div style={{ padding: 16, background: "#4a1a1a", borderRadius: 8, marginBottom: 24, color: "#f87171" }}>
-                    {error}
-                </div>
-            )}
 
             <form onSubmit={handleSubmit}>
                 {/* IDENTITY */}
@@ -375,6 +390,12 @@ export default function CasterSignupPage() {
                                 <option key={tz.value} value={tz.value}>{tz.label}</option>
                             ))}
                         </select>
+
+                        {error && (
+                            <div style={{ padding: 12, background: "#4a1a1a", borderRadius: 6, marginTop: 8, color: "#f87171", fontSize: 13 }}>
+                                {error}
+                            </div>
+                        )}
                     </div>
 
                     {/* AVAILABILITY - Right after timezone */}

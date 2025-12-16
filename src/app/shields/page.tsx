@@ -115,7 +115,7 @@ export default function ShieldsPage() {
                 <h2 style={{ fontSize: 18, marginBottom: 12 }}>📋 Shield Rules</h2>
                 <ul style={{ lineHeight: 1.8, opacity: 0.9, paddingLeft: 20 }}>
                     <li>Shields do <strong>NOT stack</strong> and do <strong>NOT queue</strong></li>
-                    <li>At 500€ multiples, <strong>Big Shield overrides Small Shield</strong></li>
+                    <li>At £500 multiples, <strong>Big Shield overrides Small Shield</strong></li>
                     <li>If a milestone is crossed during cooldown, it does not trigger</li>
                     <li>When shielded, new penalties are <strong>blocked and lost</strong> (not queued)</li>
                 </ul>
