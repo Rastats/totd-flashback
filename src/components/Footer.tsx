@@ -53,7 +53,7 @@ export default function Footer() {
 
                         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                             <a
-                                href="https://discord.gg/YMHdQXB3eC"
+                                href="https://discord.gg/invite/8CtzptmJ4s"
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{ color: "#7289da", fontSize: 14, fontWeight: 500, textDecoration: "none" }}
