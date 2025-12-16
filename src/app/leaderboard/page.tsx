@@ -238,11 +238,11 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                             background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
                             backgroundColor: "#000",
                         }} />
-                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
-                            <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.8)" }}>
+                            <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 0 }}>
                                 {team.currentMap.name}
                             </div>
-                            <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 2 }}>
+                            <div style={{ fontSize: 11, opacity: 0.8, fontStyle: "italic", marginBottom: 0 }}>
                                 by {team.currentMap.authorName}
                             </div>
                             <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 12, opacity: 0.8 }}>
@@ -299,6 +299,9 @@ export default function LeaderboardPage() {
     const [teams, setTeams] = useState<TeamStatus[]>(INITIAL_TEAMS);
     const [feed, setFeed] = useState<FeedEvent[]>(INITIAL_FEED);
     const [timeLeftMs, setTimeLeftMs] = useState(0);
+
+    // Sort teams by mapsFinished (descending)
+    const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
 
     // Countdown Effect
     useEffect(() => {
@@ -366,8 +369,8 @@ export default function LeaderboardPage() {
 
                         {/* Teams Grid (4 columns now since Joker removed) */}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-                            {teams.map(team => (
-                                <TeamCard key={team.id} team={team} />
+                            {sortedTeams.map((team, index) => (
+                                <TeamCard key={team.id} team={{ ...team, rank: index + 1 }} />
                             ))}
                         </div>
 
