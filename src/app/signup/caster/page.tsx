@@ -1,9 +1,9 @@
 "use client";
 // src/app/signup/caster/page.tsx
 
-import { useState, useMemo, FormEvent } from "react";
+import { useState, useMemo, FormEvent, useEffect, useRef } from "react";
 import Link from "next/link";
-import { COMMON_TIMEZONES, LANGUAGES, getEventDays, getHoursOptions } from "@/lib/timezones";
+import { COMMON_TIMEZONES, LANGUAGES, getEventDays, getHoursOptions, EVENT_START_UTC, EVENT_END_UTC } from "@/lib/timezones";
 import type { AvailabilitySlot, PreferenceLevel } from "@/lib/types";
 
 interface AvailabilityEntry {
@@ -61,6 +61,64 @@ export default function CasterSignupPage() {
 
     const eventDays = useMemo(() => getEventDays(formData.timezone), [formData.timezone]);
     const hoursOptions = getHoursOptions();
+    const previousTimezone = useRef<string>("");
+
+    // Convert availability slots when timezone changes
+    useEffect(() => {
+        const oldTz = previousTimezone.current;
+        const newTz = formData.timezone;
+
+        if (oldTz && newTz && oldTz !== newTz && availability.length > 0) {
+            // Convert each slot's hours from old timezone to new timezone
+            const convertedSlots = availability.map(slot => {
+                // Create a date in the old timezone for this slot
+                const [year, month, day] = slot.date.split('-').map(Number);
+
+                // Get the UTC offset difference between timezones for this date
+                const testDate = new Date(year, month - 1, day, slot.startHour);
+
+                const oldFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: oldTz,
+                    hour: 'numeric',
+                    hour12: false,
+                });
+                const newFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: newTz,
+                    hour: 'numeric',
+                    hour12: false,
+                });
+
+                // Calculate hour offset by comparing the same UTC time in both zones
+                const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                const oldHour = parseInt(oldFormatter.format(utcDate));
+                const newHour = parseInt(newFormatter.format(utcDate));
+                const hourOffset = newHour - oldHour;
+
+                // Apply offset to start and end hours
+                let newStartHour = slot.startHour + hourOffset;
+                let newEndHour = slot.endHour + hourOffset;
+
+                // Clamp to valid hours (0-24)
+                newStartHour = Math.max(0, Math.min(23, newStartHour));
+                newEndHour = Math.max(1, Math.min(24, newEndHour));
+
+                // Ensure end > start
+                if (newEndHour <= newStartHour) {
+                    newEndHour = newStartHour + 1;
+                }
+
+                return {
+                    ...slot,
+                    startHour: newStartHour,
+                    endHour: newEndHour,
+                };
+            });
+
+            setAvailability(convertedSlots);
+        }
+
+        previousTimezone.current = newTz;
+    }, [formData.timezone]);
 
     const addAvailabilitySlot = (date: string) => {
         // Find the day to get valid start/end hours
@@ -215,6 +273,17 @@ export default function CasterSignupPage() {
                     </div>
 
                     <div style={{ marginBottom: 16 }}>
+                        <label style={labelStyle}>Twitch Username (optional)</label>
+                        <input
+                            type="text"
+                            placeholder="yourchannel"
+                            value={formData.twitchUsername}
+                            onChange={(e) => setFormData({ ...formData, twitchUsername: e.target.value })}
+                            style={inputStyle}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: 16 }}>
                         <label style={labelStyle}>Timezone *</label>
                         <select
                             value={formData.timezone}
@@ -309,6 +378,16 @@ export default function CasterSignupPage() {
                         </div>
                     )}
 
+                    <div style={{ marginTop: 16 }}>
+                        <label style={labelStyle}>Availability constraints (optional)</label>
+                        <textarea
+                            placeholder="Any specific constraints?"
+                            value={formData.availabilityConstraints}
+                            onChange={(e) => setFormData({ ...formData, availabilityConstraints: e.target.value })}
+                            style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+                        />
+                    </div>
+
                     <div style={{ marginBottom: 16 }}>
                         <label style={labelStyle}>English level</label>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -373,7 +452,7 @@ export default function CasterSignupPage() {
                                 checked={formData.canAppearOnMainStream}
                                 onChange={(e) => setFormData({ ...formData, canAppearOnMainStream: e.target.checked })}
                             />
-                            I can appear on voice on twitch.tv/rastats
+                            I accept to appear on voice and on camera on twitch.tv/rastats
                         </label>
 
                         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -386,26 +465,6 @@ export default function CasterSignupPage() {
                         </label>
                     </div>
 
-                    <div style={{ marginTop: 16 }}>
-                        <label style={labelStyle}>Availability constraints (optional)</label>
-                        <textarea
-                            placeholder="Any specific constraints?"
-                            value={formData.availabilityConstraints}
-                            onChange={(e) => setFormData({ ...formData, availabilityConstraints: e.target.value })}
-                            style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
-                        />
-                    </div>
-
-                    <div style={{ marginTop: 16 }}>
-                        <label style={labelStyle}>Twitch Username (optional)</label>
-                        <input
-                            type="text"
-                            placeholder="yourchannel"
-                            value={formData.twitchUsername}
-                            onChange={(e) => setFormData({ ...formData, twitchUsername: e.target.value })}
-                            style={inputStyle}
-                        />
-                    </div>
                 </div>
 
                 {/* CONSENTS */}
@@ -455,6 +514,6 @@ export default function CasterSignupPage() {
                     {submitting ? "Submitting..." : "Submit Application"}
                 </button>
             </form>
-        </main>
+        </main >
     );
 }

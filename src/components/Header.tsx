@@ -35,16 +35,6 @@ export default function Header() {
                     </Link>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        {/* Donation Counter - placeholder */}
-                        <div style={{
-                            padding: "6px 12px",
-                            background: "#2a2a3a",
-                            borderRadius: 6,
-                            fontSize: 14,
-                        }}>
-                            💰 <strong>£0</strong> raised
-                        </div>
-
                         {/* Donate Button */}
                         <button
                             onClick={() => setShowDonationModal(true)}
@@ -62,6 +52,16 @@ export default function Header() {
                         >
                             ❤️ Donate
                         </button>
+
+                        {/* Donation Counter */}
+                        <div style={{
+                            padding: "6px 12px",
+                            background: "#2a2a3a",
+                            borderRadius: 6,
+                            fontSize: 14,
+                        }}>
+                            💰 <strong>£0</strong> raised
+                        </div>
                     </div>
                 </nav>
             </header>

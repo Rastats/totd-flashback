@@ -7,30 +7,28 @@ export interface Donation {
     donorName: string;
     amount: number;
     currency: string;
-    teamSupported: string | null;
-    teamPunished: string | null;
-    penalty: string | null;
+    potTeam?: number | null;
+    penaltyTeam?: number | null;
+    isPotRandom?: boolean;
+    isPenaltyRandom?: boolean;
     timestamp: Date;
 }
 
-// For demo/testing - in production this would come from Tiltify API via /api/donations
+// For demo/testing
 const DEMO_DONATIONS: Donation[] = [];
 
 export default function DonationNotifications() {
     const [notifications, setNotifications] = useState<Donation[]>([]);
-    const [isEnabled, setIsEnabled] = useState(true); // Toggle to disable during dev
+    const [isEnabled, setIsEnabled] = useState(true);
 
-    // Add a notification
     const addNotification = useCallback((donation: Donation) => {
-        setNotifications((prev) => [donation, ...prev].slice(0, 5)); // Keep last 5
-
-        // Auto-remove after 10 seconds
+        setNotifications((prev) => [donation, ...prev].slice(0, 5));
         setTimeout(() => {
             setNotifications((prev) => prev.filter((n) => n.id !== donation.id));
         }, 10000);
     }, []);
 
-    // Expose function globally for testing/manual triggers
+    // Expose function globally
     useEffect(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).triggerDonation = (data: Partial<Donation>) => {
@@ -39,9 +37,10 @@ export default function DonationNotifications() {
                 donorName: data.donorName || "Anonymous",
                 amount: data.amount || 10,
                 currency: data.currency || "€",
-                teamSupported: data.teamSupported || null,
-                teamPunished: data.teamPunished || null,
-                penalty: data.penalty || null,
+                potTeam: data.potTeam || 1,
+                penaltyTeam: data.penaltyTeam || 2,
+                isPotRandom: data.isPotRandom || false,
+                isPenaltyRandom: data.isPenaltyRandom || false,
                 timestamp: new Date(),
             });
         };
@@ -52,16 +51,52 @@ export default function DonationNotifications() {
         };
     }, [addNotification]);
 
-    // TODO: Poll /api/donations endpoint when Tiltify API is available
-    // useEffect(() => {
-    //     const fetchDonations = async () => {
-    //         const res = await fetch("/api/donations");
-    //         const data = await res.json();
-    //         // Process new donations...
-    //     };
-    //     const interval = setInterval(fetchDonations, 5000);
-    //     return () => clearInterval(interval);
-    // }, []);
+    // Poll endpoint
+    useEffect(() => {
+        const fetchDonations = async () => {
+            try {
+                const res = await fetch("/api/donations");
+                if (res.ok) {
+                    const data = await res.json();
+                    processNewDonations(data.recentDonations);
+                }
+            } catch (err) {
+                console.error("Polling error", err);
+            }
+        };
+
+        fetchDonations();
+        const interval = setInterval(fetchDonations, 10000);
+        return () => clearInterval(interval);
+    }, [notifications]);
+
+    const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
+
+    const processNewDonations = (recent: any[]) => {
+        if (!recent || recent.length === 0) return;
+
+        recent.forEach(d => {
+            if (!processedIds.has(d.id.toString())) {
+                addNotification({
+                    id: d.id.toString(),
+                    donorName: d.donorName,
+                    amount: Number(d.amount),
+                    currency: d.currency,
+                    potTeam: d.potTeam,
+                    penaltyTeam: d.penaltyTeam,
+                    isPotRandom: d.isPotRandom,
+                    isPenaltyRandom: d.isPenaltyRandom,
+                    timestamp: new Date(d.timestamp)
+                });
+
+                setProcessedIds(prev => {
+                    const next = new Set(prev);
+                    next.add(d.id.toString());
+                    return next;
+                });
+            }
+        });
+    };
 
     if (!isEnabled || notifications.length === 0) {
         return null;
@@ -101,32 +136,28 @@ export default function DonationNotifications() {
                         £{donation.amount.toFixed(2)} - {donation.donorName}
                     </div>
 
-                    {/* Line 3: Penalty → Team punished */}
-                    {donation.penalty && donation.teamPunished && (
-                        <div style={{
-                            padding: "6px 10px",
-                            background: "#4a1a2a",
-                            borderRadius: 6,
-                            fontSize: 14,
-                            color: "#f87171",
-                            marginBottom: 8,
-                        }}>
-                            {donation.penalty} → {donation.teamPunished}
-                        </div>
-                    )}
+                    {/* Line 3: Pot Increase */}
+                    <div style={{
+                        padding: "6px 10px",
+                        background: "#1a3a2a",
+                        borderRadius: 6,
+                        fontSize: 14,
+                        color: "#4ade80",
+                        marginBottom: 8,
+                    }}>
+                        📈 Pot: {donation.isPotRandom ? "Random" : (donation.potTeam ? `Team ${donation.potTeam}` : "Random")}
+                    </div>
 
-                    {/* Line 4: Bank emoji + Team supported */}
-                    {donation.teamSupported && (
-                        <div style={{
-                            padding: "6px 10px",
-                            background: "#1a3a2a",
-                            borderRadius: 6,
-                            fontSize: 14,
-                            color: "#4ade80",
-                        }}>
-                            💰 {donation.teamSupported}
-                        </div>
-                    )}
+                    {/* Line 4: Penalty */}
+                    <div style={{
+                        padding: "6px 10px",
+                        background: "#4a1a2a",
+                        borderRadius: 6,
+                        fontSize: 14,
+                        color: "#f87171",
+                    }}>
+                        ⚠️ Penalty: {donation.isPenaltyRandom ? "Random" : (donation.penaltyTeam ? `Team ${donation.penaltyTeam}` : "Random")}
+                    </div>
                 </div>
             ))}
 

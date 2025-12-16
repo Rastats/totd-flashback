@@ -35,7 +35,7 @@ export default function HowToJoinPage() {
                         <strong>Discord</strong> — For team coordination and staff communication
                     </li>
                     <li>
-                        <strong>Reliable availability</strong> — The event runs 69 hours non-stop; coverage matters!
+                        <strong>Reliable availability</strong> — The event runs 69 hours non-stop, coverage matters!
                     </li>
                 </ul>
             </section>
@@ -101,7 +101,7 @@ export default function HowToJoinPage() {
                         <strong>4 teams total</strong> (adjustable based on number of applicants)
                     </li>
                     <li>
-                        Teams are <strong>formed by staff</strong> to ensure full coverage
+                        Teams are <strong>formed by staff</strong> based on player affinities and availability to ensure full coverage
                     </li>
                     <li>
                         You can <strong>join with friends/as a group</strong>, but final assignment is staff-driven
@@ -122,7 +122,7 @@ export default function HowToJoinPage() {
             }}>
                 <h2 style={{ fontSize: 24, marginBottom: 16 }}>🎭 Roles</h2>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
                     <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
                         <div style={{ fontSize: 24, marginBottom: 8 }}>🎮</div>
                         <h3 style={{ marginBottom: 8 }}>Player</h3>
@@ -175,7 +175,7 @@ export default function HowToJoinPage() {
                         fontWeight: 600,
                         textDecoration: "none",
                     }}>
-                        🎮 Apply as Player/Streamer
+                        🎮 Apply as Player
                     </Link>
                     <Link href="/signup/caster" style={{
                         padding: "14px 28px",

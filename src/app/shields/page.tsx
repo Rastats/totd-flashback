@@ -54,8 +54,8 @@ export default function ShieldsPage() {
                     <h3 style={{ fontSize: 16, marginBottom: 8, color: "#3b82f6" }}>Effect</h3>
                     <ul style={{ lineHeight: 1.8, opacity: 0.9, paddingLeft: 20 }}>
                         <li><strong>Blocks ALL new penalties</strong> during its duration</li>
-                        <li>Does NOT cancel penalties already active</li>
-                        <li>Does NOT clear the waitlist</li>
+                        <li>Does NOT cancel currently active penalties</li>
+                        <li>Does NOT clear the penalty waitlist</li>
                     </ul>
                 </section>
 
@@ -99,7 +99,7 @@ export default function ShieldsPage() {
                     <ul style={{ lineHeight: 1.8, opacity: 0.9, paddingLeft: 20 }}>
                         <li><strong>Blocks ALL new penalties</strong> during its duration</li>
                         <li><strong>Cancels ALL currently active penalties</strong></li>
-                        <li><strong>Clears the waitlist</strong></li>
+                        <li><strong>Clears the penalty waitlist</strong></li>
                     </ul>
                 </section>
             </div>
@@ -133,7 +133,7 @@ export default function ShieldsPage() {
                     If Big Shield triggers while <strong>Back to the Future</strong> is ongoing:
                 </p>
                 <ul style={{ lineHeight: 1.8, opacity: 0.9, paddingLeft: 20, marginTop: 8 }}>
-                    <li>All maps with an index HIGHER than current are re-validated as completed</li>
+                    <li>All maps that were invalidated by the Back to the Future penalty are re-validated as completed</li>
                     <li>The Back to the Future penalty is cancelled</li>
                     <li>The team resumes on the highest uncompleted TOTD index</li>
                 </ul>

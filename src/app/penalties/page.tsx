@@ -10,7 +10,7 @@ const penalties = [
         cost: 5,
         color: "#4ade80",
         description: "Play 1 random TOTD that the team has NOT completed yet.",
-        details: "After finishing it, resume on the highest uncompleted TOTD index. Counts as 1 active penalty while in effect.",
+        details: "After finishing it, resume on the highest uncompleted TOTD index.",
     },
     {
         name: "Camera Shuffle",
@@ -18,7 +18,7 @@ const penalties = [
         cost: 10,
         color: "#4ade80",
         description: "On each checkpoint, the player must manually switch camera.",
-        details: "Allowed cameras: Cam 1, Alt Cam 1, Cam 2, Alt Cam 2, Cam 3, Cam 7. If 6+ checkpoints, use 6 different cameras. Applies to 1 map.",
+        details: "Applies to 1 map, no max duration. Allowed cameras: Cam 1, Alt Cam 1, Cam 2, Alt Cam 2, Cam 3, Cam 7. If 6+ checkpoints, use 6 different cameras.",
     },
     {
         name: "Cursed Controller",
@@ -43,15 +43,15 @@ const penalties = [
         cost: 35,
         color: "#facc15",
         description: "Always full throttle — no braking, no releasing accelerator.",
-        details: "Turning is allowed. Applies to 3 maps. Max 10 minutes total. After timeout, finish normally.",
+        details: "Applies to 3 maps. Max 10 minutes total. After timeout, finish normally.",
     },
     {
         name: "Tunnel Vision",
         tier: "Medium",
         cost: 50,
         color: "#facc15",
-        description: "Visibility set to '2 blocks' using the Finetuner plugin.",
-        details: "After 10 minutes without finish, visibility restored. Applies to 1 map.",
+        description: "Visibility set to render distance 60 (2 blocks) using the Finetuner plugin.",
+        details: "Applies to 1 map. Max 10 minutes total. After timeout, restore visibility and finish normally.",
     },
     // HEAVY
     {
@@ -59,7 +59,7 @@ const penalties = [
         tier: "Heavy",
         cost: 75,
         color: "#f87171",
-        description: "Immediate forced player swap + 10 maps un-completed.",
+        description: "Immediate forced player swap + last 10 maps un-completed.",
         details: "If no teammate available, 10-minute pause. The team's 10 most recently completed TOTDs must be re-finished in ascending order.",
     },
     {
@@ -75,8 +75,8 @@ const penalties = [
         tier: "Heavy",
         cost: 200,
         color: "#f87171",
-        description: "Must beat Author Time to leave the map.",
-        details: "Duration: 20 minutes. Penalty stays active on all maps during those 20 minutes. After timeout, penalty ends.",
+        description: "Must beat Author Time to proceed to the next map.",
+        details: "Duration: 20 minutes. Penalty stays active on all maps during those 20 minutes. After timeout, no medal required on map finish.",
     },
     {
         name: "Back to the Future",
@@ -112,7 +112,7 @@ export default function PenaltiesPage() {
                     <li>Each team can have <strong>max 2 active penalties</strong> at once</li>
                     <li>Extra penalties go to a <strong>waitlist</strong> (max 2 slots)</li>
                     <li>Waitlist is sorted by donation amount (higher = priority)</li>
-                    <li>Penalties start on <strong>next map load</strong> (never mid-map)</li>
+                    <li>Penalties start on <strong>next map load</strong> (except Player Switch, AT or Bust and Back to the Future)</li>
                     <li>If a <strong>shield is active</strong>, new penalties are blocked and lost</li>
                 </ul>
             </section>

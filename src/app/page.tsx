@@ -1,27 +1,32 @@
+"use client";
 // src/app/page.tsx
 
+import { useState } from "react";
 import Link from "next/link";
 import CountdownTimer from "@/components/CountdownTimer";
 import TwitchEmbed from "@/components/TwitchEmbed";
+import DonationModal from "@/components/DonationModal";
 
 export default function HomePage() {
+  const [showDonationModal, setShowDonationModal] = useState(false);
+
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
       {/* Hero */}
-      <section style={{ textAlign: "center", marginBottom: 48 }}>
-        <h1 style={{ fontSize: 48, marginBottom: 16, background: "linear-gradient(135deg, #60a5fa, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+      <section style={{ textAlign: "center", marginBottom: 55 }}>
+        <h1 style={{ fontSize: 55, marginBottom: 18, background: "linear-gradient(135deg, #60a5fa, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           TOTD Flashback
         </h1>
-        <p style={{ fontSize: 20, opacity: 0.9, marginBottom: 8 }}>
+        <p style={{ fontSize: 23, opacity: 0.9, marginBottom: 10 }}>
           Trackmania Charity Speedrun Marathon
         </p>
-        <p style={{ fontSize: 16, opacity: 0.7, marginBottom: 24 }}>
+        <p style={{ fontSize: 18, opacity: 0.7, marginBottom: 28 }}>
           Celebrating TOTD #2000 & Rastats&apos; 26th birthday 🎂
         </p>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/signup/player" style={{
-            padding: "14px 28px",
+            padding: "16px 32px",
             background: "linear-gradient(135deg, #60a5fa, #3b82f6)",
             borderRadius: 8,
             color: "#fff",
@@ -31,7 +36,7 @@ export default function HomePage() {
             🎮 Join as Player
           </Link>
           <Link href="/signup/caster" style={{
-            padding: "14px 28px",
+            padding: "16px 32px",
             background: "linear-gradient(135deg, #a855f7, #7c3aed)",
             borderRadius: 8,
             color: "#fff",
@@ -94,7 +99,7 @@ export default function HomePage() {
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Teams</div>
             <div style={{ fontSize: 18, fontWeight: 500 }}>4 Teams</div>
-            <div style={{ fontSize: 13, opacity: 0.6 }}>Staff-assigned + player affinities</div>
+            <div style={{ fontSize: 13, opacity: 0.6 }}>Based on player affinities and availabilities</div>
           </div>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Charity</div>
@@ -113,20 +118,20 @@ export default function HomePage() {
         textAlign: "center",
         marginBottom: 32,
       }}>
-        <h2 style={{ fontSize: 20, marginBottom: 12 }}>📺 Official Restream</h2>
+        <h2 style={{ fontSize: 24, marginBottom: 14 }}>📺 Official Restream</h2>
         <a
           href="https://twitch.tv/rastats"
           target="_blank"
           rel="noreferrer"
           style={{
             color: "#a855f7",
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: 500,
           }}
         >
           twitch.tv/rastats
         </a>
-        <p style={{ opacity: 0.7, marginTop: 8, fontSize: 14 }}>
+        <p style={{ opacity: 0.7, marginTop: 10, fontSize: 17 }}>
           Live commentary from our casters throughout the event
         </p>
       </section>
@@ -174,10 +179,8 @@ export default function HomePage() {
           <p style={{ opacity: 0.8, marginBottom: 12 }}>
             All donations go to <strong>Save the Children UK</strong> via Tiltify
           </p>
-          <a
-            href="https://donate.tiltify.com/0ce3def0-c80a-4581-b888-a8c89c1d16c9/details"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => setShowDonationModal(true)}
             style={{
               display: "inline-block",
               padding: "12px 24px",
@@ -185,12 +188,13 @@ export default function HomePage() {
               borderRadius: 8,
               color: "#fff",
               fontWeight: 600,
-              textDecoration: "none",
+              border: "none",
+              cursor: "pointer",
               boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
             }}
           >
             ❤️ Donate Now
-          </a>
+          </button>
         </div>
       </section>
 
@@ -212,7 +216,7 @@ export default function HomePage() {
         }}>
           <div style={{ fontSize: 24, marginBottom: 8 }}>⚠️</div>
           <div style={{ fontWeight: 500, marginBottom: 4 }}>Penalties</div>
-          <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>10 penalties from 5€ to 500€</div>
+          <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>10 penalties from £5 to £500</div>
           <div style={{ fontSize: 12, color: "#f87171" }}>View details →</div>
         </Link>
 
@@ -227,7 +231,7 @@ export default function HomePage() {
         }}>
           <div style={{ fontSize: 24, marginBottom: 8 }}>🛡️</div>
           <div style={{ fontWeight: 500, marginBottom: 4 }}>Shields</div>
-          <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>Small (100€) & Big (500€) shields</div>
+          <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>Small (£100) & Big (£500) shields</div>
           <div style={{ fontSize: 12, color: "#4ade80" }}>View details →</div>
         </Link>
 
@@ -246,6 +250,11 @@ export default function HomePage() {
           <div style={{ fontSize: 12, color: "#60a5fa" }}>View details →</div>
         </Link>
       </section>
+
+      <DonationModal
+        isOpen={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+      />
     </main>
   );
 }
