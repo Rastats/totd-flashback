@@ -1,12 +1,12 @@
+```
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 // --- Types (Dummy Data) ---
-type TeamId = "team1" | "team2" | "team3" | "team4" | "joker";
+type TeamId = "team1" | "team2" | "team3" | "team4";
 
 interface TeamStatus {
     id: TeamId;
@@ -109,23 +109,6 @@ const INITIAL_TEAMS: TeamStatus[] = [
         activeShield: null,
         activePenalties: [{ name: "Camera Shuffle", timeLeft: 800 }],
         penaltyQueue: 5
-    },
-    {
-        id: "joker",
-        name: "Jokers",
-        rank: 5,
-        color: "#fbbf24",
-        mapsFinished: 120,
-        totalMaps: 1500,
-        currentMap: {
-            name: "TOTD #121 - Retro Tech",
-            date: "November 2020",
-            authorTime: "00:35.123",
-            thumbnailUrl: "https://via.placeholder.com/300x169/1e293b/FFFFFF?text=Map+Thumbnail"
-        },
-        activeShield: { type: "small", timeLeft: 450 },
-        activePenalties: [],
-        penaltyQueue: 0
     }
 ];
 
@@ -140,7 +123,16 @@ const INITIAL_FEED: FeedEvent[] = [
 const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${ mins }:${ secs.toString().padStart(2, '0') } `;
+};
+
+const formatCountdown = (ms: number) => {
+    if (ms <= 0) return "EVENT ENDED";
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${ hours }h ${ mins }m ${ secs.toString().padStart(2, '0') } s`;
 };
 
 // --- Components ---
@@ -150,7 +142,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
         <div style={{
             background: "#1e293b",
             borderRadius: 12,
-            border: `2px solid ${team.color}`,
+            border: `2px solid ${ team.color } `,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -187,20 +179,20 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 
             {/* Map Info */}
             <div style={{ padding: 16, flex: 1 }}>
-                <div style={{
-                    aspectRatio: "16/9",
-                    background: "#0f172a",
-                    borderRadius: 8,
-                    marginBottom: 12,
+                <div style={{ 
+                    aspectRatio: "16/9", 
+                    background: "#0f172a", 
+                    borderRadius: 8, 
+                    marginBottom: 12, 
                     overflow: "hidden",
                     position: "relative"
                 }}>
                     {/* Placeholder for map image */}
-                    <div style={{
-                        width: "100%",
-                        height: "100%",
-                        background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
-                        opacity: 0.6
+                    <div style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        background: `url(${ team.currentMap.thumbnailUrl }) center / cover no - repeat`,
+                        opacity: 0.6 
                     }} />
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 8, background: "rgba(0,0,0,0.8)" }}>
                         <div style={{ fontSize: 14, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -243,7 +235,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                             <div style={{ fontSize: 13, opacity: 0.5, fontStyle: "italic" }}>None</div>
                         )}
                     </div>
-
+                    
                     {/* Queue */}
                     {team.penaltyQueue > 0 && (
                         <div style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center" }}>
@@ -259,13 +251,24 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 export default function LeaderboardPage() {
     const [teams, setTeams] = useState<TeamStatus[]>(INITIAL_TEAMS);
     const [feed, setFeed] = useState<FeedEvent[]>(INITIAL_FEED);
-    const [eventTimeLeft, setEventTimeLeft] = useState(69 * 3600); // 69 hours in seconds
+    const [timeLeftMs, setTimeLeftMs] = useState(0);
 
     // Countdown Effect
     useEffect(() => {
-        const timer = setInterval(() => {
-            setEventTimeLeft(prev => Math.max(0, prev - 1));
+        // Target: Dec 24, 2025 at 18:00:00 Paris Time (CET which is UTC+1)
+        // ISO string with offset: 2025-12-24T18:00:00+01:00
+        const targetDate = new Date("2025-12-24T18:00:00+01:00").getTime();
 
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const diff = targetDate - now;
+            setTimeLeftMs(Math.max(0, diff));
+        };
+
+        updateTimer(); // initial
+        const timer = setInterval(() => {
+            updateTimer();
+            
             // Randomly decrease shield/penalty timers for demo
             setTeams(prevTeams => prevTeams.map(team => ({
                 ...team,
@@ -277,41 +280,45 @@ export default function LeaderboardPage() {
         return () => clearInterval(timer);
     }, []);
 
-    const formatEventTime = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${hours}h ${mins}m ${secs.toString().padStart(2, '0')}s`;
-    };
-
     return (
         <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
-            <Header />
-
-            <main style={{ padding: "80px 24px 24px", maxWidth: 1600, margin: "0 auto" }}>
-                {/* Dashboard Header */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
+            {/* Header removed, using global layout */}
+            
+            <main style={{ padding: "48px 24px 24px", maxWidth: 1600, margin: "0 auto" }}>
+                {/* Dashboard Header - Centered Timer */}
+                <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "1fr auto 1fr", 
+                    alignItems: "center", 
+                    marginBottom: 48,
+                    gap: 16
+                }}>
+                    {/* Left: Title */}
                     <div>
-                        <h1 style={{ fontSize: 42, fontWeight: "bold", background: "linear-gradient(to right, #60a5fa, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: 0 }}>
+                        <h1 style={{ fontSize: 36, fontWeight: "bold", background: "linear-gradient(to right, #60a5fa, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: 0 }}>
                             LIVE LEADERBOARD
                         </h1>
-                        <p style={{ opacity: 0.6, marginTop: 4 }}>TOTD Flashback Event • tracking progress in real-time</p>
+                        <p style={{ opacity: 0.6, marginTop: 4, fontSize: 14 }}>TOTD Flashback Event • Real-time tracking</p>
                     </div>
 
-                    <div style={{ textAlign: "right", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155" }}>
-                        <div style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1, opacity: 0.7 }}>Event Time Remaining</div>
-                        <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff" }}>
-                            {formatEventTime(eventTimeLeft)}
+                    {/* Center: Timer */}
+                    <div style={{ textAlign: "center", background: "#1e293b", padding: "16px 32px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+                        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 4 }}>Time Remaining</div>
+                        <div style={{ fontSize: 42, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                            {formatCountdown(timeLeftMs)}
                         </div>
                     </div>
+
+                    {/* Right: Empty (for balance) */}
+                    <div></div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
                     {/* LEFT COLUMN: Teams Grid & Timeline */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-
-                        {/* Teams Grid */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+                        
+                        {/* Teams Grid (4 columns now since Joker removed) */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                             {teams.map(team => (
                                 <TeamCard key={team.id} team={team} />
                             ))}
@@ -323,10 +330,10 @@ export default function LeaderboardPage() {
                             <div style={{ position: "relative", height: 40, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
                                 {/* Timeline Track */}
                                 <div style={{ position: "absolute", left: 10, right: 10, height: 4, background: "#334155", borderRadius: 2 }}></div>
-
+                                
                                 {/* 2020 Marker */}
                                 <div style={{ position: "absolute", left: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>July 2020</div>
-
+                                
                                 {/* 2025 Marker */}
                                 <div style={{ position: "absolute", right: "2%", top: 45, fontSize: 12, opacity: 0.5 }}>Dec 2025</div>
 
@@ -335,20 +342,20 @@ export default function LeaderboardPage() {
                                     // Calculate fake position based on mapsFinished
                                     const percent = (team.mapsFinished / team.totalMaps) * 100;
                                     return (
-                                        <div key={team.id} style={{
-                                            position: "absolute",
-                                            left: `${percent}%`,
+                                        <div key={team.id} style={{ 
+                                            position: "absolute", 
+                                            left: `${ percent }% `, 
                                             top: -6 + (i % 2 === 0 ? -15 : 15), // stagger
                                             transform: "translateX(-50%)",
                                             display: "flex",
                                             flexDirection: "column",
                                             alignItems: "center"
                                         }}>
-                                            <div style={{
-                                                width: 12,
-                                                height: 12,
-                                                borderRadius: "50%",
-                                                background: team.color,
+                                            <div style={{ 
+                                                width: 12, 
+                                                height: 12, 
+                                                borderRadius: "50%", 
+                                                background: team.color, 
                                                 border: "2px solid #fff",
                                                 boxShadow: "0 0 10px " + team.color
                                             }} />
@@ -362,10 +369,10 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* RIGHT COLUMN: Event Feed */}
-                    <div style={{
-                        background: "#1e293b",
-                        borderRadius: 12,
-                        border: "1px solid #334155",
+                    <div style={{ 
+                        background: "#1e293b", 
+                        borderRadius: 12, 
+                        border: "1px solid #334155", 
                         padding: 16,
                         height: "fit-content",
                         maxHeight: "800px",
@@ -375,9 +382,9 @@ export default function LeaderboardPage() {
                         <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {feed.map(event => (
-                                <div key={event.id} style={{
-                                    paddingRight: 8,
-                                    borderLeft: `3px solid ${event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff"}`,
+                                <div key={event.id} style={{ 
+                                    paddingRight: 8, 
+                                    borderLeft: `3px solid ${ event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff" } `,
                                     paddingLeft: 12
                                 }}>
                                     <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{event.timestamp}</div>
@@ -390,8 +397,9 @@ export default function LeaderboardPage() {
                     </div>
                 </div>
             </main>
-
+            
             <Footer />
         </div>
     );
 }
+```
