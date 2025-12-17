@@ -120,10 +120,17 @@ export async function POST(request: Request) {
                     } else {
                         // Successfully became active
                         newActive = playerName;
+                        // Also clear waiting if this player was waiting
+                        if (currentWaiting === playerName) {
+                            newWaiting = null;
+                        }
                         result = { success: true, reason: 'became_active' };
                     }
                 } else if (currentActive === playerName) {
-                    // Already active
+                    // Already active - but also clear waiting if somehow stuck there
+                    if (currentWaiting === playerName) {
+                        newWaiting = null;
+                    }
                     result = { success: true, reason: 'already_active' };
                 } else {
                     // Someone else is active, go to waiting
