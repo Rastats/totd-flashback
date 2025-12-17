@@ -34,12 +34,13 @@ description: Package and archive a new plugin version
    Copy-Item -Path "Latest\*" -Destination "X.XX.X\" -Recurse -Force
    ```
 
-5. **Copy to Openplanet plugins folder** (for testing):
+6. **Copy to Openplanet plugins folder** (optional - removes old versions):
    ```powershell
+   Remove-Item "$env:USERPROFILE\OpenplanetNext\Plugins\TOTD_Flashback_*.op" -Force -ErrorAction SilentlyContinue
    Copy-Item "Latest\TOTD_Flashback_X.XX.X.op" "$env:USERPROFILE\OpenplanetNext\Plugins\" -Force
    ```
 
-6. **Commit changes** (if applicable):
+7. **Commit changes** (if applicable):
    ```powershell
    git add .
    git commit -m "chore: Release plugin vX.XX.X"

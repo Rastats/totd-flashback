@@ -7,6 +7,7 @@ interface StatusPayload {
     account_id: string;
     player_name: string;
     action: 'set_active' | 'set_waiting' | 'set_spectator' | 'pass_turn';
+    team_id?: number; // For Jokers who don't have a team_assignment in the roster
 }
 
 export async function POST(request: Request) {
@@ -19,22 +20,38 @@ export async function POST(request: Request) {
 
         const supabase = getSupabaseAdmin();
 
-        // Get player's team from roster
+        // Get player from roster by name (case-insensitive)
+        // Note: account_id from plugin is WebServicesUserId, not trackmania_id
         const { data: player, error: playerError } = await supabase
             .from('players')
             .select('team_assignment, trackmania_name')
-            .or(`trackmania_id.eq.${data.account_id},trackmania_name.eq.${data.player_name}`)
+            .ilike('trackmania_name', data.player_name || '')
             .eq('status', 'approved')
             .single();
 
-        if (playerError || !player || !player.team_assignment) {
+        // If player not found or is a Joker (null team), we can't determine team
+        if (playerError || !player) {
+            console.log('[PlayerStatus] Player not found:', data.player_name);
             return NextResponse.json({
                 success: false,
                 reason: 'not_in_roster'
             });
         }
 
-        const teamId = player.team_assignment;
+        // Handle Jokers: they have team_assignment = null
+        // For Jokers, the plugin should send the team_id from Settings
+        let teamId = player.team_assignment;
+        if (!teamId && data.team_id) {
+            teamId = data.team_id; // Use team from plugin settings for Jokers
+        }
+
+        if (!teamId) {
+            return NextResponse.json({
+                success: false,
+                reason: 'no_team_assignment'
+            });
+        }
+
         const playerName = player.trackmania_name;
 
         // Get current team status
