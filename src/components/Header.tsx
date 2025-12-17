@@ -64,6 +64,25 @@ export default function Header() {
                             </Link>
                         )}
 
+                        {/* Roster Link (Admin only) */}
+                        {(session?.user?.isAdmin || captainInfo?.isAdmin) && (
+                            <Link href="/rosters-928374" style={{
+                                padding: "8px 16px",
+                                background: "rgba(16, 185, 129, 0.1)",
+                                border: "1px solid #10b981",
+                                borderRadius: 8,
+                                color: "#10b981",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                fontSize: 13,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6
+                            }}>
+                                📋 Rosters
+                            </Link>
+                        )}
+
                         {/* Captain Dashboard Link */}
                         {captainInfo?.isCaptain && captainInfo.teamId && (
                             <Link href={`/captain/${captainInfo.teamId}`} style={{
