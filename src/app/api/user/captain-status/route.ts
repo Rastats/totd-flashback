@@ -8,21 +8,24 @@ export async function GET() {
         return NextResponse.json({ isCaptain: false, teamId: null });
     }
 
-    // Admins are technically captains of everything, but for UI we might want to show "Admin Dashboard" instead
-    if (session.user.isAdmin) {
-        return NextResponse.json({ isCaptain: true, isAdmin: true, teamId: null });
-    }
+    let teamId = null;
+    let isCaptain = false;
 
+    // Check if user is a captain in the players table
     const { data } = await supabase
         .from("players")
-        .select("team_assignment")
+        .select("team_assignment, is_captain")
         .eq("discord_username", session.user.username)
-        .eq("is_captain", true)
         .single();
 
-    if (data && data.team_assignment) {
-        return NextResponse.json({ isCaptain: true, teamId: data.team_assignment });
+    if (data && data.is_captain && data.team_assignment) {
+        isCaptain = true;
+        teamId = data.team_assignment;
     }
 
-    return NextResponse.json({ isCaptain: false, teamId: null });
+    return NextResponse.json({
+        isCaptain,
+        teamId,
+        isAdmin: session.user.isAdmin
+    });
 }

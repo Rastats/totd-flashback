@@ -6,9 +6,9 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import DonationModal from "./DonationModal";
 
 export default function Header() {
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: any, status: string };
     const [showDonationModal, setShowDonationModal] = useState(false);
-    const [captainInfo, setCaptainInfo] = useState<{ isCaptain: boolean; teamId: string | null } | null>(null);
+    const [captainInfo, setCaptainInfo] = useState<{ isCaptain: boolean; teamId: string | null; isAdmin?: boolean } | null>(null);
 
     useEffect(() => {
         fetch("/api/user/captain-status")
@@ -45,6 +45,25 @@ export default function Header() {
                     </Link>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        {/* Admin Dashboard Link */}
+                        {(session?.user?.isAdmin || captainInfo?.isAdmin) && (
+                            <Link href="/admin" style={{
+                                padding: "8px 16px",
+                                background: "rgba(96, 165, 250, 0.1)",
+                                border: "1px solid #60a5fa",
+                                borderRadius: 8,
+                                color: "#60a5fa",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                fontSize: 13,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6
+                            }}>
+                                🛡️ Admin
+                            </Link>
+                        )}
+
                         {/* Captain Dashboard Link */}
                         {captainInfo?.isCaptain && captainInfo.teamId && (
                             <Link href={`/captain/${captainInfo.teamId}`} style={{
