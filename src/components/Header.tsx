@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DonationModal from "./DonationModal";
 
 export default function Header() {
     const [showDonationModal, setShowDonationModal] = useState(false);
+    const [captainInfo, setCaptainInfo] = useState<{ isCaptain: boolean; teamId: string | null } | null>(null);
+
+    useEffect(() => {
+        fetch("/api/user/captain-status")
+            .then(res => res.json())
+            .then(data => setCaptainInfo(data))
+            .catch(err => console.error("Failed to fetch captain status:", err));
+    }, []);
 
     return (
         <>
@@ -35,6 +43,25 @@ export default function Header() {
                     </Link>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        {/* Captain Dashboard Link */}
+                        {captainInfo?.isCaptain && captainInfo.teamId && (
+                            <Link href={`/captain/${captainInfo.teamId}`} style={{
+                                padding: "8px 16px",
+                                background: "rgba(234, 179, 8, 0.1)",
+                                border: "1px solid #eab308",
+                                borderRadius: 8,
+                                color: "#eab308",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                fontSize: 14,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6
+                            }}>
+                                👑 My Team
+                            </Link>
+                        )}
+
                         {/* Donate Button */}
                         <button
                             onClick={() => setShowDonationModal(true)}

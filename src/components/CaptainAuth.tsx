@@ -33,20 +33,19 @@ export default function CaptainAuth({ children, teamId }: CaptainAuthProps) {
             return;
         }
 
-        if (status === "authenticated" && user?.discordId) {
+        if (status === "authenticated") {
             // Admin has access to all teams
-            if (user.isAdmin) {
+            if (user?.isAdmin) {
                 setAuthorized(true);
                 setCheckingAuth(false);
                 return;
             }
 
-            // Check if user is captain of this team
+            // Check if user is captain of this team via server-side check
             fetch(`/api/captain-auth/${teamId}`)
                 .then(res => res.json())
                 .then(data => {
-                    const isCaptain = data.captainDiscordIds?.includes(user.discordId);
-                    setAuthorized(isCaptain);
+                    setAuthorized(data.authorized);
                     setCheckingAuth(false);
                 })
                 .catch(() => {

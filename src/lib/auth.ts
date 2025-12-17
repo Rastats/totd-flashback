@@ -26,19 +26,21 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 // Check if the user is a captain for a specific team
-export async function isCaptainOfTeam(teamId: number): Promise<boolean> {
+export async function isCaptainOfTeam(teamId: string): Promise<boolean> {
     const session = await getSession();
-    if (!session?.user?.discordId) return false;
+    if (!session?.user?.username) return false;
 
     // Admins can access any team
     if (session.user.isAdmin) return true;
 
-    // Check if the user is a captain for this team
+    // Check if the user is a captain for this team in the players table
+    // We match by discord_username since we don't have discord_id in players table
     const { data, error } = await supabase
-        .from("captains")
+        .from("players")
         .select("id")
-        .eq("discord_id", session.user.discordId)
-        .eq("team_id", teamId)
+        .eq("discord_username", session.user.username)
+        .eq("team_assignment", teamId)
+        .eq("is_captain", true)
         .single();
 
     return !error && !!data;
