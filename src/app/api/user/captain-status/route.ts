@@ -15,7 +15,7 @@ export async function GET() {
     const { data } = await supabase
         .from("players")
         .select("team_assignment, is_captain")
-        .eq("discord_username", session.user.username)
+        .ilike("discord_username", session.user.username)
         .single();
 
     if (data && data.is_captain && data.team_assignment) {

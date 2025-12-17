@@ -38,7 +38,7 @@ export async function isCaptainOfTeam(teamId: string): Promise<boolean> {
     const { data, error } = await supabase
         .from("players")
         .select("id")
-        .eq("discord_username", session.user.username)
+        .ilike("discord_username", session.user.username)
         .eq("team_assignment", teamId)
         .eq("is_captain", true)
         .single();
