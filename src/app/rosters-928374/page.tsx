@@ -31,20 +31,43 @@ export default function RostersPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        Promise.all([
-            fetch("/api/rosters").then(res => res.json()),
-            fetch("/api/casters").then(res => res.json())
-        ])
-            .then(([playersData, castersData]) => {
-                setPlayers(playersData);
-                // Filter only approved casters for public roster
-                setCasters((castersData as CasterRoster[]).filter(c => c.status === "approved"));
+        const fetchData = async () => {
+            try {
+                const [playersRes, castersRes] = await Promise.all([
+                    fetch("/api/rosters"),
+                    fetch("/api/casters")
+                ]);
+
+                if (!playersRes.ok) throw new Error("Failed to fetch players");
+                const playersData = await playersRes.json();
+
+                if (Array.isArray(playersData)) {
+                    setPlayers(playersData);
+                } else {
+                    console.error("Players data is not an array:", playersData);
+                    setPlayers([]);
+                }
+
+                if (castersRes.ok) {
+                    const castersData = await castersRes.json();
+                    if (Array.isArray(castersData)) {
+                        setCasters((castersData as CasterRoster[]).filter(c => c.status === "approved"));
+                    } else {
+                        console.error("Casters data is not an array:", castersData);
+                        setCasters([]);
+                    }
+                } else {
+                    console.warn("Failed to fetch casters");
+                    setCasters([]);
+                }
+            } catch (err) {
+                console.error("Error loading rosters:", err);
+            } finally {
                 setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
+            }
+        };
+
+        fetchData();
     }, []);
 
     const getTeamPlayers = (team: string) => {
