@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession, signIn, signOut } from "next-auth/react";
 import DonationModal from "./DonationModal";
 
 export default function Header() {
+    const { data: session } = useSession();
     const [showDonationModal, setShowDonationModal] = useState(false);
     const [captainInfo, setCaptainInfo] = useState<{ isCaptain: boolean; teamId: string | null } | null>(null);
 
@@ -53,13 +55,57 @@ export default function Header() {
                                 color: "#eab308",
                                 fontWeight: 600,
                                 textDecoration: "none",
-                                fontSize: 14,
+                                fontSize: 13,
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 6
                             }}>
                                 👑 My Team
                             </Link>
+                        )}
+
+                        {/* Login Button Area */}
+                        {session ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                {session.user?.image && (
+                                    <img
+                                        src={session.user.image}
+                                        alt="User"
+                                        style={{ width: 32, height: 32, borderRadius: "50%", border: "2px solid #334155" }}
+                                    />
+                                )}
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "end" }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: "#cbd5e1" }}>
+                                        {session.user?.name}
+                                    </span>
+                                    {/* Sign Out (text link for minimalism) */}
+                                    <button
+                                        onClick={() => signOut()}
+                                        style={{ background: "none", border: "none", color: "#64748b", fontSize: 11, cursor: "pointer", padding: 0 }}
+                                    >
+                                        Sign out
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => signIn("discord")}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "#5865F2", // Discord Blurple
+                                    borderRadius: 8,
+                                    color: "#fff",
+                                    fontWeight: 600,
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: 13,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8
+                                }}
+                            >
+                                <span>Login</span>
+                            </button>
                         )}
 
                         {/* Donate Button */}
@@ -75,20 +121,11 @@ export default function Header() {
                                 cursor: "pointer",
                                 fontSize: 14,
                                 boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                                marginLeft: 8
                             }}
                         >
                             ❤️ Donate
                         </button>
-
-                        {/* Donation Counter */}
-                        <div style={{
-                            padding: "6px 12px",
-                            background: "#2a2a3a",
-                            borderRadius: 6,
-                            fontSize: 14,
-                        }}>
-                            💰 <strong>£0</strong> raised
-                        </div>
                     </div>
                 </nav>
             </header>

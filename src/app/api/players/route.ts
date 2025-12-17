@@ -41,6 +41,7 @@ export async function GET() {
             status: p.status,
             teamAssignment: p.team_assignment,
             submittedAt: p.created_at,
+            isCaptain: p.is_captain, // Added missing field mapping
             availability: (p.availability_slots || []).map((s: { date: string; start_hour: number; end_hour: number; preference: string }) => ({
                 date: s.date,
                 startHour: s.start_hour,

@@ -547,21 +547,23 @@ export default function AdminPage() {
                                                         <option value="joker">Joker</option>
                                                     </select>
 
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            updatePlayerCaptain(player.id, !player.isCaptain);
-                                                        }}
-                                                        style={{
-                                                            ...buttonStyle,
-                                                            background: player.isCaptain ? "#eab308" : "#2a2a3a",
-                                                            color: player.isCaptain ? "#000" : "#fbbf24",
-                                                            border: "1px solid #fbbf24"
-                                                        }}
-                                                        title={player.isCaptain ? "Remove Captain" : "Make Captain"}
-                                                    >
-                                                        {player.isCaptain ? "👑 Captain" : "👑 Make Captain"}
-                                                    </button>
+                                                    {player.teamAssignment !== "joker" && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                updatePlayerCaptain(player.id, !player.isCaptain);
+                                                            }}
+                                                            style={{
+                                                                ...buttonStyle,
+                                                                background: player.isCaptain ? "#eab308" : "#2a2a3a",
+                                                                color: player.isCaptain ? "#000" : "#fbbf24",
+                                                                border: "1px solid #fbbf24"
+                                                            }}
+                                                            title={player.isCaptain ? "Remove Captain" : "Make Captain"}
+                                                        >
+                                                            {player.isCaptain ? "👑 Captain" : "👑 Make Captain"}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
