@@ -87,6 +87,21 @@ export default function AdminPage() {
         }
     };
 
+    const updatePlayerCaptain = async (id: string, isCaptain: boolean) => {
+        try {
+            const res = await fetch(`/api/admin/players/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isCaptain }),
+            });
+            if (res.ok) {
+                fetchData();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const updateCasterStatus = async (id: string, status: ApplicationStatus) => {
         try {
             const res = await fetch(`/api/admin/casters/${id}`, {
@@ -366,6 +381,7 @@ export default function AdminPage() {
                                     <span>🌍 {player.timezone}</span>
                                     <span>🎮 {player.canStream ? "Streamer" : "Player"}</span>
                                     <span>💡 Fast-learn: {player.fastLearnLevel}/10</span>
+                                    {player.isCaptain && <span style={{ color: "#fbbf24" }}>👑 Captain</span>}
                                     {player.willingJoker && <span>🃏 Joker OK</span>}
                                     {player.comingAsGroup && <span>👥 Group</span>}
                                 </div>
@@ -513,22 +529,40 @@ export default function AdminPage() {
                                                 </button>
                                             )}
                                             {player.status === "approved" && (
-                                                <select
-                                                    value={player.teamAssignment || ""}
-                                                    onChange={(e) => {
-                                                        e.stopPropagation();
-                                                        updatePlayerTeam(player.id, (e.target.value || null) as TeamAssignment);
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    style={inputStyle}
-                                                >
-                                                    <option value="">Unassigned</option>
-                                                    <option value="team1">Team 1</option>
-                                                    <option value="team2">Team 2</option>
-                                                    <option value="team3">Team 3</option>
-                                                    <option value="team4">Team 4</option>
-                                                    <option value="joker">Joker</option>
-                                                </select>
+                                                <div style={{ display: "flex", gap: 8 }}>
+                                                    <select
+                                                        value={player.teamAssignment || ""}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            updatePlayerTeam(player.id, (e.target.value || null) as TeamAssignment);
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={inputStyle}
+                                                    >
+                                                        <option value="">Unassigned</option>
+                                                        <option value="team1">Team 1</option>
+                                                        <option value="team2">Team 2</option>
+                                                        <option value="team3">Team 3</option>
+                                                        <option value="team4">Team 4</option>
+                                                        <option value="joker">Joker</option>
+                                                    </select>
+
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updatePlayerCaptain(player.id, !player.isCaptain);
+                                                        }}
+                                                        style={{
+                                                            ...buttonStyle,
+                                                            background: player.isCaptain ? "#eab308" : "#2a2a3a",
+                                                            color: player.isCaptain ? "#000" : "#fbbf24",
+                                                            border: "1px solid #fbbf24"
+                                                        }}
+                                                        title={player.isCaptain ? "Remove Captain" : "Make Captain"}
+                                                    >
+                                                        {player.isCaptain ? "👑 Captain" : "👑 Make Captain"}
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

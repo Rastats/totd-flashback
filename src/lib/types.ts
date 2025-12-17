@@ -51,6 +51,7 @@ export interface PlayerApplication {
 
     // Staff fields
     teamAssignment: TeamAssignment;
+    isCaptain: boolean;
     staffInternalNotes: string;
 }
 

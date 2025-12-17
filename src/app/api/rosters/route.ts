@@ -7,7 +7,7 @@ export async function GET() {
     try {
         const { data: players, error } = await supabase
             .from('players')
-            .select('id, trackmania_name, discord_username, team_assignment, twitch_username, can_stream, status')
+            .select('id, trackmania_name, discord_username, team_assignment, twitch_username, can_stream, status, is_captain')
             .eq('status', 'approved');
 
         if (error) {
@@ -22,6 +22,7 @@ export async function GET() {
             teamAssignment: p.team_assignment,
             twitchUsername: p.twitch_username,
             canStream: p.can_stream,
+            isCaptain: p.is_captain,
         }));
 
         return NextResponse.json(transformed);

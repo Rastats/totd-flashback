@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ApplicationStatus, AvailabilitySlot } from "@/lib/types";
 
 interface RosterPlayer {
     id: string;
@@ -10,19 +11,34 @@ interface RosterPlayer {
     teamAssignment: "team1" | "team2" | "team3" | "team4" | "joker" | null;
     twitchUsername?: string;
     canStream: boolean;
+    isCaptain?: boolean;
+}
+
+interface CasterRoster {
+    id: string;
+    displayName: string;
+    discordUsername: string;
+    twitchUsername?: string;
+    englishLevel: string;
+    status: ApplicationStatus;
 }
 
 const TEAMS = ["team1", "team2", "team3", "team4", "joker"] as const;
 
 export default function RostersPage() {
     const [players, setPlayers] = useState<RosterPlayer[]>([]);
+    const [casters, setCasters] = useState<CasterRoster[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch("/api/rosters")
-            .then(res => res.json())
-            .then(data => {
-                setPlayers(data);
+        Promise.all([
+            fetch("/api/rosters").then(res => res.json()),
+            fetch("/api/casters").then(res => res.json())
+        ])
+            .then(([playersData, castersData]) => {
+                setPlayers(playersData);
+                // Filter only approved casters for public roster
+                setCasters((castersData as CasterRoster[]).filter(c => c.status === "approved"));
                 setLoading(false);
             })
             .catch(err => {
@@ -53,10 +69,64 @@ export default function RostersPage() {
 
             <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: 24,
                 alignItems: "start"
             }}>
+                {/* Casters Section */}
+                <div style={{
+                    background: "#1e293b",
+                    borderRadius: 12,
+                    border: "1px solid #334155",
+                    overflow: "hidden",
+                    gridColumn: "1 / -1", // Full width on small screens, or specific placement
+                    maxWidth: "800px",
+                    margin: "0 auto 24px auto",
+                    width: "100%"
+                }}>
+                    <div style={{
+                        padding: "16px",
+                        background: "#be185d", // Pinkish for Casters
+                        borderBottom: "1px solid #334155",
+                        textAlign: "center"
+                    }}>
+                        <h2 style={{ fontSize: 22, fontWeight: "bold", margin: 0 }}>
+                            🎙️ Broadcast Team
+                        </h2>
+                        <span style={{ fontSize: 13, opacity: 0.9 }}>
+                            {casters.length} casters
+                        </span>
+                    </div>
+
+                    <div style={{ padding: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                        {casters.length === 0 && (
+                            <p style={{ opacity: 0.5, textAlign: "center", fontStyle: "italic", fontSize: 14, width: "100%" }}>
+                                Casting team coming soon...
+                            </p>
+                        )}
+                        {casters.map(caster => (
+                            <div key={caster.id} style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                padding: "12px",
+                                background: "#0f172a",
+                                borderRadius: 6,
+                                border: "1px solid #334155"
+                            }}>
+                                <div style={{ fontWeight: 600, fontSize: 15, color: "#f472b6" }}>
+                                    {caster.displayName}
+                                </div>
+                                {caster.twitchUsername && (
+                                    <a href={`https://twitch.tv/${caster.twitchUsername}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#a78bfa", marginTop: 4, textDecoration: "none" }}>
+                                        twitch.tv/{caster.twitchUsername}
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Teams Section */}
                 {TEAMS.map(team => {
                     const teamPlayers = getTeamPlayers(team);
                     const isJoker = team === "joker";
@@ -95,11 +165,15 @@ export default function RostersPage() {
                                         alignItems: "center",
                                         padding: "8px",
                                         background: "#0f172a",
-                                        borderRadius: 6
+                                        borderRadius: 6,
+                                        border: player.isCaptain ? "1px solid #eab308" : "none"
                                     }}>
                                         <div>
-                                            <div style={{ fontWeight: 600, fontSize: 14 }}>
+                                            <div style={{ fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
                                                 {player.trackmaniaName || player.discordUsername}
+                                                {player.isCaptain && (
+                                                    <span title="Captain" style={{ fontSize: 12 }}>👑</span>
+                                                )}
                                             </div>
                                             {player.twitchUsername && (
                                                 <div style={{ fontSize: 12, color: "#a78bfa", marginTop: 2 }}>

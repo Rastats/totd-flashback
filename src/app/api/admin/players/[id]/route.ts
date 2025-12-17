@@ -19,6 +19,7 @@ export async function PATCH(
         const updateData: Record<string, unknown> = {};
         if (body.status) updateData.status = body.status;
         if (body.teamAssignment) updateData.team_assignment = body.teamAssignment;
+        if (typeof body.isCaptain === 'boolean') updateData.is_captain = body.isCaptain;
 
         const { error } = await supabase
             .from('players')
