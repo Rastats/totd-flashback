@@ -183,10 +183,11 @@ export async function GET(request: Request) {
         }
 
         const supabase = getSupabaseAdmin();
+        const HEARTBEAT_TIMEOUT_MS = 15000; // 15 seconds
 
         const { data, error } = await supabase
             .from('team_status')
-            .select('active_player, waiting_player')
+            .select('active_player, waiting_player, updated_at')
             .eq('team_id', parseInt(teamId))
             .single();
 
@@ -194,9 +195,33 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
+        let activePlayer = data?.active_player || null;
+        let waitingPlayer = data?.waiting_player || null;
+
+        // Check for heartbeat timeout: if active player hasn't sent a heartbeat in 15s, clear them
+        if (activePlayer && data?.updated_at) {
+            const lastUpdate = new Date(data.updated_at).getTime();
+            const now = Date.now();
+
+            if (now - lastUpdate > HEARTBEAT_TIMEOUT_MS) {
+                console.log(`[PlayerStatus] Heartbeat timeout for ${activePlayer} - clearing active status`);
+
+                // Active player timed out, clear them
+                await supabase
+                    .from('team_status')
+                    .update({
+                        active_player: null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('team_id', parseInt(teamId));
+
+                activePlayer = null;
+            }
+        }
+
         return NextResponse.json({
-            active_player: data?.active_player || null,
-            waiting_player: data?.waiting_player || null
+            active_player: activePlayer,
+            waiting_player: waitingPlayer
         });
 
     } catch (error) {
