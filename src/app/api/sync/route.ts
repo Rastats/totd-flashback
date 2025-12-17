@@ -79,8 +79,18 @@ export async function POST(request: Request) {
             });
         }
 
-        // Use the team from the roster, not from the plugin
-        const teamId = player.team_assignment;
+        // Parse team_assignment from string "team4" to integer 4
+        let teamId: number;
+        const teamAssignment = player.team_assignment;
+
+        if (teamAssignment && typeof teamAssignment === 'string' && teamAssignment.startsWith('team')) {
+            teamId = parseInt(teamAssignment.replace('team', ''), 10);
+        } else if (typeof teamAssignment === 'number') {
+            teamId = teamAssignment;
+        } else {
+            // Joker or invalid - use team_id from plugin
+            teamId = data.team_id;
+        }
 
         if (!teamId || teamId < 1 || teamId > 4) {
             return NextResponse.json({
