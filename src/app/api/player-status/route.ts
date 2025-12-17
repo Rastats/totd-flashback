@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         // Get current team status
         const { data: teamStatus } = await supabase
             .from('team_status')
-            .select('active_player, waiting_player')
+            .select('active_player, waiting_player, updated_at')
             .eq('team_id', teamId)
             .single();
 
@@ -53,10 +53,53 @@ export async function POST(request: Request) {
 
         switch (data.action) {
             case 'set_active':
+                // RACE CONDITION PROTECTION: "First come, first served"
+                // We use updated_at as an optimistic lock
+                const currentUpdatedAt = teamStatus?.updated_at || null;
+
                 if (!currentActive) {
-                    // No one active, this player becomes active
-                    newActive = playerName;
-                    result = { success: true, reason: 'became_active' };
+                    // No one active, attempt to become active with conditional update
+                    const { data: updateResult, error: updateError } = await supabase
+                        .from('team_status')
+                        .update({
+                            active_player: playerName,
+                            waiting_player: currentWaiting,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('team_id', teamId)
+                        .or(currentUpdatedAt
+                            ? `updated_at.eq.${currentUpdatedAt}`
+                            : 'updated_at.is.null')
+                        .select()
+                        .single();
+
+                    if (updateError || !updateResult) {
+                        // Race condition lost - someone else became active first
+                        // Fetch current state and put this player in waiting
+                        const { data: newState } = await supabase
+                            .from('team_status')
+                            .select('active_player, waiting_player')
+                            .eq('team_id', teamId)
+                            .single();
+
+                        newActive = newState?.active_player || null;
+                        newWaiting = playerName;
+
+                        // Update waiting player
+                        await supabase
+                            .from('team_status')
+                            .update({
+                                waiting_player: playerName,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('team_id', teamId);
+
+                        result = { success: true, reason: 'race_lost_added_to_waiting' };
+                    } else {
+                        // Successfully became active
+                        newActive = playerName;
+                        result = { success: true, reason: 'became_active' };
+                    }
                 } else if (currentActive === playerName) {
                     // Already active
                     result = { success: true, reason: 'already_active' };
