@@ -79,18 +79,16 @@ export async function POST(request: Request) {
                 const currentUpdatedAt = teamStatus?.updated_at || null;
 
                 if (!currentActive) {
-                    // No one active, attempt to become active with conditional update
+                    // No one active, attempt to become active
+                    // Use upsert to handle case where team_status row doesn't exist yet
                     const { data: updateResult, error: updateError } = await supabase
                         .from('team_status')
-                        .update({
+                        .upsert({
+                            team_id: teamId,
                             active_player: playerName,
                             waiting_player: currentWaiting,
                             updated_at: new Date().toISOString()
-                        })
-                        .eq('team_id', teamId)
-                        .or(currentUpdatedAt
-                            ? `updated_at.eq.${currentUpdatedAt}`
-                            : 'updated_at.is.null')
+                        }, { onConflict: 'team_id' })
                         .select()
                         .single();
 
