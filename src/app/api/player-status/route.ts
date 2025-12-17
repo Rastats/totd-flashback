@@ -40,12 +40,16 @@ export async function POST(request: Request) {
 
         // Handle Jokers: they have team_assignment = null
         // For Jokers, the plugin should send the team_id from Settings
-        let teamId = player.team_assignment;
-        if (!teamId && data.team_id) {
-            teamId = data.team_id; // Use team from plugin settings for Jokers
-        }
+        let teamAssignment = player.team_assignment;
+        let teamId: number;
 
-        if (!teamId) {
+        if (teamAssignment && teamAssignment.startsWith('team')) {
+            // Parse "team4" -> 4
+            teamId = parseInt(teamAssignment.replace('team', ''), 10);
+        } else if (data.team_id) {
+            // Joker - use team from plugin settings
+            teamId = data.team_id;
+        } else {
             return NextResponse.json({
                 success: false,
                 reason: 'no_team_assignment'
