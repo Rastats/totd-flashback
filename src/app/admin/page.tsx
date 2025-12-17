@@ -96,9 +96,14 @@ export default function AdminPage() {
             });
             if (res.ok) {
                 fetchData();
+            } else {
+                const err = await res.text();
+                console.error("Failed to update captain:", err);
+                alert(`Error: ${err}`);
             }
         } catch (err) {
             console.error(err);
+            alert("Network error updating captain");
         }
     };
 
