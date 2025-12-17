@@ -104,3 +104,33 @@ export interface TeamPlanning {
     teamId: string;
     slots: Record<number, TeamSlotAssignment>; // Key is hourIndex (0-68)
 }
+
+// Donation System
+export interface ProcessedDonation {
+    donation_id: string;
+    amount: number;
+    currency: string;
+    donor_name: string;
+    pot_team: number | null;      // Team that gets the pot (1-4, null if split)
+    penalty_team: number;          // Team that gets the penalty
+    penalty_id: number;            // Penalty ID (1-10)
+    penalty_name: string;
+    is_pot_random: boolean;
+    is_penalty_random: boolean;
+    processed_at: string;
+}
+
+export interface TeamPot {
+    team_id: number;
+    pot_amount: number;
+    currency: string;
+    updated_at: string;
+}
+
+export interface DonationApiResponse {
+    totalAmount: number;
+    currency: string;
+    goal: number;
+    teamPots: TeamPot[];
+    recentDonations: ProcessedDonation[];
+}

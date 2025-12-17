@@ -1,20 +1,32 @@
 import { NextResponse } from 'next/server';
-import { getCampaignDonations } from '@/lib/tiltify';
+import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from '@/lib/tiltify';
 
-// This is the campaign ID for "TOTD Flashback" (Should be env var, but I will hardcode for now based on user info or add to env)
-// Wait, I need to ask user for Campaign ID or find it.
-// Assuming "TOTD Flashback" is the name, I'll use a placeholder or ask.
-// But user gave me Client ID/Secret. They might not know Campaign ID.
-// However, I can probably search for it if I don't have it.
-// For now, I will use a dummy ID or env var.
-const CAMPAIGN_ID = process.env.TILTIFY_CAMPAIGN_ID || "123456";
-
+// GET /api/donations
+// Returns campaign data, team pots, and recent donations
 export async function GET() {
     try {
-        const data = await getCampaignDonations(CAMPAIGN_ID);
-        return NextResponse.json(data);
+        // Sync new donations from Tiltify to Supabase
+        await syncDonations();
+
+        // Get all the data
+        const [campaignData, teamPots, recentDonations] = await Promise.all([
+            getCampaignData(),
+            getTeamPots(),
+            getRecentDonations(20)
+        ]);
+
+        return NextResponse.json({
+            totalAmount: campaignData.totalAmount,
+            currency: campaignData.currency,
+            goal: campaignData.goal,
+            teamPots: teamPots,
+            recentDonations: recentDonations
+        });
     } catch (error) {
-        console.error("Donation fetch error:", error);
-        return NextResponse.json({ error: "Failed to fetch donations" }, { status: 500 });
+        console.error('Donation API error:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch donations' },
+            { status: 500 }
+        );
     }
 }
