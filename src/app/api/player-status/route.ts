@@ -81,12 +81,15 @@ export async function POST(request: Request) {
                 if (!currentActive) {
                     // No one active, attempt to become active
                     // Use upsert to handle case where team_status row doesn't exist yet
+                    // Clear waiting_player if this player was waiting (prevent being both)
+                    const newWaitingForUpsert = currentWaiting === playerName ? null : currentWaiting;
+
                     const { data: updateResult, error: updateError } = await supabase
                         .from('team_status')
                         .upsert({
                             team_id: teamId,
                             active_player: playerName,
-                            waiting_player: currentWaiting,
+                            waiting_player: newWaitingForUpsert,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'team_id' })
                         .select()
