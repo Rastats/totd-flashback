@@ -266,11 +266,7 @@ export default function LeaderboardPage() {
                 );
                 const penaltyData = await Promise.all(penaltyPromises);
 
-                // Fetch recent donations for feed
-                const donationsRes = await fetch('/api/donations');
-                const donationsData = donationsRes.ok ? await donationsRes.json() : { recentDonations: [] };
-
-                // Transform data
+                // Transform team data
                 const transformedTeams: TeamStatus[] = liveData.teams.map((t: any, index: number) => {
                     const teamId = t.id;
                     const progress = progressData.find((p: any) => p.team_id === teamId);
@@ -300,14 +296,36 @@ export default function LeaderboardPage() {
                     };
                 });
 
-                // Transform donations to feed events
-                const feedEvents: FeedEvent[] = (donationsData.recentDonations || []).slice(0, 10).map((d: any) => ({
-                    id: d.donation_id,
-                    type: "donation" as const,
-                    message: `${d.donor_name || 'Anonymous'} donated £${d.amount} → ${d.penalty_name || 'Donation'}`,
-                    teamId: d.penalty_team,
-                    timestamp: new Date(d.processed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                }));
+                // Fetch event log for live feed (fallback to donations if not available)
+                let feedEvents: FeedEvent[] = [];
+                try {
+                    const eventLogRes = await fetch('/api/event-log?limit=15');
+                    if (eventLogRes.ok) {
+                        const eventLogData = await eventLogRes.json();
+                        if (eventLogData.events?.length > 0) {
+                            feedEvents = eventLogData.events.map((e: any) => ({
+                                id: e.id,
+                                type: e.event_type as FeedEvent['type'],
+                                message: e.message,
+                                teamId: e.team_id,
+                                timestamp: new Date(e.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                            }));
+                        }
+                    }
+                } catch { /* ignore */ }
+
+                // If no event log entries, fallback to donations
+                if (feedEvents.length === 0) {
+                    const donationsRes = await fetch('/api/donations');
+                    const donationsData = donationsRes.ok ? await donationsRes.json() : { recentDonations: [] };
+                    feedEvents = (donationsData.recentDonations || []).slice(0, 10).map((d: any) => ({
+                        id: d.donation_id,
+                        type: "donation" as const,
+                        message: `${d.donor_name || 'Anonymous'} donated £${d.amount} → ${d.penalty_name || 'Donation'}`,
+                        teamId: d.penalty_team,
+                        timestamp: new Date(d.processed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                    }));
+                }
 
                 setTeams(transformedTeams);
                 setFeed(feedEvents);
