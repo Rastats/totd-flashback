@@ -156,7 +156,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             { name: "Out of Sight", timeLeft: 300 }
         ],
         penaltyQueue: 5,
-        penaltyQueueNames: ["Redo Last Map", "Can't Turn Right", "Tunnel Vision", "Reverse Steering", "Pedal to the Metal"]
+        penaltyQueueNames: ["Redo Last Map", "Can't Turn Right", "Tunnel Vision", "Redo 5 Maps", "Pedal to the Metal"]
     }
 ];
 
