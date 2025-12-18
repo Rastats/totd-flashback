@@ -9,12 +9,27 @@ export default function Header() {
     const { data: session } = useSession() as { data: any, status: string };
     const [showDonationModal, setShowDonationModal] = useState(false);
     const [captainInfo, setCaptainInfo] = useState<{ isCaptain: boolean; teamId: string | null; isAdmin?: boolean } | null>(null);
+    const [totalRaised, setTotalRaised] = useState<number | null>(null);
 
     useEffect(() => {
         fetch("/api/user/captain-status")
             .then(res => res.json())
             .then(data => setCaptainInfo(data))
             .catch(err => console.error("Failed to fetch captain status:", err));
+
+        // Fetch donation total
+        const fetchTotal = async () => {
+            try {
+                const res = await fetch('/api/donations');
+                if (res.ok) {
+                    const data = await res.json();
+                    setTotalRaised(data.totalAmount || 0);
+                }
+            } catch (e) { /* ignore */ }
+        };
+        fetchTotal();
+        const interval = setInterval(fetchTotal, 60000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
@@ -146,24 +161,37 @@ export default function Header() {
                             </button>
                         )}
 
-                        {/* Donate Button */}
-                        <button
-                            onClick={() => setShowDonationModal(true)}
-                            style={{
-                                padding: "10px 20px",
-                                background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                                borderRadius: 8,
-                                color: "#fff",
-                                fontWeight: 600,
-                                border: "none",
-                                cursor: "pointer",
-                                fontSize: 14,
-                                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
-                                marginLeft: 8
-                            }}
-                        >
-                            ❤️ Donate
-                        </button>
+                        {/* Donate Button + Total */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
+                            {totalRaised !== null && (
+                                <div style={{
+                                    padding: "6px 10px",
+                                    background: "#2a2a3a",
+                                    borderRadius: 6,
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: "#f59e0b",
+                                }}>
+                                    💰 £{totalRaised.toFixed(2)}
+                                </div>
+                            )}
+                            <button
+                                onClick={() => setShowDonationModal(true)}
+                                style={{
+                                    padding: "10px 20px",
+                                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                    borderRadius: 8,
+                                    color: "#fff",
+                                    fontWeight: 600,
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: 14,
+                                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                                }}
+                            >
+                                ❤️ Donate
+                            </button>
+                        </div>
                     </div>
                 </nav>
             </header>

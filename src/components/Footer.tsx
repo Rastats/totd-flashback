@@ -1,11 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DonationModal from "./DonationModal";
 
 export default function Footer() {
     const [showDonationModal, setShowDonationModal] = useState(false);
+    const [totalRaised, setTotalRaised] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchTotal = async () => {
+            try {
+                const res = await fetch('/api/donations');
+                if (res.ok) {
+                    const data = await res.json();
+                    setTotalRaised(data.totalAmount || 0);
+                }
+            } catch (e) {
+                console.error('Failed to fetch donation total', e);
+            }
+        };
+        fetchTotal();
+        const interval = setInterval(fetchTotal, 60000); // Refresh every minute
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <>
@@ -47,7 +65,7 @@ export default function Footer() {
                                 borderRadius: 6,
                                 fontSize: 14,
                             }}>
-                                💰 <strong>£0</strong> raised
+                                💰 <strong>£{totalRaised !== null ? totalRaised.toFixed(2) : '...'}</strong> raised
                             </div>
                         </div>
 

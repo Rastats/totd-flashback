@@ -59,7 +59,7 @@ export default function TopDonors({ limit = 5, showAmount = true }: TopDonorsPro
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {donations.map((donation, index) => (
                 <div
-                    key={donation.id}
+                    key={donation.donor_name || index}
                     style={{
                         display: "flex",
                         alignItems: "center",
