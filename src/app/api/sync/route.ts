@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { validateApiKey } from '@/lib/api-auth';
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from '@/lib/tiltify';
 
 export const dynamic = 'force-dynamic';
 
@@ -211,10 +212,56 @@ export async function POST(request: Request) {
             console.log(`[Sync] Marked ${completedIds.length} penalties as completed`);
         }
 
+        // ============================================
+        // Build comprehensive response with all data
+        // This replaces the need for separate /donations, /player-status, /team-progress calls
+        // ============================================
+
+        // Fetch donation data (throttled sync + cached read)
+        try {
+            // Sync donations from Tiltify (throttled to every 30s)
+            await syncDonations();
+        } catch (syncError) {
+            console.error('[Sync] Donation sync error (continuing):', syncError);
+        }
+
+        // Get all data in parallel
+        const [campaignData, teamPots, recentDonations, teamStatuses] = await Promise.all([
+            getCampaignData(),
+            getTeamPots(),
+            getRecentDonations(20),
+            supabase.from('team_status').select('*').order('team_id')
+        ]);
+
+        // Get player status for this team
+        const myTeamStatus = teamStatuses.data?.find(t => t.team_id === teamId);
+
         return NextResponse.json({
             success: true,
             team_id: teamId,
-            player: player.trackmania_name
+            player: player.trackmania_name,
+
+            // Donations data (replaces /donations)
+            donations: {
+                totalAmount: campaignData.totalAmount,
+                currency: campaignData.currency,
+                goal: campaignData.goal,
+                teamPots: teamPots,
+                recentDonations: recentDonations
+            },
+
+            // Player status for my team (replaces /player-status)
+            playerStatus: {
+                activePlayer: myTeamStatus?.active_player || null,
+                waitingPlayer: myTeamStatus?.waiting_player || null
+            },
+
+            // Team progress (replaces /team-progress)
+            teamProgress: {
+                mapsCompleted: myTeamStatus?.maps_completed || 0,
+                mapsTotal: myTeamStatus?.maps_total || 2000,
+                redoRemaining: myTeamStatus?.redo_remaining || 0
+            }
         });
 
     } catch (error) {
