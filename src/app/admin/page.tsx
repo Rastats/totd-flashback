@@ -237,14 +237,53 @@ export default function AdminPage() {
     const saveAvailability = async () => {
         if (!editAvailPlayer) return;
 
-        // Merge contiguous slots? Optional but nice.
-        // ... skip merge for now, backend/frontend handles fragmentation fine usually.
+        // ===== DEDUPLICATE AND MERGE SLOTS =====
+        // Step 1: Remove exact duplicates and normalize
+        const slotMap = new Map<string, { date: string; startHour: number; endHour: number; preference: string }>();
+
+        for (const slot of tempAvailability) {
+            // Create unique key for each hour within the slot
+            for (let h = slot.startHour; h < slot.endHour; h++) {
+                const key = `${slot.date}-${h}`;
+                const existing = slotMap.get(key);
+                // Keep preferred over ok
+                if (!existing || (existing.preference === 'ok' && slot.preference === 'preferred')) {
+                    slotMap.set(key, {
+                        date: slot.date,
+                        startHour: h,
+                        endHour: h + 1,
+                        preference: slot.preference
+                    });
+                }
+            }
+        }
+
+        // Step 2: Convert back to array and merge contiguous slots with same preference
+        const hourSlots = Array.from(slotMap.values());
+        hourSlots.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.startHour - b.startHour;
+        });
+
+        const mergedSlots: any[] = [];
+        for (const slot of hourSlots) {
+            const last = mergedSlots[mergedSlots.length - 1];
+            if (last && last.date === slot.date && last.endHour === slot.startHour && last.preference === slot.preference) {
+                // Extend the previous slot
+                last.endHour = slot.endHour;
+            } else {
+                // Start a new slot
+                mergedSlots.push({ ...slot, id: Math.random().toString() });
+            }
+        }
+
+        console.log(`[Availability] Reduced ${tempAvailability.length} slots to ${mergedSlots.length} after dedup/merge`);
 
         try {
             const res = await fetch(`/api/admin/players/${editAvailPlayer.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ availability: tempAvailability }),
+                body: JSON.stringify({ availability: mergedSlots }),
             });
             if (res.ok) {
                 fetchData();
@@ -675,6 +714,48 @@ export default function AdminPage() {
                                             >
                                                 📅 Edit Availability
                                             </button>
+                                            {player.availability.length > 10 && (
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        // Quick dedupe/merge without opening modal
+                                                        const slotMap = new Map<string, any>();
+                                                        for (const slot of player.availability) {
+                                                            for (let h = slot.startHour; h < slot.endHour; h++) {
+                                                                const key = `${slot.date}-${h}`;
+                                                                const existing = slotMap.get(key);
+                                                                if (!existing || (existing.preference === 'ok' && slot.preference === 'preferred')) {
+                                                                    slotMap.set(key, { date: slot.date, startHour: h, endHour: h + 1, preference: slot.preference });
+                                                                }
+                                                            }
+                                                        }
+                                                        const hourSlots = Array.from(slotMap.values()).sort((a, b) =>
+                                                            a.date !== b.date ? a.date.localeCompare(b.date) : a.startHour - b.startHour
+                                                        );
+                                                        const merged: any[] = [];
+                                                        for (const slot of hourSlots) {
+                                                            const last = merged[merged.length - 1];
+                                                            if (last && last.date === slot.date && last.endHour === slot.startHour && last.preference === slot.preference) {
+                                                                last.endHour = slot.endHour;
+                                                            } else {
+                                                                merged.push({ ...slot, id: Math.random().toString() });
+                                                            }
+                                                        }
+                                                        const res = await fetch(`/api/admin/players/${player.id}`, {
+                                                            method: "PATCH",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ availability: merged }),
+                                                        });
+                                                        if (res.ok) {
+                                                            alert(`Fixed! ${player.availability.length} → ${merged.length} slots`);
+                                                            fetchData();
+                                                        }
+                                                    }}
+                                                    style={{ ...buttonStyle, background: "#5a3a2a", color: "#fbbf24" }}
+                                                >
+                                                    🔧 Fix {player.availability.length} slots
+                                                </button>
+                                            )}
                                             {player.status === "approved" && (
                                                 <div style={{ display: "flex", gap: 8 }}>
                                                     <select
