@@ -81,7 +81,7 @@ export default function Header() {
 
                         {/* Roster Link (Admin only) */}
                         {(session?.user?.isAdmin || captainInfo?.isAdmin) && (
-                            <Link href="/rosters-928374" style={{
+                            <Link href="/rosters" style={{
                                 padding: "8px 16px",
                                 background: "rgba(16, 185, 129, 0.1)",
                                 border: "1px solid #10b981",
