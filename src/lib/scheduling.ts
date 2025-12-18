@@ -10,6 +10,7 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
             id,
             trackmania_name,
             discord_username,
+            timezone,
             availability_slots (*)
         `)
         .eq('status', 'approved')
@@ -19,6 +20,8 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
         console.error("Autofill: Failed to fetch players", playersError);
         return;
     }
+
+    console.log(`Autofill: Found ${players.length} players for ${teamId}`);
 
     // 2. Fetch Existing Planning
     const { data: currentSlots, error: slotsError } = await supabase
@@ -106,8 +109,10 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
     for (let h = 0; h < eventDurationHours; h++) {
         // Find players available at this hour
         const availablePlayers = players.filter(p => {
-            // We need to implement availability check here
-            return checkPlayerAvailability(p, h);
+            const isAvail = checkPlayerAvailability(p, h);
+            // Debug log for specific cases if needed
+            // if (p.trackmania_name === 's0nity' && isAvail) console.log(`Active: ${h} for ${p.trackmania_name}`);
+            return isAvail;
         });
 
         if (availablePlayers.length === 0) continue;
@@ -141,17 +146,18 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
             if (mainId === p.id || subId === p.id) continue;
 
             const pActiveHours = playerActiveHours.get(p.id) || 0;
+            const pName = p.trackmania_name || p.discord_username || "Unknown";
 
             if (!mainId) {
                 // Case 1: Slot Empty -> Assign Main
                 mainId = p.id;
-                mainName = p.trackmania_name;
+                mainName = pName;
                 playerActiveHours.set(p.id, pActiveHours + 1); // Update stats dynamically
                 changed = true;
             } else if (!subId) {
                 // Case 2: Main taken, Sub empty -> Assign Sub
                 subId = p.id;
-                subName = p.trackmania_name;
+                subName = pName;
                 changed = true;
             } else {
                 // Case 3: Both taken. Challenge the Sub.
@@ -161,7 +167,7 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
                 // If candidate has LESS active hours than current sub, they steal the spot
                 if (pActiveHours < currentSubActiveHours) {
                     subId = p.id;
-                    subName = p.trackmania_name;
+                    subName = pName;
                     changed = true;
                     // Note: We don't change 'active hours' stats because sub slots don't count towards it (per user prompt validation "active hours")
                 }
