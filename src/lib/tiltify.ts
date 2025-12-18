@@ -112,21 +112,24 @@ async function processDonation(donation: {
     const { potTeam, penaltyTeam, isPotRandom, isPenaltyRandom } = parseCents(amount);
     const penalty = getPenaltyForAmount(amount);
 
-    // Check if donation is too old (> 1 minute) - skip pot increment for old donations
+    // Check if donation is too old (> 3 minutes) - skip pot increment for old donations
     const donationTime = new Date(donation.completed_at).getTime();
     const now = Date.now();
     const ageMs = now - donationTime;
-    const isOldDonation = ageMs > 60 * 1000; // 1 minute
+    const isOldDonation = ageMs > 3 * 60 * 1000; // 3 minutes (was 1 minute)
 
-    // CRITICAL: Check if donation ALREADY EXISTS before upsert
-    // This prevents double-counting if processDonation is called multiple times
+    // Check if donation exists AND if pot was already incremented
+    // This is more robust than just checking existence
     const { data: existingDonation } = await supabaseAdmin
         .from('processed_donations')
-        .select('donation_id')
+        .select('donation_id, pot_incremented')
         .eq('donation_id', donation.id)
         .single();
 
     const isNewDonation = !existingDonation;
+    const potAlreadyIncremented = existingDonation?.pot_incremented === true;
+    // Determine if we should increment pot (new AND recent AND not already done)
+    const shouldIncrementPot = !isOldDonation && !potAlreadyIncremented;
 
     // Insert into processed_donations (always record, even if old)
     const donationRecord = {
@@ -140,7 +143,8 @@ async function processDonation(donation: {
         penalty_name: penalty?.name ?? 'Support Only',
         is_pot_random: isPotRandom,
         is_penalty_random: isPenaltyRandom,
-        processed_at: donation.completed_at
+        processed_at: donation.completed_at,
+        pot_incremented: shouldIncrementPot // Set to true only if we're about to increment
     };
 
     const { error: insertError } = await supabaseAdmin
@@ -152,15 +156,13 @@ async function processDonation(donation: {
         return;
     }
 
-    // Only increment pots for NEW and RECENT donations
-    // Skip if: donation is old OR already existed in database
-    if (isOldDonation) {
-        console.log(`[Tiltify] Skipping pot increment for old donation ${donation.id} (${Math.round(ageMs / 1000)}s old)`);
-        return;
-    }
-
-    if (!isNewDonation) {
-        console.log(`[Tiltify] Skipping pot increment for already-processed donation ${donation.id}`);
+    // Skip pot increment if already done or donation too old
+    if (!shouldIncrementPot) {
+        if (isOldDonation) {
+            console.log(`[Tiltify] Skipping pot for old donation ${donation.id} (${Math.round(ageMs / 1000)}s old)`);
+        } else if (potAlreadyIncremented) {
+            console.log(`[Tiltify] Pot already incremented for ${donation.id}`);
+        }
         return;
     }
 
