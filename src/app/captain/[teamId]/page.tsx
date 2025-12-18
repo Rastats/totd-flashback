@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { TeamSlotAssignment, AvailabilitySlot, TeamAssignment } from "@/lib/types";
 import CaptainAuth from "@/components/CaptainAuth";
@@ -14,7 +14,7 @@ interface PlayerSummary {
 }
 
 interface CalendarSlot {
-    hourIndex: number;      // 0-68 (stored)
+    hourIndex: number;
     mainPlayerId: string;
     mainPlayerName: string;
     subPlayerId: string | null;
@@ -23,16 +23,22 @@ interface CalendarSlot {
 
 // =============== CONSTANTS ===============
 const TIMEZONES = [
-    { label: "CET (Paris, UTC+1)", offset: 1 },
-    { label: "GMT (London, UTC+0)", offset: 0 },
-    { label: "EST (New York, UTC-5)", offset: -5 },
-    { label: "PST (Los Angeles, UTC-8)", offset: -8 },
-    { label: "AEST (Sydney, UTC+11)", offset: 11 },
-    { label: "JST (Tokyo, UTC+9)", offset: 9 },
+    { label: "🇫🇷 Paris (UTC+1)", offset: 1 },
+    { label: "🇬🇧 London (UTC+0)", offset: 0 },
+    { label: "🇺🇸 New York (UTC-5)", offset: -5 },
+    { label: "🇺🇸 Chicago (UTC-6)", offset: -6 },
+    { label: "🇺🇸 Denver (UTC-7)", offset: -7 },
+    { label: "🇺🇸 Los Angeles (UTC-8)", offset: -8 },
+    { label: "🇧🇷 São Paulo (UTC-3)", offset: -3 },
+    { label: "🇵🇹 Lisbon (UTC+0)", offset: 0 },
+    { label: "🇩🇪 Berlin (UTC+1)", offset: 1 },
+    { label: "🇷🇺 Moscow (UTC+3)", offset: 3 },
+    { label: "🇮🇳 Mumbai (UTC+5:30)", offset: 5.5 },
+    { label: "🇨🇳 Beijing (UTC+8)", offset: 8 },
+    { label: "🇯🇵 Tokyo (UTC+9)", offset: 9 },
+    { label: "🇦🇺 Sydney (UTC+11)", offset: 11 },
+    { label: "🇳🇿 Auckland (UTC+13)", offset: 13 },
 ];
-
-// Event runs Dec 21 21:00 CET to Dec 24 18:00 CET (69 hours)
-const EVENT_START_UTC = new Date("2025-12-21T20:00:00Z"); // 21:00 CET = 20:00 UTC
 
 const PLAYER_COLORS = [
     "#60a5fa", "#fbbf24", "#f472b6", "#34d399",
@@ -45,54 +51,66 @@ const getPlayerColor = (name: string): string => {
 };
 
 // =============== TIME UTILITIES ===============
-const getLocalDateForHourIndex = (hourIndex: number, tzOffset: number) => {
-    const utcTime = new Date(EVENT_START_UTC.getTime() + hourIndex * 60 * 60 * 1000);
-    const localTime = new Date(utcTime.getTime() + tzOffset * 60 * 60 * 1000);
-    return localTime;
+// Event: Dec 21 21:00 CET to Dec 24 18:00 CET (69 hours, indices 0-68)
+// CET = UTC+1
+
+// Convert hourIndex (0-68) to local day and hour
+const getLocalTimeForHourIndex = (hourIndex: number, tzOffset: number): { day: number; hour: number } => {
+    // hourIndex 0 = Dec 21 21:00 CET
+    const cetTotalHours = 21 * 24 + 21 + hourIndex; // Day 21, hour 21 + index
+    const cetDay = Math.floor(cetTotalHours / 24);
+    const cetHour = cetTotalHours % 24;
+
+    // Convert CET to target timezone
+    const offsetDiff = tzOffset - 1; // CET is +1
+    let localHour = cetHour + offsetDiff;
+    let localDay = cetDay;
+
+    while (localHour >= 24) { localHour -= 24; localDay += 1; }
+    while (localHour < 0) { localHour += 24; localDay -= 1; }
+
+    return { day: localDay, hour: localHour };
 };
 
-const getColumnDates = (tzOffset: number): Date[] => {
-    const dates: Date[] = [];
-    const startLocal = getLocalDateForHourIndex(0, tzOffset);
-    const endLocal = getLocalDateForHourIndex(68, tzOffset);
+// Convert local day+hour back to hourIndex
+const getHourIndexForLocal = (localDay: number, localHour: number, tzOffset: number): number => {
+    // Convert to CET first
+    const offsetDiff = tzOffset - 1;
+    let cetHour = localHour - offsetDiff;
+    let cetDay = localDay;
 
-    const startDay = new Date(startLocal.getFullYear(), startLocal.getMonth(), startLocal.getDate());
-    const endDay = new Date(endLocal.getFullYear(), endLocal.getMonth(), endLocal.getDate());
+    while (cetHour >= 24) { cetHour -= 24; cetDay += 1; }
+    while (cetHour < 0) { cetHour += 24; cetDay -= 1; }
 
-    const current = new Date(startDay);
-    while (current <= endDay) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-    }
-    return dates;
+    // Calculate hourIndex
+    const cetTotalHours = cetDay * 24 + cetHour;
+    const startTotalHours = 21 * 24 + 21; // Dec 21, 21:00
+    return cetTotalHours - startTotalHours;
 };
 
-const formatDate = (date: Date): string => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${months[date.getMonth()]} ${date.getDate()}`;
+// Get column days for timezone
+const getColumnDays = (tzOffset: number): number[] => {
+    const start = getLocalTimeForHourIndex(0, tzOffset);
+    const end = getLocalTimeForHourIndex(68, tzOffset);
+    const days: number[] = [];
+    for (let d = start.day; d <= end.day; d++) days.push(d);
+    return days;
 };
 
 // =============== AVAILABILITY CHECK ===============
 const isPlayerAvailable = (player: PlayerSummary, hourIndex: number): boolean => {
-    // Convert hourIndex to date + hour (CET-based for availability matching)
     let dateStr = "";
     let hour = 0;
-
     if (hourIndex < 3) {
         dateStr = "2025-12-21";
         hour = 21 + hourIndex;
     } else {
         const offsetIndex = hourIndex - 3;
         const dayOffset = Math.floor(offsetIndex / 24);
-        const h = offsetIndex % 24;
-        dateStr = ["2025-12-22", "2025-12-23", "2025-12-24"][dayOffset];
-        hour = h;
+        hour = offsetIndex % 24;
+        dateStr = ["2025-12-22", "2025-12-23", "2025-12-24"][dayOffset] || "2025-12-24";
     }
-
-    const slot = player.availability.find(s =>
-        s.date === dateStr && hour >= s.startHour && hour < s.endHour
-    );
-    return !!slot;
+    return !!player.availability.find(s => s.date === dateStr && hour >= s.startHour && hour < s.endHour);
 };
 
 // =============== MODAL COMPONENT ===============
@@ -102,21 +120,16 @@ interface SlotModalProps {
     onSave: (data: { startHour: number; endHour: number; mainPlayerId: string; subPlayerId: string | null }) => void;
     onDelete?: () => void;
     players: PlayerSummary[];
-    dayDate: Date;
+    day: number;
     initialStartHour: number;
     initialEndHour?: number;
     initialMainPlayerId?: string;
     initialSubPlayerId?: string | null;
     isEdit?: boolean;
-    existingSlots: { startHour: number; endHour: number }[];
     tzOffset: number;
 }
 
-function SlotModal({
-    isOpen, onClose, onSave, onDelete, players, dayDate,
-    initialStartHour, initialEndHour, initialMainPlayerId, initialSubPlayerId,
-    isEdit, existingSlots, tzOffset
-}: SlotModalProps) {
+function SlotModal({ isOpen, onClose, onSave, onDelete, players, day, initialStartHour, initialEndHour, initialMainPlayerId, initialSubPlayerId, isEdit, tzOffset }: SlotModalProps) {
     const [startHour, setStartHour] = useState(initialStartHour);
     const [endHour, setEndHour] = useState(initialEndHour || initialStartHour + 1);
     const [mainPlayerId, setMainPlayerId] = useState(initialMainPlayerId || "");
@@ -131,122 +144,69 @@ function SlotModal({
 
     if (!isOpen) return null;
 
-    // Get hourIndex for availability check
-    const getHourIndexForLocalHour = (dayDate: Date, hour: number): number => {
-        // Convert local hour back to hourIndex
-        const localTime = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), hour);
-        const utcTime = new Date(localTime.getTime() - tzOffset * 60 * 60 * 1000);
-        const diffMs = utcTime.getTime() - EVENT_START_UTC.getTime();
-        return Math.floor(diffMs / (60 * 60 * 1000));
-    };
-
-    const availableHours: number[] = [];
+    // Find valid hours for this day
+    const validHours: number[] = [];
     for (let h = 0; h < 24; h++) {
-        const idx = getHourIndexForLocalHour(dayDate, h);
-        if (idx >= 0 && idx <= 68) {
-            availableHours.push(h);
-        }
+        const idx = getHourIndexForLocal(day, h, tzOffset);
+        if (idx >= 0 && idx <= 68) validHours.push(h);
     }
 
+    const checkHourIdx = getHourIndexForLocal(day, startHour, tzOffset);
+
     return (
-        <div style={{
-            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 1000
-        }} onClick={onClose}>
-            <div style={{
-                background: "#1e293b", borderRadius: 12, padding: 24, minWidth: 350,
-                border: "1px solid #334155"
-            }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
+            <div style={{ background: "#1e293b", borderRadius: 12, padding: 24, minWidth: 380, border: "1px solid #475569" }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#e2e8f0" }}>
-                    {isEdit ? "Edit Slot" : "Add Slot"} - {formatDate(dayDate)}
+                    {isEdit ? "Edit Slot" : "Add Slot"} - Dec {day}
                 </h3>
 
                 <div style={{ display: "grid", gap: 12 }}>
                     <div style={{ display: "flex", gap: 12 }}>
                         <div style={{ flex: 1 }}>
                             <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Start</label>
-                            <select value={startHour} onChange={e => setStartHour(parseInt(e.target.value))}
-                                style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
-                                {availableHours.map(h => (
-                                    <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
-                                ))}
+                            <select value={startHour} onChange={e => setStartHour(parseInt(e.target.value))} style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                                {validHours.map(h => <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>)}
                             </select>
                         </div>
                         <div style={{ flex: 1 }}>
                             <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>End</label>
-                            <select value={endHour} onChange={e => setEndHour(parseInt(e.target.value))}
-                                style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
-                                {availableHours.filter(h => h > startHour).map(h => (
-                                    <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
-                                ))}
-                                {availableHours[availableHours.length - 1] < 24 && (
-                                    <option value={24}>24:00</option>
-                                )}
+                            <select value={endHour} onChange={e => setEndHour(parseInt(e.target.value))} style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                                {validHours.filter(h => h > startHour).map(h => <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>)}
                             </select>
                         </div>
                     </div>
 
                     <div>
                         <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Active Player</label>
-                        <select value={mainPlayerId} onChange={e => setMainPlayerId(e.target.value)}
-                            style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                        <select value={mainPlayerId} onChange={e => setMainPlayerId(e.target.value)} style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
                             <option value="">-- Select --</option>
-                            {players.map(p => {
-                                const hourIdx = getHourIndexForLocalHour(dayDate, startHour);
-                                const available = isPlayerAvailable(p, hourIdx);
-                                return (
-                                    <option key={p.id} value={p.id}>
-                                        {available ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
-                                    </option>
-                                );
-                            })}
+                            {players.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
                     <div>
                         <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Sub Player</label>
-                        <select value={subPlayerId} onChange={e => setSubPlayerId(e.target.value)}
-                            style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                        <select value={subPlayerId} onChange={e => setSubPlayerId(e.target.value)} style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
                             <option value="">-- None --</option>
-                            {players.filter(p => p.id !== mainPlayerId).map(p => {
-                                const hourIdx = getHourIndexForLocalHour(dayDate, startHour);
-                                const available = isPlayerAvailable(p, hourIdx);
-                                return (
-                                    <option key={p.id} value={p.id}>
-                                        {available ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
-                                    </option>
-                                );
-                            })}
+                            {players.filter(p => p.id !== mainPlayerId).map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
                     {isEdit && onDelete && (
-                        <button onClick={onDelete} style={{
-                            padding: "8px 16px", borderRadius: 6, border: "none",
-                            background: "#dc2626", color: "#fff", cursor: "pointer", marginRight: "auto"
-                        }}>
-                            🗑️ Delete
-                        </button>
+                        <button onClick={onDelete} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", marginRight: "auto" }}>🗑️ Delete</button>
                     )}
-                    <button onClick={onClose} style={{
-                        padding: "8px 16px", borderRadius: 6, border: "1px solid #475569",
-                        background: "transparent", color: "#94a3b8", cursor: "pointer"
-                    }}>
-                        Cancel
-                    </button>
-                    <button onClick={() => {
-                        if (mainPlayerId) {
-                            onSave({ startHour, endHour, mainPlayerId, subPlayerId: subPlayerId || null });
-                        }
-                    }} disabled={!mainPlayerId} style={{
-                        padding: "8px 16px", borderRadius: 6, border: "none",
-                        background: mainPlayerId ? "#2563eb" : "#475569", color: "#fff", cursor: mainPlayerId ? "pointer" : "not-allowed"
-                    }}>
-                        Save
-                    </button>
+                    <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #475569", background: "transparent", color: "#94a3b8", cursor: "pointer" }}>Cancel</button>
+                    <button onClick={() => mainPlayerId && onSave({ startHour, endHour, mainPlayerId, subPlayerId: subPlayerId || null })} disabled={!mainPlayerId} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: mainPlayerId ? "#2563eb" : "#475569", color: "#fff", cursor: mainPlayerId ? "pointer" : "not-allowed" }}>Save</button>
                 </div>
             </div>
         </div>
@@ -263,15 +223,12 @@ export default function CaptainPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [tzOffset, setTzOffset] = useState(1); // Default CET
+    const [tzOffset, setTzOffset] = useState(1);
 
-    // Modal state
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalDayDate, setModalDayDate] = useState<Date>(new Date());
+    const [modalDay, setModalDay] = useState(21);
     const [modalStartHour, setModalStartHour] = useState(0);
     const [editingSlot, setEditingSlot] = useState<CalendarSlot | null>(null);
-
-    // Hover state for delete button
     const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
 
     useEffect(() => {
@@ -281,26 +238,17 @@ export default function CaptainPage() {
                 if (res.ok) {
                     const json = await res.json();
                     setPlayers(json.players || []);
-
-                    // Convert old format to CalendarSlot[]
                     const storedSlots: CalendarSlot[] = [];
                     const rawSlots = json.planning?.slots || {};
-
-                    // Group consecutive hourIndexes by player
-                    let currentSlot: CalendarSlot | null = null;
-
                     for (let i = 0; i <= 68; i++) {
                         const raw = rawSlots[i];
-                        if (raw && raw.mainPlayerId) {
-                            const playerName = players.find(p => p.id === raw.mainPlayerId)?.name || raw.main_player_name || "Unknown";
-                            const subName = raw.subPlayerId ? (players.find(p => p.id === raw.subPlayerId)?.name || raw.sub_player_name) : null;
-
+                        if (raw?.mainPlayerId) {
                             storedSlots.push({
                                 hourIndex: i,
                                 mainPlayerId: raw.mainPlayerId,
-                                mainPlayerName: playerName,
+                                mainPlayerName: raw.main_player_name || "Unknown",
                                 subPlayerId: raw.subPlayerId || null,
-                                subPlayerName: subName,
+                                subPlayerName: raw.sub_player_name || null,
                             });
                         }
                     }
@@ -317,43 +265,25 @@ export default function CaptainPage() {
         fetchData();
     }, [teamId]);
 
-    const columnDates = getColumnDates(tzOffset);
+    const columnDays = getColumnDays(tzOffset);
 
-    const getHourIndexForLocalTime = (dayDate: Date, hour: number): number => {
-        const localTime = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), hour);
-        const utcTime = new Date(localTime.getTime() - tzOffset * 60 * 60 * 1000);
-        const diffMs = utcTime.getTime() - EVENT_START_UTC.getTime();
-        return Math.floor(diffMs / (60 * 60 * 1000));
-    };
-
-    const getLocalHourForIndex = (hourIndex: number): { date: Date; hour: number } => {
-        const localTime = getLocalDateForHourIndex(hourIndex, tzOffset);
-        return { date: localTime, hour: localTime.getHours() };
-    };
-
-    const handleCellClick = (dayDate: Date, hour: number) => {
-        const hourIndex = getHourIndexForLocalTime(dayDate, hour);
+    const handleCellClick = (day: number, hour: number) => {
+        const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
         if (hourIndex < 0 || hourIndex > 68) return;
-
-        // Check if slot exists
         const existing = slots.find(s => s.hourIndex === hourIndex);
-        if (existing) {
-            setEditingSlot(existing);
-        } else {
-            setEditingSlot(null);
-        }
-        setModalDayDate(dayDate);
+        setEditingSlot(existing || null);
+        setModalDay(day);
         setModalStartHour(hour);
         setModalOpen(true);
     };
 
     const handleSaveSlot = (data: { startHour: number; endHour: number; mainPlayerId: string; subPlayerId: string | null }) => {
-        const newSlots: CalendarSlot[] = [];
         const player = players.find(p => p.id === data.mainPlayerId);
         const subPlayer = data.subPlayerId ? players.find(p => p.id === data.subPlayerId) : null;
 
+        const newSlots: CalendarSlot[] = [];
         for (let h = data.startHour; h < data.endHour; h++) {
-            const hourIndex = getHourIndexForLocalTime(modalDayDate, h);
+            const hourIndex = getHourIndexForLocal(modalDay, h, tzOffset);
             if (hourIndex >= 0 && hourIndex <= 68) {
                 newSlots.push({
                     hourIndex,
@@ -365,21 +295,16 @@ export default function CaptainPage() {
             }
         }
 
-        // Remove old slots in this range and add new ones
         setSlots(prev => {
-            const hourIndexes = newSlots.map(s => s.hourIndex);
-            const filtered = prev.filter(s => !hourIndexes.includes(s.hourIndex));
-            return [...filtered, ...newSlots];
+            const idxs = newSlots.map(s => s.hourIndex);
+            return [...prev.filter(s => !idxs.includes(s.hourIndex)), ...newSlots];
         });
-
         setModalOpen(false);
         setEditingSlot(null);
     };
 
     const handleDeleteSlot = () => {
-        if (editingSlot) {
-            setSlots(prev => prev.filter(s => s.hourIndex !== editingSlot.hourIndex));
-        }
+        if (editingSlot) setSlots(prev => prev.filter(s => s.hourIndex !== editingSlot.hourIndex));
         setModalOpen(false);
         setEditingSlot(null);
     };
@@ -387,26 +312,14 @@ export default function CaptainPage() {
     const saveToServer = async () => {
         setSaving(true);
         try {
-            // Convert back to old format
             const slotsObj: Record<number, TeamSlotAssignment> = {};
             for (const slot of slots) {
-                slotsObj[slot.hourIndex] = {
-                    mainPlayerId: slot.mainPlayerId,
-                    subPlayerId: slot.subPlayerId,
-                };
+                slotsObj[slot.hourIndex] = { mainPlayerId: slot.mainPlayerId, subPlayerId: slot.subPlayerId };
             }
-
-            await fetch(`/api/captain/${teamId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ slots: slotsObj })
-            });
+            await fetch(`/api/captain/${teamId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slots: slotsObj }) });
             alert("Saved!");
-        } catch {
-            alert("Failed to save");
-        } finally {
-            setSaving(false);
-        }
+        } catch { alert("Failed to save"); }
+        finally { setSaving(false); }
     };
 
     if (loading) return <CaptainAuth teamId={teamId}><div style={{ padding: 20, color: "#fff" }}>Loading...</div></CaptainAuth>;
@@ -415,110 +328,68 @@ export default function CaptainPage() {
     return (
         <CaptainAuth teamId={teamId}>
             <div style={{ padding: 20, maxWidth: 1400, margin: "0 auto", color: "#e2e8f0" }}>
-                {/* Header */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
                     <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>
                         Captain Dashboard - {teamId === "joker" ? "🃏 Jokers" : `Team ${teamId.replace("team", "")}`}
                     </h1>
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                        <select value={tzOffset} onChange={e => setTzOffset(parseInt(e.target.value))}
-                            style={{ padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
-                            {TIMEZONES.map(tz => (
-                                <option key={tz.offset} value={tz.offset}>{tz.label}</option>
-                            ))}
+                        <select value={tzOffset} onChange={e => setTzOffset(parseFloat(e.target.value))} style={{ padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            {TIMEZONES.map(tz => <option key={tz.label} value={tz.offset}>{tz.label}</option>)}
                         </select>
-                        <button onClick={saveToServer} disabled={saving} style={{
-                            padding: "10px 20px", borderRadius: 6, border: "none",
-                            background: "#2563eb", color: "#fff", fontWeight: "bold", cursor: saving ? "wait" : "pointer"
-                        }}>
+                        <button onClick={saveToServer} disabled={saving} style={{ padding: "10px 20px", borderRadius: 6, border: "none", background: "#2563eb", color: "#fff", fontWeight: "bold", cursor: saving ? "wait" : "pointer" }}>
                             {saving ? "Saving..." : "💾 Save Changes"}
                         </button>
                     </div>
                 </div>
 
-                {/* Calendar Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${columnDates.length}, 1fr)`, background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
-                    {/* Header row */}
+                <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${columnDays.length}, 1fr)`, background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
                     <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
-                    {columnDates.map((date, i) => (
-                        <div key={i} style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderLeft: "1px solid #334155" }}>
-                            {formatDate(date)}
-                        </div>
-                    ))}
+                    {columnDays.map(day => <div key={day} style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderLeft: "1px solid #334155" }}>Dec {day}</div>)}
 
-                    {/* Hour rows */}
                     {Array.from({ length: 24 }).map((_, hour) => (
-                        <>
-                            <div key={`hour-${hour}`} style={{ padding: 8, textAlign: "right", fontSize: 12, color: "#94a3b8", borderTop: "1px solid #334155" }}>
-                                {hour.toString().padStart(2, '0')}:00
-                            </div>
-                            {columnDates.map((date, dayIdx) => {
-                                const hourIndex = getHourIndexForLocalTime(date, hour);
+                        <div key={hour} style={{ display: "contents" }}>
+                            <div style={{ padding: 8, textAlign: "right", fontSize: 12, color: "#94a3b8", borderTop: "1px solid #334155" }}>{hour.toString().padStart(2, '0')}:00</div>
+                            {columnDays.map(day => {
+                                const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
                                 const isInEvent = hourIndex >= 0 && hourIndex <= 68;
                                 const slot = slots.find(s => s.hourIndex === hourIndex);
                                 const isHovered = hoveredSlot === hourIndex;
 
                                 return (
                                     <div
-                                        key={`${dayIdx}-${hour}`}
-                                        onClick={() => isInEvent && handleCellClick(date, hour)}
-                                        onDoubleClick={() => slot && handleCellClick(date, hour)}
+                                        key={`${day}-${hour}`}
+                                        onClick={() => isInEvent && handleCellClick(day, hour)}
                                         onMouseEnter={() => slot && setHoveredSlot(hourIndex)}
                                         onMouseLeave={() => setHoveredSlot(null)}
                                         style={{
                                             borderTop: "1px solid #334155",
                                             borderLeft: "1px solid #334155",
                                             minHeight: 40,
-                                            background: isInEvent ? (slot ? getPlayerColor(slot.mainPlayerName) : "#1e293b") : "#0f172a",
+                                            background: isInEvent ? (slot ? getPlayerColor(slot.mainPlayerName) : "#1e293b") : "#080b10",
                                             cursor: isInEvent ? "pointer" : "default",
                                             position: "relative",
                                             padding: slot ? 4 : 0,
-                                            opacity: isInEvent ? 1 : 0.3,
+                                            opacity: isInEvent ? 1 : 0.4,
+                                            backgroundImage: isInEvent ? undefined : "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.3) 5px, rgba(0,0,0,0.3) 10px)",
                                         }}
                                     >
                                         {slot && (
                                             <>
-                                                <div style={{ fontSize: 12, fontWeight: "bold", color: "#000" }}>{slot.mainPlayerName}</div>
-                                                {slot.subPlayerName && (
-                                                    <div style={{ fontSize: 10, color: "#1e293b" }}>(Sub: {slot.subPlayerName})</div>
-                                                )}
+                                                <div style={{ fontSize: 11, fontWeight: "bold", color: "#000" }}>{slot.mainPlayerName}</div>
+                                                {slot.subPlayerName && <div style={{ fontSize: 9, color: "#1e293b" }}>(Sub: {slot.subPlayerName})</div>}
                                                 {isHovered && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setSlots(prev => prev.filter(s => s.hourIndex !== hourIndex)); }}
-                                                        style={{
-                                                            position: "absolute", top: 2, right: 2,
-                                                            background: "rgba(0,0,0,0.5)", border: "none", borderRadius: 4,
-                                                            padding: "2px 6px", cursor: "pointer", fontSize: 12
-                                                        }}
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                                    <button onClick={e => { e.stopPropagation(); setSlots(prev => prev.filter(s => s.hourIndex !== hourIndex)); }} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: 4, padding: "2px 6px", cursor: "pointer", fontSize: 12, color: "#fff" }}>🗑️</button>
                                                 )}
                                             </>
                                         )}
                                     </div>
                                 );
                             })}
-                        </>
+                        </div>
                     ))}
                 </div>
 
-                {/* Modal */}
-                <SlotModal
-                    isOpen={modalOpen}
-                    onClose={() => { setModalOpen(false); setEditingSlot(null); }}
-                    onSave={handleSaveSlot}
-                    onDelete={editingSlot ? handleDeleteSlot : undefined}
-                    players={players}
-                    dayDate={modalDayDate}
-                    initialStartHour={modalStartHour}
-                    initialEndHour={editingSlot ? modalStartHour + 1 : undefined}
-                    initialMainPlayerId={editingSlot?.mainPlayerId}
-                    initialSubPlayerId={editingSlot?.subPlayerId}
-                    isEdit={!!editingSlot}
-                    existingSlots={[]}
-                    tzOffset={tzOffset}
-                />
+                <SlotModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingSlot(null); }} onSave={handleSaveSlot} onDelete={editingSlot ? handleDeleteSlot : undefined} players={players} day={modalDay} initialStartHour={modalStartHour} initialEndHour={editingSlot ? modalStartHour + 1 : undefined} initialMainPlayerId={editingSlot?.mainPlayerId} initialSubPlayerId={editingSlot?.subPlayerId} isEdit={!!editingSlot} tzOffset={tzOffset} />
             </div>
         </CaptainAuth>
     );
