@@ -135,3 +135,46 @@ export interface DonationApiResponse {
     teamPots: TeamPot[];
     recentDonations: ProcessedDonation[];
 }
+
+// Live Status (from /api/live-status)
+export interface TeamLiveStatus {
+    id: number;
+    name: string;
+    color: string;
+    activePlayer: string | null;
+    currentMapName: string | null;
+    currentMapStatus: string | null;
+    mapsCompleted: number;
+    lastUpdated: string | null;
+    isOnline: boolean;
+}
+
+// Leaderboard display
+export interface LeaderboardTeam {
+    id: string;
+    name: string;
+    rank: number;
+    color: string;
+    mapsFinished: number;
+    totalMaps: number;
+    activePlayer: string | null;
+    currentMap: {
+        name: string;
+        authorName: string;
+        mapUid: string;
+        date: string;
+        authorTime: string;
+        thumbnailUrl: string;
+    };
+    activeShield: {
+        type: 'small' | 'big';
+        timeLeft: number;
+    } | null;
+    activePenalties: {
+        name: string;
+        timeLeft: number;
+    }[];
+    penaltyQueue: number;
+    penaltyQueueNames: string[];
+}
+

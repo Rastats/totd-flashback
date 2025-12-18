@@ -3,6 +3,26 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
+// Team metadata
+const TEAMS = {
+    1: { name: 'Team 1', color: '#60a5fa' },
+    2: { name: 'Team 2', color: '#fbbf24' },
+    3: { name: 'Team 3', color: '#f472b6' },
+    4: { name: 'Team 4', color: '#34d399' },
+};
+
+interface TeamLiveStatus {
+    id: number;
+    name: string;
+    color: string;
+    activePlayer: string | null;
+    currentMapName: string | null;
+    currentMapStatus: string | null;
+    mapsCompleted: number;
+    lastUpdated: string | null;
+    isOnline: boolean; // true if updated in last 60 seconds
+}
+
 // GET /api/live-status
 // Returns live status for each team (active player, current map, etc.)
 export async function GET() {
@@ -20,40 +40,42 @@ export async function GET() {
             return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
         }
 
-        // Group by team and get the latest entry per team
-        const teamStatus: Record<number, {
-            active_player: string | null;
-            current_map_name: string | null;
-            current_map_status: string | null;
-            maps_completed: number;
-            updated_at: string;
-        }> = {};
+        const now = new Date();
+        const teams: TeamLiveStatus[] = [];
 
-        // Process all entries, keeping the latest per team
-        for (const entry of statusData || []) {
-            const teamId = entry.team_id;
-            if (!teamStatus[teamId] || new Date(entry.updated_at) > new Date(teamStatus[teamId].updated_at)) {
-                teamStatus[teamId] = {
-                    active_player: entry.active_player,
-                    current_map_name: entry.current_map_name,
-                    current_map_status: entry.current_map_status,
-                    maps_completed: entry.maps_completed,
-                    updated_at: entry.updated_at
-                };
+        // Process each team
+        for (let teamId = 1; teamId <= 4; teamId++) {
+            const teamMeta = TEAMS[teamId as keyof typeof TEAMS];
+
+            // Find latest entry for this team
+            const entry = statusData?.find(e => e.team_id === teamId);
+
+            let isOnline = false;
+            if (entry?.updated_at) {
+                const updatedAt = new Date(entry.updated_at);
+                isOnline = (now.getTime() - updatedAt.getTime()) < 60000; // 60 seconds
             }
+
+            teams.push({
+                id: teamId,
+                name: teamMeta.name,
+                color: teamMeta.color,
+                activePlayer: entry?.active_player || null,
+                currentMapName: entry?.current_map_name || null,
+                currentMapStatus: entry?.current_map_status || null,
+                mapsCompleted: entry?.maps_completed || 0,
+                lastUpdated: entry?.updated_at || null,
+                isOnline,
+            });
         }
 
-        // Return organized by team
         return NextResponse.json({
-            teams: {
-                1: teamStatus[1] || null,
-                2: teamStatus[2] || null,
-                3: teamStatus[3] || null,
-                4: teamStatus[4] || null,
-            }
+            teams,
+            timestamp: now.toISOString(),
         });
     } catch (error) {
         console.error('[LiveStatus] Error:', error);
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
+
