@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { TeamPlanning, TeamSlotAssignment, AvailabilitySlot, TeamAssignment } from "@/lib/types";
+import { TeamSlotAssignment, AvailabilitySlot, TeamAssignment } from "@/lib/types";
 import CaptainAuth from "@/components/CaptainAuth";
 
+// =============== TYPES ===============
 interface PlayerSummary {
     id: string;
     name: string;
@@ -12,32 +13,68 @@ interface PlayerSummary {
     availability: AvailabilitySlot[];
 }
 
-interface TeamData {
-    teamId: string;
-    players: PlayerSummary[];
-    planning: TeamPlanning;
+interface CalendarSlot {
+    hourIndex: number;      // 0-68 (stored)
+    mainPlayerId: string;
+    mainPlayerName: string;
+    subPlayerId: string | null;
+    subPlayerName: string | null;
 }
 
-const HOURS = 69;
+// =============== CONSTANTS ===============
+const TIMEZONES = [
+    { label: "CET (Paris, UTC+1)", offset: 1 },
+    { label: "GMT (London, UTC+0)", offset: 0 },
+    { label: "EST (New York, UTC-5)", offset: -5 },
+    { label: "PST (Los Angeles, UTC-8)", offset: -8 },
+    { label: "AEST (Sydney, UTC+11)", offset: 11 },
+    { label: "JST (Tokyo, UTC+9)", offset: 9 },
+];
 
-const getSlotTime = (hourIndex: number) => {
-    // 0 = Dec 21 21h
-    // 3 = Dec 22 00h
-    // 27 = Dec 23 00h
-    // 51 = Dec 24 00h
-    if (hourIndex < 3) {
-        return `Dec 21, ${21 + hourIndex}:00`;
-    }
-    const offsetIndex = hourIndex - 3;
-    const day = Math.floor(offsetIndex / 24);
-    const hour = offsetIndex % 24;
-    const dates = ["Dec 22", "Dec 23", "Dec 24"];
-    return `${dates[day]}, ${hour}:00`;
+// Event runs Dec 21 21:00 CET to Dec 24 18:00 CET (69 hours)
+const EVENT_START_UTC = new Date("2025-12-21T20:00:00Z"); // 21:00 CET = 20:00 UTC
+
+const PLAYER_COLORS = [
+    "#60a5fa", "#fbbf24", "#f472b6", "#34d399",
+    "#a78bfa", "#fb923c", "#2dd4bf", "#f87171"
+];
+
+const getPlayerColor = (name: string): string => {
+    const hash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return PLAYER_COLORS[hash % PLAYER_COLORS.length];
 };
 
-// Check if a player is available at a specific hourIndex
-const isUnavailable = (player: PlayerSummary, hourIndex: number) => {
-    // Reverse mapping: from hourIndex to date + hour
+// =============== TIME UTILITIES ===============
+const getLocalDateForHourIndex = (hourIndex: number, tzOffset: number) => {
+    const utcTime = new Date(EVENT_START_UTC.getTime() + hourIndex * 60 * 60 * 1000);
+    const localTime = new Date(utcTime.getTime() + tzOffset * 60 * 60 * 1000);
+    return localTime;
+};
+
+const getColumnDates = (tzOffset: number): Date[] => {
+    const dates: Date[] = [];
+    const startLocal = getLocalDateForHourIndex(0, tzOffset);
+    const endLocal = getLocalDateForHourIndex(68, tzOffset);
+
+    const startDay = new Date(startLocal.getFullYear(), startLocal.getMonth(), startLocal.getDate());
+    const endDay = new Date(endLocal.getFullYear(), endLocal.getMonth(), endLocal.getDate());
+
+    const current = new Date(startDay);
+    while (current <= endDay) {
+        dates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+};
+
+const formatDate = (date: Date): string => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+};
+
+// =============== AVAILABILITY CHECK ===============
+const isPlayerAvailable = (player: PlayerSummary, hourIndex: number): boolean => {
+    // Convert hourIndex to date + hour (CET-based for availability matching)
     let dateStr = "";
     let hour = 0;
 
@@ -52,28 +89,190 @@ const isUnavailable = (player: PlayerSummary, hourIndex: number) => {
         hour = h;
     }
 
-    // Check availability array
-    // Availability is stored as availability slots with start/end
     const slot = player.availability.find(s =>
-        s.date === dateStr &&
-        hour >= s.startHour &&
-        hour < s.endHour
+        s.date === dateStr && hour >= s.startHour && hour < s.endHour
     );
-    return !slot;
+    return !!slot;
 };
 
+// =============== MODAL COMPONENT ===============
+interface SlotModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: { startHour: number; endHour: number; mainPlayerId: string; subPlayerId: string | null }) => void;
+    onDelete?: () => void;
+    players: PlayerSummary[];
+    dayDate: Date;
+    initialStartHour: number;
+    initialEndHour?: number;
+    initialMainPlayerId?: string;
+    initialSubPlayerId?: string | null;
+    isEdit?: boolean;
+    existingSlots: { startHour: number; endHour: number }[];
+    tzOffset: number;
+}
+
+function SlotModal({
+    isOpen, onClose, onSave, onDelete, players, dayDate,
+    initialStartHour, initialEndHour, initialMainPlayerId, initialSubPlayerId,
+    isEdit, existingSlots, tzOffset
+}: SlotModalProps) {
+    const [startHour, setStartHour] = useState(initialStartHour);
+    const [endHour, setEndHour] = useState(initialEndHour || initialStartHour + 1);
+    const [mainPlayerId, setMainPlayerId] = useState(initialMainPlayerId || "");
+    const [subPlayerId, setSubPlayerId] = useState(initialSubPlayerId || "");
+
+    useEffect(() => {
+        setStartHour(initialStartHour);
+        setEndHour(initialEndHour || initialStartHour + 1);
+        setMainPlayerId(initialMainPlayerId || "");
+        setSubPlayerId(initialSubPlayerId || "");
+    }, [initialStartHour, initialEndHour, initialMainPlayerId, initialSubPlayerId]);
+
+    if (!isOpen) return null;
+
+    // Get hourIndex for availability check
+    const getHourIndexForLocalHour = (dayDate: Date, hour: number): number => {
+        // Convert local hour back to hourIndex
+        const localTime = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), hour);
+        const utcTime = new Date(localTime.getTime() - tzOffset * 60 * 60 * 1000);
+        const diffMs = utcTime.getTime() - EVENT_START_UTC.getTime();
+        return Math.floor(diffMs / (60 * 60 * 1000));
+    };
+
+    const availableHours: number[] = [];
+    for (let h = 0; h < 24; h++) {
+        const idx = getHourIndexForLocalHour(dayDate, h);
+        if (idx >= 0 && idx <= 68) {
+            availableHours.push(h);
+        }
+    }
+
+    return (
+        <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000
+        }} onClick={onClose}>
+            <div style={{
+                background: "#1e293b", borderRadius: 12, padding: 24, minWidth: 350,
+                border: "1px solid #334155"
+            }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#e2e8f0" }}>
+                    {isEdit ? "Edit Slot" : "Add Slot"} - {formatDate(dayDate)}
+                </h3>
+
+                <div style={{ display: "grid", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Start</label>
+                            <select value={startHour} onChange={e => setStartHour(parseInt(e.target.value))}
+                                style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                                {availableHours.map(h => (
+                                    <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>End</label>
+                            <select value={endHour} onChange={e => setEndHour(parseInt(e.target.value))}
+                                style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                                {availableHours.filter(h => h > startHour).map(h => (
+                                    <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
+                                ))}
+                                {availableHours[availableHours.length - 1] < 24 && (
+                                    <option value={24}>24:00</option>
+                                )}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Active Player</label>
+                        <select value={mainPlayerId} onChange={e => setMainPlayerId(e.target.value)}
+                            style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            <option value="">-- Select --</option>
+                            {players.map(p => {
+                                const hourIdx = getHourIndexForLocalHour(dayDate, startHour);
+                                const available = isPlayerAvailable(p, hourIdx);
+                                return (
+                                    <option key={p.id} value={p.id}>
+                                        {available ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Sub Player</label>
+                        <select value={subPlayerId} onChange={e => setSubPlayerId(e.target.value)}
+                            style={{ width: "100%", padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            <option value="">-- None --</option>
+                            {players.filter(p => p.id !== mainPlayerId).map(p => {
+                                const hourIdx = getHourIndexForLocalHour(dayDate, startHour);
+                                const available = isPlayerAvailable(p, hourIdx);
+                                return (
+                                    <option key={p.id} value={p.id}>
+                                        {available ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
+                    {isEdit && onDelete && (
+                        <button onClick={onDelete} style={{
+                            padding: "8px 16px", borderRadius: 6, border: "none",
+                            background: "#dc2626", color: "#fff", cursor: "pointer", marginRight: "auto"
+                        }}>
+                            🗑️ Delete
+                        </button>
+                    )}
+                    <button onClick={onClose} style={{
+                        padding: "8px 16px", borderRadius: 6, border: "1px solid #475569",
+                        background: "transparent", color: "#94a3b8", cursor: "pointer"
+                    }}>
+                        Cancel
+                    </button>
+                    <button onClick={() => {
+                        if (mainPlayerId) {
+                            onSave({ startHour, endHour, mainPlayerId, subPlayerId: subPlayerId || null });
+                        }
+                    }} disabled={!mainPlayerId} style={{
+                        padding: "8px 16px", borderRadius: 6, border: "none",
+                        background: mainPlayerId ? "#2563eb" : "#475569", color: "#fff", cursor: mainPlayerId ? "pointer" : "not-allowed"
+                    }}>
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// =============== MAIN COMPONENT ===============
 export default function CaptainPage() {
     const params = useParams();
     const teamId = params.teamId as string;
-    const [data, setData] = useState<TeamData | null>(null);
+
+    const [players, setPlayers] = useState<PlayerSummary[]>([]);
+    const [slots, setSlots] = useState<CalendarSlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [assignments, setAssignments] = useState<Record<number, TeamSlotAssignment>>({});
     const [error, setError] = useState<string | null>(null);
+    const [tzOffset, setTzOffset] = useState(1); // Default CET
 
-    // Bulk state
-    const [bulkStart, setBulkStart] = useState(0);
-    const [bulkEnd, setBulkEnd] = useState(0);
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalDayDate, setModalDayDate] = useState<Date>(new Date());
+    const [modalStartHour, setModalStartHour] = useState(0);
+    const [editingSlot, setEditingSlot] = useState<CalendarSlot | null>(null);
+
+    // Hover state for delete button
+    const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -81,14 +280,35 @@ export default function CaptainPage() {
                 const res = await fetch(`/api/captain/${teamId}`);
                 if (res.ok) {
                     const json = await res.json();
-                    setData(json);
-                    setAssignments(json.planning.slots || {});
+                    setPlayers(json.players || []);
+
+                    // Convert old format to CalendarSlot[]
+                    const storedSlots: CalendarSlot[] = [];
+                    const rawSlots = json.planning?.slots || {};
+
+                    // Group consecutive hourIndexes by player
+                    let currentSlot: CalendarSlot | null = null;
+
+                    for (let i = 0; i <= 68; i++) {
+                        const raw = rawSlots[i];
+                        if (raw && raw.mainPlayerId) {
+                            const playerName = players.find(p => p.id === raw.mainPlayerId)?.name || raw.main_player_name || "Unknown";
+                            const subName = raw.subPlayerId ? (players.find(p => p.id === raw.subPlayerId)?.name || raw.sub_player_name) : null;
+
+                            storedSlots.push({
+                                hourIndex: i,
+                                mainPlayerId: raw.mainPlayerId,
+                                mainPlayerName: playerName,
+                                subPlayerId: raw.subPlayerId || null,
+                                subPlayerName: subName,
+                            });
+                        }
+                    }
+                    setSlots(storedSlots);
                 } else {
-                    const text = await res.text();
-                    setError(`Failed to load team data (${res.status}): ${text}`);
+                    setError(`Failed to load (${res.status})`);
                 }
             } catch (err) {
-                console.error(err);
                 setError(err instanceof Error ? err.message : "Network error");
             } finally {
                 setLoading(false);
@@ -97,276 +317,208 @@ export default function CaptainPage() {
         fetchData();
     }, [teamId]);
 
-    const handleAssignmentChange = (hourIndex: number, type: 'main' | 'sub', playerId: string) => {
-        const current = assignments[hourIndex] || { mainPlayerId: null, subPlayerId: null };
-        const newVal = playerId === "null" ? null : playerId;
+    const columnDates = getColumnDates(tzOffset);
 
-        const updated = {
-            ...current,
-            [type === 'main' ? 'mainPlayerId' : 'subPlayerId']: newVal
-        };
-
-        setAssignments(prev => ({
-            ...prev,
-            [hourIndex]: updated
-        }));
+    const getHourIndexForLocalTime = (dayDate: Date, hour: number): number => {
+        const localTime = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), hour);
+        const utcTime = new Date(localTime.getTime() - tzOffset * 60 * 60 * 1000);
+        const diffMs = utcTime.getTime() - EVENT_START_UTC.getTime();
+        return Math.floor(diffMs / (60 * 60 * 1000));
     };
 
-    const saveChanges = async () => {
+    const getLocalHourForIndex = (hourIndex: number): { date: Date; hour: number } => {
+        const localTime = getLocalDateForHourIndex(hourIndex, tzOffset);
+        return { date: localTime, hour: localTime.getHours() };
+    };
+
+    const handleCellClick = (dayDate: Date, hour: number) => {
+        const hourIndex = getHourIndexForLocalTime(dayDate, hour);
+        if (hourIndex < 0 || hourIndex > 68) return;
+
+        // Check if slot exists
+        const existing = slots.find(s => s.hourIndex === hourIndex);
+        if (existing) {
+            setEditingSlot(existing);
+        } else {
+            setEditingSlot(null);
+        }
+        setModalDayDate(dayDate);
+        setModalStartHour(hour);
+        setModalOpen(true);
+    };
+
+    const handleSaveSlot = (data: { startHour: number; endHour: number; mainPlayerId: string; subPlayerId: string | null }) => {
+        const newSlots: CalendarSlot[] = [];
+        const player = players.find(p => p.id === data.mainPlayerId);
+        const subPlayer = data.subPlayerId ? players.find(p => p.id === data.subPlayerId) : null;
+
+        for (let h = data.startHour; h < data.endHour; h++) {
+            const hourIndex = getHourIndexForLocalTime(modalDayDate, h);
+            if (hourIndex >= 0 && hourIndex <= 68) {
+                newSlots.push({
+                    hourIndex,
+                    mainPlayerId: data.mainPlayerId,
+                    mainPlayerName: player?.name || "Unknown",
+                    subPlayerId: data.subPlayerId,
+                    subPlayerName: subPlayer?.name || null,
+                });
+            }
+        }
+
+        // Remove old slots in this range and add new ones
+        setSlots(prev => {
+            const hourIndexes = newSlots.map(s => s.hourIndex);
+            const filtered = prev.filter(s => !hourIndexes.includes(s.hourIndex));
+            return [...filtered, ...newSlots];
+        });
+
+        setModalOpen(false);
+        setEditingSlot(null);
+    };
+
+    const handleDeleteSlot = () => {
+        if (editingSlot) {
+            setSlots(prev => prev.filter(s => s.hourIndex !== editingSlot.hourIndex));
+        }
+        setModalOpen(false);
+        setEditingSlot(null);
+    };
+
+    const saveToServer = async () => {
         setSaving(true);
         try {
+            // Convert back to old format
+            const slotsObj: Record<number, TeamSlotAssignment> = {};
+            for (const slot of slots) {
+                slotsObj[slot.hourIndex] = {
+                    mainPlayerId: slot.mainPlayerId,
+                    subPlayerId: slot.subPlayerId,
+                };
+            }
+
             await fetch(`/api/captain/${teamId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ slots: assignments })
+                body: JSON.stringify({ slots: slotsObj })
             });
-            alert("Changes saved successfully!");
-        } catch (err) {
-            alert("Failed to save changes.");
+            alert("Saved!");
+        } catch {
+            alert("Failed to save");
         } finally {
             setSaving(false);
         }
     };
 
-    // Calculate availability for bulk range
-    const getBulkAvailability = (player: PlayerSummary) => {
-        if (!bulkStart && bulkStart !== 0) return { status: 'unknown', text: '', score: -1 };
-
-        let availableCount = 0;
-        let total = 0;
-
-        // Ensure start <= end
-        const s = Math.min(bulkStart, bulkEnd);
-        const e = Math.max(bulkStart, bulkEnd);
-
-        for (let i = s; i <= e; i++) {
-            total++;
-            if (!isUnavailable(player, i)) {
-                availableCount++;
-            }
-        }
-
-        if (availableCount === total) return { status: 'full', text: '✅', score: 2 };
-        if (availableCount === 0) return { status: 'none', text: '🔴', score: 0 };
-        return { status: 'partial', text: `⚠️ (${availableCount}/${total})`, score: 1 };
-    };
-
-    if (loading) return (
-        <CaptainAuth teamId={teamId}>
-            <div style={{ padding: 20, color: "#fff" }}>Loading...</div>
-        </CaptainAuth>
-    );
-    if (error) return (
-        <CaptainAuth teamId={teamId}>
-            <div style={{ padding: 20, color: "#f87171" }}>Error: {error}</div>
-        </CaptainAuth>
-    );
-    if (!data) return (
-        <CaptainAuth teamId={teamId}>
-            <div style={{ padding: 20, color: "#f87171" }}>Team not found</div>
-        </CaptainAuth>
-    );
-
-    // Sort players for bulk dropdown
-    const sortedPlayers = [...data.players].sort((a, b) => {
-        const scoreA = getBulkAvailability(a).score;
-        const scoreB = getBulkAvailability(b).score;
-        return scoreB - scoreA; // Highest score first
-    });
+    if (loading) return <CaptainAuth teamId={teamId}><div style={{ padding: 20, color: "#fff" }}>Loading...</div></CaptainAuth>;
+    if (error) return <CaptainAuth teamId={teamId}><div style={{ padding: 20, color: "#f87171" }}>Error: {error}</div></CaptainAuth>;
 
     return (
         <CaptainAuth teamId={teamId}>
-            <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto", color: "#e2e8f0", fontFamily: "sans-serif" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                    <h1 style={{ fontSize: 24, fontWeight: "bold" }}>
+            <div style={{ padding: 20, maxWidth: 1400, margin: "0 auto", color: "#e2e8f0" }}>
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+                    <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>
                         Captain Dashboard - {teamId === "joker" ? "🃏 Jokers" : `Team ${teamId.replace("team", "")}`}
                     </h1>
-                    <button
-                        onClick={saveChanges}
-                        disabled={saving}
-                        style={{
-                            background: "#2563eb", color: "white", padding: "10px 20px",
-                            border: "none", borderRadius: 6, cursor: saving ? "wait" : "pointer",
-                            fontWeight: "bold"
-                        }}
-                    >
-                        {saving ? "Saving..." : "Save Changes"}
-                    </button>
-                </div>
-
-                {/* BULK ACTIONS */}
-                <div style={{ background: "#1e293b", padding: 16, borderRadius: 8, marginBottom: 20 }}>
-                    <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>⚡ Bulk Assignment</h3>
-                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
-                        <div>
-                            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>First Slot</label>
-                            <select
-                                value={bulkStart}
-                                onChange={(e) => setBulkStart(parseInt(e.target.value))}
-                                style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}
-                            >
-                                {Array.from({ length: HOURS }).map((_, i) => (
-                                    <option key={i} value={i}>{getSlotTime(i)}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>
-                                Last Slot <span style={{ color: "#64748b", fontWeight: "normal" }}>({Math.abs(bulkEnd - bulkStart) + 1} slots)</span>
-                            </label>
-                            <select
-                                value={bulkEnd}
-                                onChange={(e) => setBulkEnd(parseInt(e.target.value))}
-                                style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569" }}
-                            >
-                                {Array.from({ length: HOURS }).map((_, i) => (
-                                    <option key={i} value={i}>{getSlotTime(i)}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Main Player</label>
-                            <select id="bulk-main" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 200 }}>
-                                <option value="">-- No Change --</option>
-                                <option value="clear">❌ Clear Assignment</option>
-                                {sortedPlayers.map(p => {
-                                    const avail = getBulkAvailability(p);
-                                    return (
-                                        <option key={p.id} value={p.id}>
-                                            {avail.text} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8" }}>Set Backup Player</label>
-                            <select id="bulk-sub" style={{ padding: 8, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", minWidth: 200 }}>
-                                <option value="">-- No Change --</option>
-                                <option value="clear">❌ Clear Assignment</option>
-                                {sortedPlayers.map(p => {
-                                    const avail = getBulkAvailability(p);
-                                    return (
-                                        <option key={p.id} value={p.id}>
-                                            {avail.text} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                        </div>
-                        <button
-                            onClick={() => {
-                                const start = Math.min(bulkStart, bulkEnd);
-                                const end = Math.max(bulkStart, bulkEnd);
-                                const main = (document.getElementById("bulk-main") as HTMLSelectElement).value;
-                                const sub = (document.getElementById("bulk-sub") as HTMLSelectElement).value;
-
-                                if (!main && !sub) return;
-
-                                setAssignments(prev => {
-                                    const next = { ...prev };
-                                    for (let i = start; i <= end; i++) {
-                                        const current = next[i] || { mainPlayerId: null, subPlayerId: null };
-                                        if (main) next[i] = { ...current, mainPlayerId: main === "clear" ? null : main };
-                                        if (sub) next[i] = { ...next[i], subPlayerId: sub === "clear" ? null : sub };
-                                    }
-                                    return next;
-                                });
-                            }}
-                            style={{ padding: "8px 16px", background: "#f59e0b", color: "#000", fontWeight: "bold", borderRadius: 4, border: "none", cursor: "pointer" }}
-                        >
-                            Apply to Range
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <select value={tzOffset} onChange={e => setTzOffset(parseInt(e.target.value))}
+                            style={{ padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
+                            {TIMEZONES.map(tz => (
+                                <option key={tz.offset} value={tz.offset}>{tz.label}</option>
+                            ))}
+                        </select>
+                        <button onClick={saveToServer} disabled={saving} style={{
+                            padding: "10px 20px", borderRadius: 6, border: "none",
+                            background: "#2563eb", color: "#fff", fontWeight: "bold", cursor: saving ? "wait" : "pointer"
+                        }}>
+                            {saving ? "Saving..." : "💾 Save Changes"}
                         </button>
                     </div>
                 </div>
 
-                <div style={{ background: "#1e293b", borderRadius: 8, overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                            <tr style={{ background: "#0f172a", textAlign: "left" }}>
-                                <th style={{ padding: 12, borderBottom: "1px solid #334155" }}>Time Slot</th>
-                                <th style={{ padding: 12, borderBottom: "1px solid #334155" }}>Main Player</th>
-                                <th style={{ padding: 12, borderBottom: "1px solid #334155" }}>Secondary Player (Backup)</th>
-                                <th style={{ padding: 12, borderBottom: "1px solid #334155" }}>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {Array.from({ length: HOURS }).map((_, i) => {
-                                const slot = assignments[i] || { mainPlayerId: null, subPlayerId: null };
-                                const mainMissing = !slot.mainPlayerId;
-                                const subMissing = !slot.subPlayerId;
+                {/* Calendar Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${columnDates.length}, 1fr)`, background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
+                    {/* Header row */}
+                    <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
+                    {columnDates.map((date, i) => (
+                        <div key={i} style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderLeft: "1px solid #334155" }}>
+                            {formatDate(date)}
+                        </div>
+                    ))}
 
-                                let statusColor = "#22c55e"; // Green
-                                let statusText = "Ready";
-                                if (mainMissing) {
-                                    statusColor = "#ef4444"; // Red
-                                    statusText = "Missing Main";
-                                } else if (subMissing) {
-                                    statusColor = "#eab308"; // Yellow
-                                    statusText = "Missing Backup";
-                                }
+                    {/* Hour rows */}
+                    {Array.from({ length: 24 }).map((_, hour) => (
+                        <>
+                            <div key={`hour-${hour}`} style={{ padding: 8, textAlign: "right", fontSize: 12, color: "#94a3b8", borderTop: "1px solid #334155" }}>
+                                {hour.toString().padStart(2, '0')}:00
+                            </div>
+                            {columnDates.map((date, dayIdx) => {
+                                const hourIndex = getHourIndexForLocalTime(date, hour);
+                                const isInEvent = hourIndex >= 0 && hourIndex <= 68;
+                                const slot = slots.find(s => s.hourIndex === hourIndex);
+                                const isHovered = hoveredSlot === hourIndex;
 
                                 return (
-                                    <tr key={i} style={{ borderBottom: "1px solid #334155", background: i % 2 === 0 ? "#1e293b" : "#24344d" }}>
-                                        <td style={{ padding: 10, fontWeight: 500 }}>{getSlotTime(i)}</td>
-
-                                        {/* MAIN PLAYER */}
-                                        <td style={{ padding: 10 }}>
-                                            <select
-                                                value={slot.mainPlayerId || "null"}
-                                                onChange={(e) => handleAssignmentChange(i, 'main', e.target.value)}
-                                                style={{
-                                                    padding: 6, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", width: "100%"
-                                                }}
-                                            >
-                                                <option value="null">-- Select Main --</option>
-                                                {data.players.map(p => {
-                                                    const unavailable = isUnavailable(p, i);
-                                                    return (
-                                                        <option key={p.id} value={p.id} style={{ color: unavailable ? "#f87171" : "#fff" }}>
-                                                            {unavailable ? "🔴 " : "🟢 "} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
-                                        </td>
-
-                                        {/* SUB PLAYER */}
-                                        <td style={{ padding: 10 }}>
-                                            <select
-                                                value={slot.subPlayerId || "null"}
-                                                onChange={(e) => handleAssignmentChange(i, 'sub', e.target.value)}
-                                                style={{
-                                                    padding: 6, borderRadius: 4, background: "#334155", color: "#fff", border: "1px solid #475569", width: "100%"
-                                                }}
-                                            >
-                                                <option value="null">-- Select Backup --</option>
-                                                {data.players.map(p => {
-                                                    if (p.id === slot.mainPlayerId) return null; // Can't be main and sub
-                                                    const unavailable = isUnavailable(p, i);
-                                                    return (
-                                                        <option key={p.id} value={p.id} style={{ color: unavailable ? "#f87171" : "#fff" }}>
-                                                            {unavailable ? "🔴 " : "🟢 "} {p.name} {p.teamAssignment === 'joker' ? "(Joker)" : ""}
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
-                                        </td>
-
-                                        <td style={{ padding: 10 }}>
-                                            <span style={{
-                                                padding: "4px 8px", borderRadius: 4,
-                                                background: `${statusColor}20`, color: statusColor, fontWeight: "bold", fontSize: 12
-                                            }}>
-                                                {statusText}
-                                            </span>
-                                        </td>
-                                    </tr>
+                                    <div
+                                        key={`${dayIdx}-${hour}`}
+                                        onClick={() => isInEvent && handleCellClick(date, hour)}
+                                        onDoubleClick={() => slot && handleCellClick(date, hour)}
+                                        onMouseEnter={() => slot && setHoveredSlot(hourIndex)}
+                                        onMouseLeave={() => setHoveredSlot(null)}
+                                        style={{
+                                            borderTop: "1px solid #334155",
+                                            borderLeft: "1px solid #334155",
+                                            minHeight: 40,
+                                            background: isInEvent ? (slot ? getPlayerColor(slot.mainPlayerName) : "#1e293b") : "#0f172a",
+                                            cursor: isInEvent ? "pointer" : "default",
+                                            position: "relative",
+                                            padding: slot ? 4 : 0,
+                                            opacity: isInEvent ? 1 : 0.3,
+                                        }}
+                                    >
+                                        {slot && (
+                                            <>
+                                                <div style={{ fontSize: 12, fontWeight: "bold", color: "#000" }}>{slot.mainPlayerName}</div>
+                                                {slot.subPlayerName && (
+                                                    <div style={{ fontSize: 10, color: "#1e293b" }}>(Sub: {slot.subPlayerName})</div>
+                                                )}
+                                                {isHovered && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSlots(prev => prev.filter(s => s.hourIndex !== hourIndex)); }}
+                                                        style={{
+                                                            position: "absolute", top: 2, right: 2,
+                                                            background: "rgba(0,0,0,0.5)", border: "none", borderRadius: 4,
+                                                            padding: "2px 6px", cursor: "pointer", fontSize: 12
+                                                        }}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 );
                             })}
-                        </tbody>
-                    </table>
+                        </>
+                    ))}
                 </div>
+
+                {/* Modal */}
+                <SlotModal
+                    isOpen={modalOpen}
+                    onClose={() => { setModalOpen(false); setEditingSlot(null); }}
+                    onSave={handleSaveSlot}
+                    onDelete={editingSlot ? handleDeleteSlot : undefined}
+                    players={players}
+                    dayDate={modalDayDate}
+                    initialStartHour={modalStartHour}
+                    initialEndHour={editingSlot ? modalStartHour + 1 : undefined}
+                    initialMainPlayerId={editingSlot?.mainPlayerId}
+                    initialSubPlayerId={editingSlot?.subPlayerId}
+                    isEdit={!!editingSlot}
+                    existingSlots={[]}
+                    tzOffset={tzOffset}
+                />
             </div>
         </CaptainAuth>
     );
