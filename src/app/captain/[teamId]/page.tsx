@@ -347,7 +347,13 @@ export default function CaptainPage() {
                     <div style={{ gridColumn: `1 / span ${columnDays.length + 1}`, padding: "16px", background: "#0f172a", borderBottom: "1px solid #334155" }}>
                         <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
                             <span style={{ fontSize: 13, fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Play Time Stats:</span>
-                            {players.map(p => {
+                            {players.filter(p => {
+                                // Show if:
+                                // 1. Belongs to this team
+                                // 2. OR is showing on the schedule (even if Joker)
+                                const isActive = slots.some(s => s.mainPlayerId === p.id || s.subPlayerId === p.id);
+                                return p.teamAssignment === teamId || isActive;
+                            }).map(p => {
                                 const activeCount = slots.filter(s => s.mainPlayerId === p.id).length;
                                 const subCount = slots.filter(s => s.subPlayerId === p.id).length;
                                 const color = getPlayerColor(p.name);
