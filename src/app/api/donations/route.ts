@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from '@/lib/tiltify';
+import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,8 +10,12 @@ const SYNC_THROTTLE_MS = 30000; // 30 seconds
 
 // GET /api/donations
 // Returns campaign data, team pots, and recent donations
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        // Rate limiting
+        const rateLimited = applyRateLimit(request, RATE_LIMITS.public);
+        if (rateLimited) return rateLimited;
+
         // Only sync if enough time has passed since last sync
         const now = Date.now();
         if (now - lastSyncTime >= SYNC_THROTTLE_MS) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { validateApiKey } from '@/lib/api-auth';
+import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,10 @@ interface SyncPayload {
 
 export async function POST(request: Request) {
     try {
+        // Rate limiting
+        const rateLimited = applyRateLimit(request, RATE_LIMITS.plugin);
+        if (rateLimited) return rateLimited;
+
         // Validate API key
         if (!validateApiKey(request)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
