@@ -99,6 +99,31 @@ export async function POST(request: Request) {
             });
         }
 
+        // Get existing team_status to preserve maps_completed if -1 is sent
+        let existingMapsCompleted = 0;
+        let existingMapsTotal = 2000;
+
+        if (data.progress?.maps_completed === -1 || data.progress?.maps_total === -1) {
+            const { data: existing } = await supabase
+                .from('team_status')
+                .select('maps_completed, maps_total')
+                .eq('team_id', teamId)
+                .single();
+
+            if (existing) {
+                existingMapsCompleted = existing.maps_completed || 0;
+                existingMapsTotal = existing.maps_total || 2000;
+            }
+        }
+
+        // Determine final values: -1 means "don't update", use existing
+        const finalMapsCompleted = data.progress?.maps_completed === -1
+            ? existingMapsCompleted
+            : (data.progress?.maps_completed ?? 0);
+        const finalMapsTotal = data.progress?.maps_total === -1
+            ? existingMapsTotal
+            : (data.progress?.maps_total ?? 2000);
+
         // Upsert into team_status table
         const { error: upsertError } = await supabase
             .from('team_status')
@@ -118,9 +143,9 @@ export async function POST(request: Request) {
                 current_map_author: data.current_map?.author || null,
                 current_map_status: data.current_map?.status || null,
 
-                // Progress
-                maps_completed: data.progress?.maps_completed || 0,
-                maps_total: data.progress?.maps_total || 2000,
+                // Progress - use conditional values
+                maps_completed: finalMapsCompleted,
+                maps_total: finalMapsTotal,
                 speedrun_time_ms: data.progress?.speedrun_time_ms || 0,
                 redo_remaining: data.progress?.redo_remaining || 0,
 

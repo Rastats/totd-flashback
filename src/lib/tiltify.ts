@@ -118,6 +118,16 @@ async function processDonation(donation: {
     const ageMs = now - donationTime;
     const isOldDonation = ageMs > 60 * 1000; // 1 minute
 
+    // CRITICAL: Check if donation ALREADY EXISTS before upsert
+    // This prevents double-counting if processDonation is called multiple times
+    const { data: existingDonation } = await supabaseAdmin
+        .from('processed_donations')
+        .select('donation_id')
+        .eq('donation_id', donation.id)
+        .single();
+
+    const isNewDonation = !existingDonation;
+
     // Insert into processed_donations (always record, even if old)
     const donationRecord = {
         donation_id: donation.id,
@@ -142,9 +152,15 @@ async function processDonation(donation: {
         return;
     }
 
-    // Only increment pots for recent donations (< 1 minute old)
+    // Only increment pots for NEW and RECENT donations
+    // Skip if: donation is old OR already existed in database
     if (isOldDonation) {
         console.log(`[Tiltify] Skipping pot increment for old donation ${donation.id} (${Math.round(ageMs / 1000)}s old)`);
+        return;
+    }
+
+    if (!isNewDonation) {
+        console.log(`[Tiltify] Skipping pot increment for already-processed donation ${donation.id}`);
         return;
     }
 

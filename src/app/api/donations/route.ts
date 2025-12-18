@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
 import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from '@/lib/tiltify';
 
+export const dynamic = 'force-dynamic';
+
+// Throttle syncDonations to prevent excessive Tiltify API calls
+let lastSyncTime = 0;
+const SYNC_THROTTLE_MS = 30000; // 30 seconds
+
 // GET /api/donations
 // Returns campaign data, team pots, and recent donations
 export async function GET() {
     try {
-        // Sync new donations from Tiltify to Supabase
-        await syncDonations();
+        // Only sync if enough time has passed since last sync
+        const now = Date.now();
+        if (now - lastSyncTime >= SYNC_THROTTLE_MS) {
+            try {
+                await syncDonations();
+                lastSyncTime = now;
+            } catch (syncError) {
+                // Log sync error but don't fail the request - return cached data
+                console.error('[Donations] Sync error (continuing with cached data):', syncError);
+            }
+        }
 
-        // Get all the data
+        // Get all the data (from Supabase cache, even if sync failed)
         const [campaignData, teamPots, recentDonations] = await Promise.all([
             getCampaignData(),
             getTeamPots(),
