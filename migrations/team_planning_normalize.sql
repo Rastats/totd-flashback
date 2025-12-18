@@ -1,8 +1,11 @@
 -- Migration: Normalize team_planning table
 -- This replaces the JSONB structure with proper relational data
 
--- 1. Create new normalized table
-CREATE TABLE IF NOT EXISTS team_planning_slots (
+-- 1. Backup and drop old table first
+ALTER TABLE IF EXISTS team_planning RENAME TO team_planning_old;
+
+-- 2. Create new normalized table (same name: team_planning)
+CREATE TABLE team_planning (
     id SERIAL PRIMARY KEY,
     team_id TEXT NOT NULL CHECK (team_id IN ('team1', 'team2', 'team3', 'team4')),
     hour_index INTEGER NOT NULL CHECK (hour_index >= 0 AND hour_index < 72),
@@ -14,21 +17,20 @@ CREATE TABLE IF NOT EXISTS team_planning_slots (
     UNIQUE (team_id, hour_index)
 );
 
--- 2. Create index for fast lookups
-CREATE INDEX IF NOT EXISTS idx_team_planning_slots_team ON team_planning_slots(team_id);
-CREATE INDEX IF NOT EXISTS idx_team_planning_slots_hour ON team_planning_slots(hour_index);
+-- 3. Create index for fast lookups
+CREATE INDEX idx_team_planning_team ON team_planning(team_id);
+CREATE INDEX idx_team_planning_hour ON team_planning(hour_index);
 
--- 3. Enable RLS
-ALTER TABLE team_planning_slots ENABLE ROW LEVEL SECURITY;
+-- 4. Enable RLS
+ALTER TABLE team_planning ENABLE ROW LEVEL SECURITY;
 
 -- Allow read for authenticated (captains need to see)
-CREATE POLICY "Allow read" ON team_planning_slots FOR SELECT USING (true);
+CREATE POLICY "Allow read" ON team_planning FOR SELECT USING (true);
 
 -- Allow write for authenticated (captains need to update)
-CREATE POLICY "Allow write" ON team_planning_slots FOR ALL USING (true);
+CREATE POLICY "Allow write" ON team_planning FOR ALL USING (true);
 
--- 4. Migrate existing data from old JSONB structure (run once)
--- This extracts data from team_planning.slots JSONB into the new table
+-- 5. Migrate existing data from old JSONB structure
 DO $$
 DECLARE
     r RECORD;
@@ -37,7 +39,7 @@ DECLARE
     main_id UUID;
     sub_id UUID;
 BEGIN
-    FOR r IN SELECT team_id, slots FROM team_planning WHERE slots IS NOT NULL LOOP
+    FOR r IN SELECT team_id, slots FROM team_planning_old WHERE slots IS NOT NULL LOOP
         FOR slot_key, slot_value IN SELECT * FROM jsonb_each(r.slots) LOOP
             main_id := NULL;
             sub_id := NULL;
@@ -52,7 +54,7 @@ BEGIN
             
             -- Only insert if there's at least one player assigned
             IF main_id IS NOT NULL OR sub_id IS NOT NULL THEN
-                INSERT INTO team_planning_slots (team_id, hour_index, main_player_id, sub_player_id)
+                INSERT INTO team_planning (team_id, hour_index, main_player_id, sub_player_id)
                 VALUES (r.team_id, slot_key::INTEGER, main_id, sub_id)
                 ON CONFLICT (team_id, hour_index) 
                 DO UPDATE SET main_player_id = EXCLUDED.main_player_id, sub_player_id = EXCLUDED.sub_player_id;
@@ -61,8 +63,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 5. Drop old table (only after verifying migration worked!)
--- DROP TABLE team_planning;
+-- 6. Drop old table after verifying migration worked
+-- DROP TABLE team_planning_old;
+-- Uncomment above line after confirming data migrated correctly
 
--- Note: Keep the old table until you've verified the new one works
--- Then uncomment the DROP above or run it manually

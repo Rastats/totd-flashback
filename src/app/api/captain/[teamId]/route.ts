@@ -37,7 +37,7 @@ export async function GET(
 
         // 2. Get Planning from normalized 'team_planning_slots' table
         const { data: slotsData, error: slotsError } = await supabase
-            .from('team_planning_slots')
+            .from('team_planning')
             .select('hour_index, main_player_id, sub_player_id')
             .eq('team_id', teamId)
             .order('hour_index');
@@ -87,7 +87,7 @@ export async function POST(
             // If both are null/empty, delete the row
             if (!slot.mainPlayerId && !slot.subPlayerId) {
                 return supabase
-                    .from('team_planning_slots')
+                    .from('team_planning')
                     .delete()
                     .eq('team_id', teamId)
                     .eq('hour_index', hourIdx);
@@ -95,7 +95,7 @@ export async function POST(
 
             // Otherwise upsert
             return supabase
-                .from('team_planning_slots')
+                .from('team_planning')
                 .upsert({
                     team_id: teamId,
                     hour_index: hourIdx,
