@@ -12,8 +12,8 @@ const SYNC_THROTTLE_MS = 30000; // 30 seconds
 // Returns campaign data, team pots, and recent donations
 export async function GET(request: Request) {
     try {
-        // Rate limiting
-        const rateLimited = applyRateLimit(request, RATE_LIMITS.public);
+        // Rate limiting - use plugin tier for higher limits
+        const rateLimited = applyRateLimit(request, RATE_LIMITS.plugin);
         if (rateLimited) return rateLimited;
 
         // Only sync if enough time has passed since last sync
