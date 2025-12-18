@@ -41,6 +41,8 @@ interface SyncPayload {
             id: number;
             name: string;
         }>;
+        applied_donation_ids?: string[];   // Donation IDs just applied
+        completed_donation_ids?: string[]; // Donation IDs just completed
     };
 
     shield: {
@@ -185,6 +187,29 @@ export async function POST(request: Request) {
         }
 
         console.log(`[Sync] Team ${teamId} updated by ${player.trackmania_name}`);
+
+        // Process penalty tracking updates
+        const appliedIds = data.penalties?.applied_donation_ids || [];
+        const completedIds = data.penalties?.completed_donation_ids || [];
+
+        if (appliedIds.length > 0) {
+            await supabase
+                .from('processed_donations')
+                .update({ penalty_applied: true })
+                .in('donation_id', appliedIds);
+            console.log(`[Sync] Marked ${appliedIds.length} penalties as applied`);
+        }
+
+        if (completedIds.length > 0) {
+            await supabase
+                .from('processed_donations')
+                .update({
+                    penalty_completed: true,
+                    penalty_completed_at: new Date().toISOString()
+                })
+                .in('donation_id', completedIds);
+            console.log(`[Sync] Marked ${completedIds.length} penalties as completed`);
+        }
 
         return NextResponse.json({
             success: true,
