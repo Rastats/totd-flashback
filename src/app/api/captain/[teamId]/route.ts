@@ -80,6 +80,26 @@ export async function POST(
         const body = await request.json();
         const slots = body.slots as Record<string, { mainPlayerId: string | null; subPlayerId: string | null }>;
 
+        // Collect all player IDs to fetch names
+        const playerIds = new Set<string>();
+        Object.values(slots).forEach(slot => {
+            if (slot.mainPlayerId) playerIds.add(slot.mainPlayerId);
+            if (slot.subPlayerId) playerIds.add(slot.subPlayerId);
+        });
+
+        // Fetch player names
+        const playerNames: Record<string, string> = {};
+        if (playerIds.size > 0) {
+            const { data: players } = await supabase
+                .from('players')
+                .select('id, trackmania_name')
+                .in('id', Array.from(playerIds));
+
+            players?.forEach(p => {
+                playerNames[p.id] = p.trackmania_name;
+            });
+        }
+
         // Upsert each slot into the normalized table
         const upsertPromises = Object.entries(slots).map(async ([hourIndex, slot]) => {
             const hourIdx = parseInt(hourIndex, 10);
@@ -93,14 +113,16 @@ export async function POST(
                     .eq('hour_index', hourIdx);
             }
 
-            // Otherwise upsert
+            // Otherwise upsert with names
             return supabase
                 .from('team_planning')
                 .upsert({
                     team_id: teamId,
                     hour_index: hourIdx,
                     main_player_id: slot.mainPlayerId || null,
+                    main_player_name: slot.mainPlayerId ? playerNames[slot.mainPlayerId] || null : null,
                     sub_player_id: slot.subPlayerId || null,
+                    sub_player_name: slot.subPlayerId ? playerNames[slot.subPlayerId] || null : null,
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'team_id,hour_index'
