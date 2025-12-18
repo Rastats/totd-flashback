@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApplicationStatus, AvailabilitySlot } from "@/lib/types";
+import { TEAM_IDS } from "@/lib/config";
 
 interface RosterPlayer {
     id: string;
@@ -23,7 +24,7 @@ interface CasterRoster {
     status: ApplicationStatus;
 }
 
-const TEAMS = ["team1", "team2", "team3", "team4", "joker"] as const;
+const TEAMS = TEAM_IDS;
 
 export default function RostersPage() {
     const [players, setPlayers] = useState<RosterPlayer[]>([]);

@@ -79,24 +79,22 @@ export default function Header() {
                             </Link>
                         )}
 
-                        {/* Roster Link (Admin only) */}
-                        {(session?.user?.isAdmin || captainInfo?.isAdmin) && (
-                            <Link href="/rosters" style={{
-                                padding: "8px 16px",
-                                background: "rgba(16, 185, 129, 0.1)",
-                                border: "1px solid #10b981",
-                                borderRadius: 8,
-                                color: "#10b981",
-                                fontWeight: 600,
-                                textDecoration: "none",
-                                fontSize: 13,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6
-                            }}>
-                                📋 Rosters
-                            </Link>
-                        )}
+                        {/* Roster Link (Public) */}
+                        <Link href="/rosters" style={{
+                            padding: "8px 16px",
+                            background: "rgba(16, 185, 129, 0.1)",
+                            border: "1px solid #10b981",
+                            borderRadius: 8,
+                            color: "#10b981",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                            fontSize: 13,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6
+                        }}>
+                            📋 Rosters
+                        </Link>
 
                         {/* Captain Dashboard Link */}
                         {captainInfo?.isCaptain && captainInfo.teamId && (
@@ -165,12 +163,13 @@ export default function Header() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
                             {totalRaised !== null && (
                                 <div style={{
-                                    padding: "6px 10px",
+                                    padding: "8px 16px",
                                     background: "#2a2a3a",
-                                    borderRadius: 6,
+                                    borderRadius: 8,
                                     fontSize: 13,
                                     fontWeight: 600,
                                     color: "#f59e0b",
+                                    border: "1px solid #3a3a4a",
                                 }}>
                                     💰 £{totalRaised.toFixed(2)}
                                 </div>
@@ -178,14 +177,14 @@ export default function Header() {
                             <button
                                 onClick={() => setShowDonationModal(true)}
                                 style={{
-                                    padding: "10px 20px",
+                                    padding: "8px 16px",
                                     background: "linear-gradient(135deg, #f59e0b, #d97706)",
                                     borderRadius: 8,
                                     color: "#fff",
                                     fontWeight: 600,
                                     border: "none",
                                     cursor: "pointer",
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
                                 }}
                             >

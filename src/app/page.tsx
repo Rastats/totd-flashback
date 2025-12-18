@@ -7,9 +7,13 @@ import CountdownTimer from "@/components/CountdownTimer";
 import TwitchEmbed from "@/components/TwitchEmbed";
 import DonationModal from "@/components/DonationModal";
 import TopDonors from "@/components/TopDonors";
+import { EVENT_START_UTC } from "@/lib/config";
 
 export default function HomePage() {
   const [showDonationModal, setShowDonationModal] = useState(false);
+
+  // Auto-show Twitch embed when event starts
+  const isEventLive = new Date() >= EVENT_START_UTC;
 
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
@@ -73,8 +77,8 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* Twitch Stream - set isVisible={true} when event starts */}
-      <TwitchEmbed channel="rastats" isVisible={false} />
+      {/* Twitch Stream - auto-visible when event starts */}
+      <TwitchEmbed channel="rastats" isVisible={isEventLive} />
 
       {/* Event Info */}
       <section style={{

@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { TEAMS as TEAM_CONFIG, CURRENCY_RATES } from "@/lib/config";
 
 const TEAMS = [
     { id: 0, name: "Random", color: "#9ca3af" },
-    { id: 1, name: "Team 1", color: "#f87171" },
-    { id: 2, name: "Team 2", color: "#60a5fa" },
-    { id: 3, name: "Team 3", color: "#4ade80" },
-    { id: 4, name: "Team 4", color: "#facc15" },
+    ...TEAM_CONFIG.map(t => ({ id: t.number, name: t.name, color: t.color })),
 ];
 
 const PENALTIES = [
@@ -76,9 +74,9 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
     const availablePenalties = PENALTIES.filter((p) => p.cost <= baseAmount);
 
-    // Conversion rates
-    const GBP_TO_EUR = 1.13902;
-    const GBP_TO_USD = 1.27; // approximate
+    // Conversion rates (updated from config)
+    const GBP_TO_EUR = CURRENCY_RATES.GBP_TO_EUR;
+    const GBP_TO_USD = CURRENCY_RATES.GBP_TO_USD;
 
     const handleDonate = () => {
         // Build Tiltify URL with amount parameter to auto-select "Other" and pre-fill
