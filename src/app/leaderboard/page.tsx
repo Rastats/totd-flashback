@@ -34,6 +34,7 @@ interface TeamStatus {
         timeLeft: number; // seconds
     }[];
     penaltyQueue: number;
+    penaltyQueueNames: string[]; // For tooltip
 }
 
 interface FeedEvent {
@@ -85,7 +86,8 @@ const INITIAL_TEAMS: TeamStatus[] = [
         activePlayer: "Rastats",
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
-        penaltyQueue: 0
+        penaltyQueue: 0,
+        penaltyQueueNames: []
     },
     {
         id: "team2",
@@ -104,8 +106,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         },
         activePlayer: "SaiyaPunk",
         activeShield: null,
-        activePenalties: [{ name: "Tunnel Vision", timeLeft: 145 }],
-        penaltyQueue: 2
+        activePenalties: [
+            { name: "Tunnel Vision", timeLeft: 145 },
+            { name: "Pedal to the Metal", timeLeft: 420 }
+        ],
+        penaltyQueue: 2,
+        penaltyQueueNames: ["Camera Shuffle", "Russian Roulette"]
     },
     {
         id: "team3",
@@ -125,7 +131,8 @@ const INITIAL_TEAMS: TeamStatus[] = [
         activePlayer: "ElectroFlash",
         activeShield: null,
         activePenalties: [],
-        penaltyQueue: 0
+        penaltyQueue: 0,
+        penaltyQueueNames: []
     },
     {
         id: "team4",
@@ -144,8 +151,12 @@ const INITIAL_TEAMS: TeamStatus[] = [
         },
         activePlayer: "Zephyr",
         activeShield: null,
-        activePenalties: [{ name: "Camera Shuffle", timeLeft: 800 }],
-        penaltyQueue: 5
+        activePenalties: [
+            { name: "Camera Shuffle", timeLeft: 800 },
+            { name: "Out of Sight", timeLeft: 300 }
+        ],
+        penaltyQueue: 5,
+        penaltyQueueNames: ["One-Hand Mode", "Can't Turn Right", "Tunnel Vision", "Reverse Steering", "Pedal to the Metal"]
     }
 ];
 
@@ -295,8 +306,11 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 
                     {/* Queue */}
                     {team.penaltyQueue > 0 && (
-                        <div style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center" }}>
-                            +{team.penaltyQueue} penalties in queue
+                        <div
+                            title={team.penaltyQueueNames?.join("\n") || ""}
+                            style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center", cursor: "help" }}
+                        >
+                            +{team.penaltyQueue} penalties in queue ℹ️
                         </div>
                     )}
                 </div>
@@ -402,7 +416,7 @@ export default function LeaderboardPage() {
                                     const isTop = i % 2 === 0;
                                     // Stagger heights: Teams 1&2 (i=0,1) get longer arrows to be outer
                                     // Teams 3&4 (i=2,3) get shorter arrows to be inner
-                                    const arrowHeight = (i < 2) ? 35 : 20;
+                                    const arrowHeight = (i < 2) ? 35 : 12;
 
                                     return (
                                         <div key={team.id} style={{
