@@ -35,22 +35,27 @@ export async function GET(
             }))
         }));
 
-        // 2. Get Planning from 'team_planning' table
-        const { data: planningData, error: planningError } = await supabase
-            .from('team_planning')
-            .select('slots')
+        // 2. Get Planning from normalized 'team_planning_slots' table
+        const { data: slotsData, error: slotsError } = await supabase
+            .from('team_planning_slots')
+            .select('hour_index, main_player_id, sub_player_id')
             .eq('team_id', teamId)
-            .single();
+            .order('hour_index');
 
-        // If error code is 'PGRST116', it means no row found (which is fine, return default)
-        // Otherwise throw real error
-        if (planningError && planningError.code !== 'PGRST116') {
-            throw planningError;
+        if (slotsError) throw slotsError;
+
+        // Convert to the slots object format expected by UI
+        const slots: Record<number, { mainPlayerId: string | null; subPlayerId: string | null }> = {};
+        for (const slot of slotsData || []) {
+            slots[slot.hour_index] = {
+                mainPlayerId: slot.main_player_id,
+                subPlayerId: slot.sub_player_id
+            };
         }
 
         const planning: TeamPlanning = {
             teamId,
-            slots: planningData?.slots || {}
+            slots
         };
 
         return NextResponse.json({
@@ -73,20 +78,38 @@ export async function POST(
 
     try {
         const body = await request.json();
-        const slots = body.slots;
+        const slots = body.slots as Record<string, { mainPlayerId: string | null; subPlayerId: string | null }>;
 
-        // Upsert planning into Supabase
-        const { error } = await supabase
-            .from('team_planning')
-            .upsert({
-                team_id: teamId,
-                slots: slots,
-                updated_at: new Date().toISOString()
-            });
+        // Upsert each slot into the normalized table
+        const upsertPromises = Object.entries(slots).map(async ([hourIndex, slot]) => {
+            const hourIdx = parseInt(hourIndex, 10);
 
-        if (error) throw error;
+            // If both are null/empty, delete the row
+            if (!slot.mainPlayerId && !slot.subPlayerId) {
+                return supabase
+                    .from('team_planning_slots')
+                    .delete()
+                    .eq('team_id', teamId)
+                    .eq('hour_index', hourIdx);
+            }
 
-        return NextResponse.json({ success: true, teamId, slots });
+            // Otherwise upsert
+            return supabase
+                .from('team_planning_slots')
+                .upsert({
+                    team_id: teamId,
+                    hour_index: hourIdx,
+                    main_player_id: slot.mainPlayerId || null,
+                    sub_player_id: slot.subPlayerId || null,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'team_id,hour_index'
+                });
+        });
+
+        await Promise.all(upsertPromises);
+
+        return NextResponse.json({ success: true, teamId });
     } catch (err: any) {
         console.error('Captain API Save Error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
