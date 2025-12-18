@@ -343,8 +343,29 @@ export default function CaptainPage() {
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${columnDays.length}, 1fr)`, background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
-                    {columnDays.map(day => <div key={day} style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderLeft: "1px solid #334155" }}>Dec {day}</div>)}
+                    {/* Play Time Stats */}
+                    <div style={{ gridColumn: `1 / span ${columnDays.length + 1}`, padding: "16px", background: "#0f172a", borderBottom: "1px solid #334155" }}>
+                        <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+                            <span style={{ fontSize: 13, fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Play Time Stats:</span>
+                            {players.map(p => {
+                                const activeCount = slots.filter(s => s.mainPlayerId === p.id).length;
+                                const subCount = slots.filter(s => s.subPlayerId === p.id).length;
+                                const color = getPlayerColor(p.name);
+
+                                return (
+                                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+                                        <span style={{ color: "#e2e8f0", fontWeight: 500 }}>{p.name}:</span>
+                                        <span style={{ color: "#fff", fontWeight: "bold" }}>{activeCount}h</span>
+                                        <span style={{ color: "#64748b" }}>(Sub: {subCount}h)</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderTop: "1px solid #334155" }}>Time</div>
+                    {columnDays.map(day => <div key={day} style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center", borderLeft: "1px solid #334155", borderTop: "1px solid #334155" }}>Dec {day}</div>)}
 
                     {Array.from({ length: 24 }).map((_, hour) => (
                         <div key={hour} style={{ display: "contents" }}>

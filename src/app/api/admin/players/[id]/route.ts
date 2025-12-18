@@ -31,6 +31,19 @@ export async function PATCH(
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
+        // Trigger Auto-Fill Schedule if teamAssignment changed
+        if (body.teamAssignment && typeof body.teamAssignment === 'string') {
+            // We need to import it dynamically or at top level to avoid cycles if any?
+            // Dynamic import or separate file is fine.
+            try {
+                const { autofillSchedule } = await import('@/lib/scheduling');
+                await autofillSchedule(body.teamAssignment, supabase);
+            } catch (scheduleError) {
+                console.error('Autofill error:', scheduleError);
+                // Don't fail the request, just log it
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Update error:', error);
