@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 
 import { isAdmin } from '@/lib/auth';
 
+import { autofillSchedule } from '@/lib/scheduling';
+
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -15,6 +17,15 @@ export async function PATCH(
 
         const { id } = await params;
         const body = await request.json();
+
+        // Get current player state to check for team change
+        const { data: currentPlayer } = await supabase
+            .from('players')
+            .select('team_assignment')
+            .eq('id', id)
+            .single();
+
+        const oldTeam = currentPlayer?.team_assignment;
 
         const updateData: Record<string, unknown> = {};
         if (body.status) updateData.status = body.status;
@@ -65,16 +76,40 @@ export async function PATCH(
             }
         }
 
-        // Trigger Auto-Fill Schedule if teamAssignment changed
-        if (body.teamAssignment && typeof body.teamAssignment === 'string') {
-            // We need to import it dynamically or at top level to avoid cycles if any?
-            // Dynamic import or separate file is fine.
-            try {
-                const { autofillSchedule } = await import('@/lib/scheduling');
-                await autofillSchedule(body.teamAssignment, supabase);
-            } catch (scheduleError) {
-                console.error('Autofill error:', scheduleError);
-                // Don't fail the request, just log it
+        // Handle Team Change / Autofill
+        const newTeam = body.teamAssignment;
+
+        // If team changed, we MUST clean up the player from old planning to avoid "Unknown" ghosts
+        if (newTeam && newTeam !== oldTeam) {
+            console.log(`Player ${id} moved from ${oldTeam} to ${newTeam}. Cleaning up old slots.`);
+
+            // Remove player from ALL planning slots (globally safe, as you can only be in one team)
+            // Set main_player_id to null where it matches
+            await supabase.from('team_planning')
+                .update({ main_player_id: null, main_player_name: null })
+                .eq('main_player_id', id);
+
+            // Set sub_player_id to null where it matches
+            await supabase.from('team_planning')
+                .update({ sub_player_id: null, sub_player_name: null })
+                .eq('sub_player_id', id);
+
+            // Trigger Autofill for NEW team
+            if (newTeam !== 'joker') {
+                await autofillSchedule(newTeam, supabase);
+            }
+
+            // Trigger Autofill for OLD team (to fill the gap)
+            if (oldTeam && oldTeam !== 'joker') {
+                await autofillSchedule(oldTeam, supabase);
+            }
+        }
+        // If team didn't change (just availability update?), maybe re-run autofill for current team?
+        else if (body.availability || (newTeam && newTeam === oldTeam)) {
+            // If availability changed, we might want to re-run autofill for their current team
+            const targetTeam = newTeam || oldTeam;
+            if (targetTeam && targetTeam !== 'joker') {
+                await autofillSchedule(targetTeam, supabase);
             }
         }
 
