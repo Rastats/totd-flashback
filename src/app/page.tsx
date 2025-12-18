@@ -6,6 +6,7 @@ import Link from "next/link";
 import CountdownTimer from "@/components/CountdownTimer";
 import TwitchEmbed from "@/components/TwitchEmbed";
 import DonationModal from "@/components/DonationModal";
+import TopDonors from "@/components/TopDonors";
 
 export default function HomePage() {
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -196,6 +197,18 @@ export default function HomePage() {
             ❤️ Donate Now
           </button>
         </div>
+      </section>
+
+      {/* Top Donors */}
+      <section style={{
+        padding: 24,
+        background: "#12121a",
+        borderRadius: 12,
+        border: "1px solid #4a3a2a",
+        marginBottom: 32,
+      }}>
+        <h2 style={{ fontSize: 24, marginBottom: 16, color: "#f59e0b" }}>🏆 Top Donors</h2>
+        <TopDonors limit={10} />
       </section>
 
       {/* Quick Links */}

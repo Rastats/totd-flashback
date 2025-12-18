@@ -16,6 +16,7 @@ interface TeamStatus {
     color: string;
     mapsFinished: number;
     totalMaps: number; // e.g. 1500
+    activePlayer: string | null; // Currently playing
     currentMap: {
         name: string;
         authorName: string; // Added authorName
@@ -81,6 +82,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId)
         },
+        activePlayer: "Rastats",
         activeShield: { type: "big", timeLeft: 3400 },
         activePenalties: [],
         penaltyQueue: 0
@@ -100,6 +102,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             authorTime: formatAuthorTime(TEAM2_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapId)
         },
+        activePlayer: "SaiyaPunk",
         activeShield: null,
         activePenalties: [{ name: "Tunnel Vision", timeLeft: 145 }],
         penaltyQueue: 2
@@ -119,6 +122,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             authorTime: formatAuthorTime(TEAM3_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapId)
         },
+        activePlayer: "ElectroFlash",
         activeShield: null,
         activePenalties: [],
         penaltyQueue: 0
@@ -138,6 +142,7 @@ const INITIAL_TEAMS: TeamStatus[] = [
             authorTime: formatAuthorTime(TEAM4_MAP.authorTime),
             thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapId)
         },
+        activePlayer: "Zephyr",
         activeShield: null,
         activePenalties: [{ name: "Camera Shuffle", timeLeft: 800 }],
         penaltyQueue: 5
@@ -205,6 +210,11 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
             {/* Header */}
             <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", textAlign: "center", borderBottom: "1px solid #334155" }}>
                 <h3 style={{ margin: 0, fontSize: 24, fontWeight: "bold", color: team.color }}>{team.name}</h3>
+                {team.activePlayer && (
+                    <div style={{ fontSize: 13, color: "#4ade80", marginTop: 4 }}>
+                        🎮 {team.activePlayer}
+                    </div>
+                )}
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
                     {team.mapsFinished} / {team.totalMaps} maps
                 </div>
