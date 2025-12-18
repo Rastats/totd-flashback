@@ -31,6 +31,40 @@ export async function PATCH(
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
+        // Update Availability if provided
+        if (body.availability && Array.isArray(body.availability)) {
+            // Delete existing slots
+            const { error: deleteError } = await supabase
+                .from('availability_slots')
+                .delete()
+                .eq('player_id', id);
+
+            if (deleteError) {
+                console.error('Error deleting slots:', deleteError);
+                return NextResponse.json({ error: "Failed to update availability" }, { status: 500 });
+            }
+
+            // Insert new slots
+            if (body.availability.length > 0) {
+                const slotsToInsert = body.availability.map((s: any) => ({
+                    player_id: id,
+                    date: s.date,
+                    start_hour: s.startHour,
+                    end_hour: s.endHour,
+                    preference: s.preference
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('availability_slots')
+                    .insert(slotsToInsert);
+
+                if (insertError) {
+                    console.error('Error inserting slots:', insertError);
+                    return NextResponse.json({ error: "Failed to save new slots" }, { status: 500 });
+                }
+            }
+        }
+
         // Trigger Auto-Fill Schedule if teamAssignment changed
         if (body.teamAssignment && typeof body.teamAssignment === 'string') {
             // We need to import it dynamically or at top level to avoid cycles if any?

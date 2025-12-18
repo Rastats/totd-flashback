@@ -127,6 +127,139 @@ export default function AdminPage() {
         }
     };
 
+    // ================== EDIT AVAILABILITY MODAL ==================
+    const [editAvailPlayer, setEditAvailPlayer] = useState<PlayerApplication | null>(null);
+    const [tempAvailability, setTempAvailability] = useState<any[]>([]);
+
+    const openAvailabilityEditor = (player: PlayerApplication) => {
+        setEditAvailPlayer(player);
+        setTempAvailability([...player.availability]); // clone
+    };
+
+    const toggleSlot = (date: string, hour: number) => {
+        // Find if slot exists covering this hour
+        // Simplification: We assume slots are 1h blocks for the editor grid to keep it simple?
+        // Or we stick to the backend format: startHour -> endHour.
+        // If we want a simple grid clicker:
+        // Click -> Create 1h slot 'ok' -> 'preferred' -> 'delete'.
+
+        // Let's implement this logic:
+        // Check if there is a slot on this date that contains this hour.
+        const existingSlotIndex = tempAvailability.findIndex(s =>
+            s.date === date && hour >= s.startHour && hour < s.endHour
+        );
+
+        if (existingSlotIndex >= 0) {
+            // Found a slot. 
+            // If it's 1h long, cycle preference. If >1h, maybe split it? 
+            // To keep simple: The editor visualizes 1h blocks. 
+            // If we click a block covered by a long slot, we might need to split it if we change preference?
+            // COMPLEXITY: Handling variable length slots in a simple grid clicker is hard.
+            // ALTERNATIVE: Just visualize existing slots and allow adding/removing standard 1h blocks?
+            // BETTER: If a slot covers multiple hours, we treat them as individual hours for the sake of editing logic?
+            // Actually, let's just use the `preference` cycle: None -> OK -> Preferred -> None.
+
+            const slot = tempAvailability[existingSlotIndex];
+
+            // If slot is exactly this hour (1h duration)
+            if (slot.endHour === slot.startHour + 1) {
+                if (slot.preference === 'ok') {
+                    // Change to preferred
+                    const newSlots = [...tempAvailability];
+                    newSlots[existingSlotIndex] = { ...slot, preference: 'preferred' };
+                    setTempAvailability(newSlots);
+                } else {
+                    // Remove (None)
+                    const newSlots = [...tempAvailability];
+                    newSlots.splice(existingSlotIndex, 1);
+                    setTempAvailability(newSlots);
+                }
+            } else {
+                // It's a multi-hour slot. We are clicking one hour inside it.
+                // We should probably convert everything to 1h slots for the editor then merge back? 
+                // Too complex for "quick edit".
+                // Let's Just delete the whole slot if clicked? No.
+
+                // FORCE STRATEGY: We assume the admin wants to granularly control.
+                // We split the large slot into pieces excluding the clicked hour, and add the modified hour.
+                // This is getting complicated to code inline.
+
+                // VISUAL SHORTCUT: Just cycle preference of the WHOLE slot if clicked? 
+                // Or deleting it?
+                // Let's go with: Click existing -> Delete. 
+                // Click empty -> Add 1h 'ok'.
+                // Click 'ok' (1h) -> 'preferred'.
+
+                // Implementation:
+                // 1. Remove the existing slot (whatever length).
+                // 2. If it was providing coverage for other hours, we need to re-add them.
+                const slot = tempAvailability[existingSlotIndex];
+                const newSlots = tempAvailability.filter((_, i) => i !== existingSlotIndex);
+
+                // Re-add parts before and after if needed
+                if (hour > slot.startHour) {
+                    newSlots.push({ ...slot, endHour: hour });
+                }
+                if (hour + 1 < slot.endHour) {
+                    newSlots.push({ ...slot, startHour: hour + 1 });
+                }
+
+                // Now we effectively deleted the hour 'hour'.
+                // If the user wanted to upgrade preference, we add it back as preferred (if it was ok)
+                // If it was preferred, we just deleted it (cycle to None).
+                // If it was OK (but part of a larger block), we just deleted it.
+                // To support cycle: OK -> PREF -> NONE
+
+                if (slot.preference === 'ok') {
+                    newSlots.push({
+                        date: date,
+                        startHour: hour,
+                        endHour: hour + 1,
+                        preference: 'preferred',
+                        id: Math.random().toString()
+                    });
+                }
+
+                setTempAvailability(newSlots);
+            }
+        } else {
+            // Empty -> Create 'ok'
+            setTempAvailability([...tempAvailability, {
+                date: date,
+                startHour: hour,
+                endHour: hour + 1,
+                preference: 'ok',
+                id: Math.random().toString()
+            }]);
+        }
+    };
+
+    const saveAvailability = async () => {
+        if (!editAvailPlayer) return;
+
+        // Merge contiguous slots? Optional but nice.
+        // ... skip merge for now, backend/frontend handles fragmentation fine usually.
+
+        try {
+            const res = await fetch(`/api/admin/players/${editAvailPlayer.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ availability: tempAvailability }),
+            });
+            if (res.ok) {
+                fetchData();
+                setEditAvailPlayer(null);
+            } else {
+                alert("Failed to save availability");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Network error");
+        }
+    };
+
+    // ==============================================================
+
     const filteredPlayers = players.filter(
         (p) => statusFilter === "all" || p.status === statusFilter
     );
@@ -536,6 +669,12 @@ export default function AdminPage() {
                                                     ✕ Reject
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openAvailabilityEditor(player); }}
+                                                style={{ ...buttonStyle, background: "#2a3a4a", color: "#60a5fa" }}
+                                            >
+                                                📅 Edit Availability
+                                            </button>
                                             {player.status === "approved" && (
                                                 <div style={{ display: "flex", gap: 8 }}>
                                                     <select
@@ -960,6 +1099,64 @@ export default function AdminPage() {
                                 >
                                     Refresh
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {/* Edit Availability Modal */}
+                {editAvailPlayer && (
+                    <div style={{
+                        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                        background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100
+                    }}>
+                        <div style={{ background: "#1e293b", padding: 24, borderRadius: 12, width: "95%", maxWidth: 1000, maxHeight: "90vh", overflowY: "auto" }}>
+                            <h2 style={{ marginBottom: 16 }}>Edit Availability: {editAvailPlayer.trackmaniaName}</h2>
+                            <p style={{ marginBottom: 24, opacity: 0.7 }}>Click cells to cycle: Empty → <span style={{ color: "#3b82f6" }}>OK</span> → <span style={{ color: "#22c55e" }}>Preferred</span> → Empty</p>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "100px repeat(24, 1fr)", gap: 2, marginBottom: 24 }}>
+                                <div />
+                                {Array.from({ length: 24 }).map((_, h) => (
+                                    <div key={h} style={{ fontSize: 10, textAlign: "center", color: "#64748b" }}>{h}</div>
+                                ))}
+
+                                {["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].map(date => (
+                                    <>
+                                        <div style={{ fontSize: 12, fontWeight: "bold", padding: "8px 0" }}>{date.slice(5)}</div>
+                                        {Array.from({ length: 24 }).map((_, h) => {
+                                            // Determine state of this cell
+                                            const slot = tempAvailability.find(s => s.date === date && h >= s.startHour && h < s.endHour);
+                                            let bg = "#0f172a";
+                                            if (slot) {
+                                                bg = slot.preference === 'preferred' ? "#22c55e" : "#3b82f6";
+                                            }
+
+                                            // Limit based on event hours if needed, but let's allow all for simplicity or match valid hours
+                                            // Event: 21st 21:00 -> 24th 18:00
+                                            const isInvalid = (date === "2025-12-21" && h < 21) || (date === "2025-12-24" && h >= 18);
+
+                                            return (
+                                                <div
+                                                    key={h}
+                                                    onClick={() => !isInvalid && toggleSlot(date, h)}
+                                                    style={{
+                                                        height: 32,
+                                                        background: isInvalid ? "#000" : bg,
+                                                        borderRadius: 2,
+                                                        cursor: isInvalid ? "default" : "pointer",
+                                                        border: "1px solid #334155",
+                                                        opacity: isInvalid ? 0.3 : 1
+                                                    }}
+                                                    title={`${date} ${h}:00`}
+                                                />
+                                            );
+                                        })}
+                                    </>
+                                ))}
+                            </div>
+
+                            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                                <button onClick={() => setEditAvailPlayer(null)} style={{ ...buttonStyle, background: "#334155" }}>Cancel</button>
+                                <button onClick={saveAvailability} style={{ ...buttonStyle, background: "#22c55e", color: "#000" }}>Save Changes</button>
                             </div>
                         </div>
                     </div>
