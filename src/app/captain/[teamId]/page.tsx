@@ -33,7 +33,7 @@ const TIMEZONES = [
     { label: "🇵🇹 Lisbon (UTC+0)", offset: 0 },
     { label: "🇩🇪 Berlin (UTC+1)", offset: 1 },
     { label: "🇷🇺 Moscow (UTC+3)", offset: 3 },
-    { label: "🇮🇳 Mumbai (UTC+5:30)", offset: 5.5 },
+
     { label: "🇨🇳 Beijing (UTC+8)", offset: 8 },
     { label: "🇯🇵 Tokyo (UTC+9)", offset: 9 },
     { label: "🇦🇺 Sydney (UTC+11)", offset: 11 },
