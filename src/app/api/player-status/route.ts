@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { validateApiKey } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,11 @@ interface StatusPayload {
 
 export async function POST(request: Request) {
     try {
+        // Validate API key
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const data: StatusPayload = await request.json();
 
         if (!data.account_id || !data.action) {
@@ -204,6 +210,11 @@ export async function POST(request: Request) {
 // GET to check current status for a team
 export async function GET(request: Request) {
     try {
+        // Validate API key
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         const teamId = searchParams.get('team_id');
 

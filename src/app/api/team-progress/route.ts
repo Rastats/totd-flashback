@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { validateApiKey } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic';
 // Body: { team_id: number, completed_ids: number[], account_id: string }
 export async function POST(request: Request) {
     try {
+        // Validate API key
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const data = await request.json();
         const { team_id, completed_ids, account_id } = data;
 
@@ -82,6 +88,11 @@ export async function POST(request: Request) {
 // Get completed map IDs for a team
 export async function GET(request: Request) {
     try {
+        // Validate API key
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         const teamIdStr = searchParams.get('team_id');
 

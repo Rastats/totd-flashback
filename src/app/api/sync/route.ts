@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { validateApiKey } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,11 @@ interface SyncPayload {
 
 export async function POST(request: Request) {
     try {
+        // Validate API key
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const data: SyncPayload = await request.json();
 
         if (!data.account_id) {
