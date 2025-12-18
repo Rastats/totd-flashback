@@ -27,7 +27,6 @@ interface SyncPayload {
     progress: {
         maps_completed: number;
         maps_total: number;
-        speedrun_time_ms: number;
         redo_remaining: number;
     };
 
@@ -157,7 +156,6 @@ export async function POST(request: Request) {
                 // Progress - use conditional values
                 maps_completed: finalMapsCompleted,
                 maps_total: finalMapsTotal,
-                speedrun_time_ms: data.progress?.speedrun_time_ms || 0,
                 redo_remaining: data.progress?.redo_remaining || 0,
 
                 // Penalties (stored as JSONB)
