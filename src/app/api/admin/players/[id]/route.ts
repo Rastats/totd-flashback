@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-
+import { supabaseAdmin } from '@/lib/supabase-admin'; // Use Service Role client
 import { isAdmin } from '@/lib/auth';
 
 import { autofillSchedule } from '@/lib/scheduling';
@@ -18,8 +17,8 @@ export async function PATCH(
         const { id } = await params;
         const body = await request.json();
 
-        // Get current player state to check for team change
-        const { data: currentPlayer } = await supabase
+        // Get current player state (using Admin client to ensure access)
+        const { data: currentPlayer } = await supabaseAdmin
             .from('players')
             .select('team_assignment')
             .eq('id', id)
@@ -32,7 +31,7 @@ export async function PATCH(
         if (body.teamAssignment) updateData.team_assignment = body.teamAssignment;
         if (typeof body.isCaptain === 'boolean') updateData.is_captain = body.isCaptain;
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('players')
             .update(updateData)
             .eq('id', id);
@@ -44,8 +43,8 @@ export async function PATCH(
 
         // Update Availability if provided
         if (body.availability && Array.isArray(body.availability)) {
-            // Delete existing slots
-            const { error: deleteError } = await supabase
+            // Delete existing slots (Admin client ensures we can delete anyone's slots)
+            const { error: deleteError } = await supabaseAdmin
                 .from('availability_slots')
                 .delete()
                 .eq('player_id', id);
@@ -65,7 +64,7 @@ export async function PATCH(
                     preference: s.preference
                 }));
 
-                const { error: insertError } = await supabase
+                const { error: insertError } = await supabaseAdmin
                     .from('availability_slots')
                     .insert(slotsToInsert);
 
@@ -85,23 +84,23 @@ export async function PATCH(
 
             // Remove player from ALL planning slots (globally safe, as you can only be in one team)
             // Set main_player_id to null where it matches
-            await supabase.from('team_planning')
+            await supabaseAdmin.from('team_planning')
                 .update({ main_player_id: null, main_player_name: null })
                 .eq('main_player_id', id);
 
             // Set sub_player_id to null where it matches
-            await supabase.from('team_planning')
+            await supabaseAdmin.from('team_planning')
                 .update({ sub_player_id: null, sub_player_name: null })
                 .eq('sub_player_id', id);
 
             // Trigger Autofill for NEW team
             if (newTeam !== 'joker') {
-                await autofillSchedule(newTeam, supabase);
+                await autofillSchedule(newTeam, supabaseAdmin);
             }
 
             // Trigger Autofill for OLD team (to fill the gap)
             if (oldTeam && oldTeam !== 'joker') {
-                await autofillSchedule(oldTeam, supabase);
+                await autofillSchedule(oldTeam, supabaseAdmin);
             }
         }
         // If team didn't change (just availability update?), maybe re-run autofill for current team?
@@ -109,7 +108,7 @@ export async function PATCH(
             // If availability changed, we might want to re-run autofill for their current team
             const targetTeam = newTeam || oldTeam;
             if (targetTeam && targetTeam !== 'joker') {
-                await autofillSchedule(targetTeam, supabase);
+                await autofillSchedule(targetTeam, supabaseAdmin);
             }
         }
 
