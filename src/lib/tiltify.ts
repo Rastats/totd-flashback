@@ -112,7 +112,13 @@ async function processDonation(donation: {
     const { potTeam, penaltyTeam, isPotRandom, isPenaltyRandom } = parseCents(amount);
     const penalty = getPenaltyForAmount(amount);
 
-    // Insert into processed_donations
+    // Check if donation is too old (> 1 minute) - skip pot increment for old donations
+    const donationTime = new Date(donation.completed_at).getTime();
+    const now = Date.now();
+    const ageMs = now - donationTime;
+    const isOldDonation = ageMs > 60 * 1000; // 1 minute
+
+    // Insert into processed_donations (always record, even if old)
     const donationRecord = {
         donation_id: donation.id,
         amount: amount,
@@ -133,6 +139,12 @@ async function processDonation(donation: {
 
     if (insertError) {
         console.error('Error inserting donation:', insertError);
+        return;
+    }
+
+    // Only increment pots for recent donations (< 1 minute old)
+    if (isOldDonation) {
+        console.log(`[Tiltify] Skipping pot increment for old donation ${donation.id} (${Math.round(ageMs / 1000)}s old)`);
         return;
     }
 
