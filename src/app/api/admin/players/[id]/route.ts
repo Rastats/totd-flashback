@@ -56,21 +56,81 @@ export async function PATCH(
 
             // Insert new slots
             if (body.availability.length > 0) {
-                const slotsToInsert = body.availability.map((s: any) => ({
-                    player_id: id,
-                    date: s.date,
-                    start_hour: s.startHour,
-                    end_hour: s.endHour,
-                    preference: s.preference
-                }));
+                // Normalization: Flatten to avoid overlaps/duplicates
+                const hourlyMap = new Map<string, string>(); // Key: "yyyy-mm-dd_h", Value: preference
 
-                const { error: insertError } = await supabaseAdmin
-                    .from('availability_slots')
-                    .insert(slotsToInsert);
+                body.availability.forEach((s: any) => {
+                    for (let h = s.startHour; h < s.endHour; h++) {
+                        const key = `${s.date}_${h}`;
+                        // If conflict, 'preferred' wins over 'ok'
+                        if (hourlyMap.has(key)) {
+                            if (s.preference === 'preferred') hourlyMap.set(key, 'preferred');
+                        } else {
+                            hourlyMap.set(key, s.preference);
+                        }
+                    }
+                });
 
-                if (insertError) {
-                    console.error('Error inserting slots:', insertError);
-                    return NextResponse.json({ error: "Failed to save new slots" }, { status: 500 });
+                // Reconstruct contiguous slots
+                const normalizedSlots: any[] = [];
+                // Sort keys to scan in order
+                const sortedKeys = Array.from(hourlyMap.keys()).sort();
+
+                // Group by day to make it easier
+                const days = new Set(sortedKeys.map(k => k.split('_')[0]));
+
+                days.forEach(day => {
+                    const hoursForDay = sortedKeys
+                        .filter(k => k.startsWith(day))
+                        .map(k => parseInt(k.split('_')[1]))
+                        .sort((a, b) => a - b);
+
+                    if (hoursForDay.length === 0) return;
+
+                    let currentStart = hoursForDay[0];
+                    let currentEnd = currentStart + 1;
+                    let currentpref = hourlyMap.get(`${day}_${currentStart}`);
+
+                    for (let i = 1; i < hoursForDay.length; i++) {
+                        const h = hoursForDay[i];
+                        const pref = hourlyMap.get(`${day}_${h}`);
+
+                        // Check if contiguous AND same preference
+                        if (h === currentEnd && pref === currentpref) {
+                            currentEnd++; // Extend
+                        } else {
+                            // Push current and start new
+                            normalizedSlots.push({
+                                player_id: id,
+                                date: day,
+                                start_hour: currentStart,
+                                end_hour: currentEnd,
+                                preference: currentpref
+                            });
+                            currentStart = h;
+                            currentEnd = currentStart + 1;
+                            currentpref = pref;
+                        }
+                    }
+                    // Push final
+                    normalizedSlots.push({
+                        player_id: id,
+                        date: day,
+                        start_hour: currentStart,
+                        end_hour: currentEnd,
+                        preference: currentpref
+                    });
+                });
+
+                if (normalizedSlots.length > 0) {
+                    const { error: insertError } = await supabaseAdmin
+                        .from('availability_slots')
+                        .insert(normalizedSlots);
+
+                    if (insertError) {
+                        console.error('Error inserting slots:', insertError);
+                        return NextResponse.json({ error: "Failed to save new slots" }, { status: 500 });
+                    }
                 }
             }
         }
