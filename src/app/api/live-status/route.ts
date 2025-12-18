@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { TEAMS } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
-// Team metadata
-const TEAMS = {
-    1: { name: 'Team 1', color: '#60a5fa' },
-    2: { name: 'Team 2', color: '#fbbf24' },
-    3: { name: 'Team 3', color: '#f472b6' },
-    4: { name: 'Team 4', color: '#34d399' },
-};
+// Build team metadata from config
+const TEAM_META = Object.fromEntries(
+    TEAMS.map(t => [t.number, { name: t.name, color: t.color }])
+);
 
 interface TeamLiveStatus {
     id: number;
@@ -45,7 +43,7 @@ export async function GET() {
 
         // Process each team
         for (let teamId = 1; teamId <= 4; teamId++) {
-            const teamMeta = TEAMS[teamId as keyof typeof TEAMS];
+            const teamMeta = TEAM_META[teamId];
 
             // Find latest entry for this team
             const entry = statusData?.find(e => e.team_id === teamId);

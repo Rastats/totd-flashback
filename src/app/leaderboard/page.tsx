@@ -2,47 +2,45 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-// Footer removed to avoid duplication
+import { TEAMS } from "@/lib/config";
 import { totds } from "@/data/totds";
 import { getMapThumbnailUrl, getTrackmaniaIoUrl } from "@/utils/mapUtils";
 
-// --- Types (Dummy Data) ---
-type TeamId = "team1" | "team2" | "team3" | "team4";
-
+// --- Types ---
 interface TeamStatus {
-    id: TeamId;
+    id: number;
     name: string;
-    rank: number;
     color: string;
     mapsFinished: number;
-    totalMaps: number; // e.g. 1500
-    activePlayer: string | null; // Currently playing
+    totalMaps: number;
+    activePlayer: string | null;
     currentMap: {
         name: string;
-        authorName: string; // Added authorName
-        mapUid: string; // Added mapUid for linking
-        date: string; // "July 2021"
+        authorName: string;
+        mapUid: string;
+        date: string;
         authorTime: string;
-        thumbnailUrl: string; // generated from UID
-    };
+        thumbnailUrl: string;
+    } | null;
     activeShield: {
         type: "small" | "big";
-        timeLeft: number; // seconds
+        timeLeft: number;
     } | null;
     activePenalties: {
         name: string;
-        timeLeft: number; // seconds
+        timeLeft: number;
     }[];
     penaltyQueue: number;
-    penaltyQueueNames: string[]; // For tooltip
+    penaltyQueueNames: string[];
+    isOnline: boolean;
 }
 
 interface FeedEvent {
     id: string;
-    type: "month_finish" | "penalty" | "shield" | "shield_cooldown" | "donation_milestone";
+    type: "donation" | "penalty" | "shield" | "milestone";
     message: string;
-    teamId?: TeamId;
-    timestamp: string; // "14:02"
+    teamId?: number;
+    timestamp: string;
 }
 
 // Helper to format Author Time (ms -> mm:ss.ms)
@@ -53,120 +51,12 @@ const formatAuthorTime = (ms: number): string => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
 };
 
-// --- Initial Data (Using Real TOTD Data) ---
-// We pick specific maps to match the "progress" of each team for the demo
-const getTotdByIndex = (index: number) => {
-    const safeIndex = Math.min(Math.max(0, index - 1), totds.length - 1); // 1-based index to 0-based
-    return totds[safeIndex];
-};
-
-const TEAM1_MAP = getTotdByIndex(453); // Map #453
-const TEAM2_MAP = getTotdByIndex(449); // Map #449
-const TEAM3_MAP = getTotdByIndex(431); // Map #431
-const TEAM4_MAP = getTotdByIndex(416); // Map #416
-
 const TOTAL_MAPS = 2000;
 
-const INITIAL_TEAMS: TeamStatus[] = [
-    {
-        id: "team1",
-        name: "Team 1",
-        rank: 1,
-        color: "#60a5fa",
-        mapsFinished: TOTAL_MAPS - 453, // 1547
-        totalMaps: TOTAL_MAPS,
-        currentMap: {
-            name: TEAM1_MAP.name,
-            authorName: TEAM1_MAP.authorName,
-            mapUid: TEAM1_MAP.mapUid,
-            date: TEAM1_MAP.date,
-            authorTime: formatAuthorTime(TEAM1_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM1_MAP.mapId)
-        },
-        activePlayer: "Rastats",
-        activeShield: { type: "big", timeLeft: 3400 },
-        activePenalties: [],
-        penaltyQueue: 0,
-        penaltyQueueNames: []
-    },
-    {
-        id: "team2",
-        name: "Team 2",
-        rank: 2,
-        color: "#a78bfa",
-        mapsFinished: TOTAL_MAPS - 449 + 5, // 1551 + 5 (Russian Roulette bonus)
-        totalMaps: TOTAL_MAPS,
-        currentMap: {
-            name: TEAM2_MAP.name,
-            authorName: TEAM2_MAP.authorName,
-            mapUid: TEAM2_MAP.mapUid,
-            date: TEAM2_MAP.date,
-            authorTime: formatAuthorTime(TEAM2_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM2_MAP.mapId)
-        },
-        activePlayer: "SaiyaPunk",
-        activeShield: null,
-        activePenalties: [
-            { name: "Tunnel Vision", timeLeft: 145 },
-            { name: "Pedal to the Metal", timeLeft: 420 }
-        ],
-        penaltyQueue: 2,
-        penaltyQueueNames: ["Camera Shuffle", "Russian Roulette"]
-    },
-    {
-        id: "team3",
-        name: "Team 3",
-        rank: 3,
-        color: "#f472b6",
-        mapsFinished: TOTAL_MAPS - 431, // 1569
-        totalMaps: TOTAL_MAPS,
-        currentMap: {
-            name: TEAM3_MAP.name,
-            authorName: TEAM3_MAP.authorName,
-            mapUid: TEAM3_MAP.mapUid,
-            date: TEAM3_MAP.date,
-            authorTime: formatAuthorTime(TEAM3_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM3_MAP.mapId)
-        },
-        activePlayer: "ElectroFlash",
-        activeShield: null,
-        activePenalties: [],
-        penaltyQueue: 0,
-        penaltyQueueNames: []
-    },
-    {
-        id: "team4",
-        name: "Team 4",
-        rank: 4,
-        color: "#34d399",
-        mapsFinished: TOTAL_MAPS - 416, // 1584
-        totalMaps: TOTAL_MAPS,
-        currentMap: {
-            name: TEAM4_MAP.name,
-            authorName: TEAM4_MAP.authorName,
-            mapUid: TEAM4_MAP.mapUid,
-            date: TEAM4_MAP.date,
-            authorTime: formatAuthorTime(TEAM4_MAP.authorTime),
-            thumbnailUrl: getMapThumbnailUrl(TEAM4_MAP.mapId)
-        },
-        activePlayer: "Zephyr",
-        activeShield: null,
-        activePenalties: [
-            { name: "Camera Shuffle", timeLeft: 800 },
-            { name: "Out of Sight", timeLeft: 300 }
-        ],
-        penaltyQueue: 5,
-        penaltyQueueNames: ["Redo Last Map", "Can't Turn Right", "Tunnel Vision", "Redo 5 Maps", "Pedal to the Metal"]
-    }
-];
-
-const INITIAL_FEED: FeedEvent[] = [
-    { id: "1", type: "month_finish", message: "Team 1 completed August 2021! 📅", teamId: "team1", timestamp: "14:05" },
-    { id: "2", type: "donation_milestone", message: "We reached £1,500 raised! 🎉", timestamp: "14:04" },
-    { id: "3", type: "shield_cooldown", message: "Team 2 Shield Cooldown expired (Ready to use)", teamId: "team2", timestamp: "14:03" },
-    { id: "4", type: "penalty", message: "Team 2 : 'Tunnel Vision' activated by anon (£20)", teamId: "team2", timestamp: "14:01" },
-    { id: "5", type: "shield", message: "Team 4 bought a Small Shield", teamId: "team4", timestamp: "13:58" },
-];
+// Team colors from config
+const TEAM_COLORS: Record<number, { name: string; color: string }> = Object.fromEntries(
+    TEAMS.map(t => [t.number, { name: t.name, color: t.color }])
+);
 
 // --- Helpers ---
 const formatTime = (seconds: number) => {
@@ -184,8 +74,21 @@ const formatCountdown = (ms: number) => {
     return `${hours}h ${mins}m ${secs.toString().padStart(2, '0')}s`;
 };
 
-// --- Components ---
+// Get TOTD info by map number (1-based)
+const getTotdInfo = (mapNumber: number) => {
+    if (mapNumber < 1 || mapNumber > totds.length) return null;
+    const totd = totds[mapNumber - 1];
+    return {
+        name: totd.name,
+        authorName: totd.authorName,
+        mapUid: totd.mapUid,
+        date: totd.date,
+        authorTime: formatAuthorTime(totd.authorTime),
+        thumbnailUrl: getMapThumbnailUrl(totd.mapId)
+    };
+};
 
+// --- Components ---
 const TeamCard = ({ team }: { team: TeamStatus }) => {
     return (
         <div style={{
@@ -196,7 +99,8 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
             display: "flex",
             flexDirection: "column",
             height: "100%",
-            position: "relative"
+            position: "relative",
+            opacity: team.isOnline ? 1 : 0.6
         }}>
             {/* Rank Badge */}
             <div style={{
@@ -215,8 +119,20 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                 zIndex: 10,
                 boxShadow: "0 2px 5px rgba(0,0,0,0.3)"
             }}>
-                #{team.rank}
+                #{team.id}
             </div>
+
+            {/* Online indicator */}
+            <div style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                background: team.isOnline ? "#4ade80" : "#6b7280",
+                boxShadow: team.isOnline ? "0 0 8px #4ade80" : "none"
+            }} title={team.isOnline ? "Online" : "Offline"} />
 
             {/* Header */}
             <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", textAlign: "center", borderBottom: "1px solid #334155" }}>
@@ -233,45 +149,50 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 
             {/* Map Info */}
             <div style={{ padding: 12, flex: 1 }}>
-                <a
-                    href={getTrackmaniaIoUrl(team.currentMap.mapUid)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: "none", color: "inherit", display: "block" }}
-                >
-                    <div style={{
-                        aspectRatio: "16/9",
-                        background: "#0f172a",
-                        borderRadius: 8,
-                        marginBottom: 12,
-                        overflow: "hidden",
-                        position: "relative",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        transition: "transform 0.2s"
-                    }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                {team.currentMap ? (
+                    <a
+                        href={getTrackmaniaIoUrl(team.currentMap.mapUid)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none", color: "inherit", display: "block" }}
                     >
-                        {/* Placeholder for map image */}
                         <div style={{
-                            width: "100%",
-                            height: "100%",
-                            background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
-                            backgroundColor: "#000",
-                        }} />
-                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.8)" }}>
-                            <div style={{ fontSize: 13, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 1 }}>
-                                {team.currentMap.name}
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, opacity: 0.8 }}>
-                                <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
-                                    by {team.currentMap.authorName}
-                                </span>
-                                <span style={{ whiteSpace: "nowrap", fontSize: "1.25em" }}>{team.currentMap.date}</span>
+                            aspectRatio: "16/9",
+                            background: "#0f172a",
+                            borderRadius: 8,
+                            marginBottom: 12,
+                            overflow: "hidden",
+                            position: "relative",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            transition: "transform 0.2s"
+                        }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                        >
+                            <div style={{
+                                width: "100%",
+                                height: "100%",
+                                background: `url(${team.currentMap.thumbnailUrl}) center/cover no-repeat`,
+                                backgroundColor: "#000",
+                            }} />
+                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.8)" }}>
+                                <div style={{ fontSize: 13, fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 1 }}>
+                                    {team.currentMap.name}
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, opacity: 0.8 }}>
+                                    <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
+                                        by {team.currentMap.authorName}
+                                    </span>
+                                    <span style={{ whiteSpace: "nowrap", fontSize: "1.25em" }}>{team.currentMap.date}</span>
+                                </div>
                             </div>
                         </div>
+                    </a>
+                ) : (
+                    <div style={{ aspectRatio: "16/9", background: "#0f172a", borderRadius: 8, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+                        No map data
                     </div>
-                </a>
+                )}
 
                 {/* Status Section */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -320,17 +241,92 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
 };
 
 export default function LeaderboardPage() {
-    const [teams, setTeams] = useState<TeamStatus[]>(INITIAL_TEAMS);
-    const [feed, setFeed] = useState<FeedEvent[]>(INITIAL_FEED);
+    const [teams, setTeams] = useState<TeamStatus[]>([]);
+    const [feed, setFeed] = useState<FeedEvent[]>([]);
     const [timeLeftMs, setTimeLeftMs] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Sort teams by mapsFinished (descending)
-    const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
+    // Fetch live data
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch live status
+                const liveRes = await fetch('/api/live-status');
+                if (!liveRes.ok) throw new Error('Failed to fetch live status');
+                const liveData = await liveRes.json();
+
+                // Fetch team progress
+                const progressRes = await fetch('/api/team-progress');
+                const progressData = progressRes.ok ? await progressRes.json() : [];
+
+                // Fetch pending penalties
+                const penaltyPromises = [1, 2, 3, 4].map(teamId =>
+                    fetch(`/api/penalty-status?team_id=${teamId}`).then(r => r.ok ? r.json() : { pending_penalties: [] })
+                );
+                const penaltyData = await Promise.all(penaltyPromises);
+
+                // Fetch recent donations for feed
+                const donationsRes = await fetch('/api/donations');
+                const donationsData = donationsRes.ok ? await donationsRes.json() : { recentDonations: [] };
+
+                // Transform data
+                const transformedTeams: TeamStatus[] = liveData.teams.map((t: any, index: number) => {
+                    const teamId = t.id;
+                    const progress = progressData.find((p: any) => p.team_id === teamId);
+                    const penalties = penaltyData[index]?.pending_penalties || [];
+                    const mapsCompleted = progress?.maps_completed || t.mapsCompleted || 0;
+
+                    // Calculate current map number (TOTD #X where X = TOTAL_MAPS - mapsCompleted)
+                    const currentMapNumber = TOTAL_MAPS - mapsCompleted;
+                    const mapInfo = getTotdInfo(currentMapNumber);
+
+                    return {
+                        id: teamId,
+                        name: TEAM_COLORS[teamId]?.name || `Team ${teamId}`,
+                        color: TEAM_COLORS[teamId]?.color || "#888",
+                        mapsFinished: mapsCompleted,
+                        totalMaps: TOTAL_MAPS,
+                        activePlayer: t.activePlayer,
+                        currentMap: mapInfo,
+                        activeShield: null, // TODO: fetch from shield status API
+                        activePenalties: penalties.slice(0, 2).map((p: any) => ({
+                            name: p.penalty_name,
+                            timeLeft: 0 // Real-time countdown would need WebSocket
+                        })),
+                        penaltyQueue: Math.max(0, penalties.length - 2),
+                        penaltyQueueNames: penalties.slice(2).map((p: any) => p.penalty_name),
+                        isOnline: t.isOnline
+                    };
+                });
+
+                // Transform donations to feed events
+                const feedEvents: FeedEvent[] = (donationsData.recentDonations || []).slice(0, 10).map((d: any) => ({
+                    id: d.donation_id,
+                    type: "donation" as const,
+                    message: `${d.donor_name || 'Anonymous'} donated £${d.amount} → ${d.penalty_name || 'Donation'}`,
+                    teamId: d.penalty_team,
+                    timestamp: new Date(d.processed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                }));
+
+                setTeams(transformedTeams);
+                setFeed(feedEvents);
+                setLoading(false);
+                setError(null);
+            } catch (err) {
+                console.error('Leaderboard fetch error:', err);
+                setError('Failed to load live data');
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
+        return () => clearInterval(interval);
+    }, []);
 
     // Countdown Effect
     useEffect(() => {
-        // Target: Dec 24, 2025 at 18:00:00 Paris Time (CET which is UTC+1)
-        // ISO string with offset: 2025-12-24T18:00:00+01:00
         const targetDate = new Date("2025-12-24T18:00:00+01:00").getTime();
 
         const updateTimer = () => {
@@ -339,27 +335,46 @@ export default function LeaderboardPage() {
             setTimeLeftMs(Math.max(0, diff));
         };
 
-        updateTimer(); // initial
-        const timer = setInterval(() => {
-            updateTimer();
-
-            // Randomly decrease shield/penalty timers for demo
-            setTeams(prevTeams => prevTeams.map(team => ({
-                ...team,
-                activeShield: team.activeShield ? { ...team.activeShield, timeLeft: Math.max(0, team.activeShield.timeLeft - 1) } : null,
-                activePenalties: team.activePenalties.map(p => ({ ...p, timeLeft: Math.max(0, p.timeLeft - 1) }))
-            })));
-
-        }, 1000);
+        updateTimer();
+        const timer = setInterval(updateTimer, 1000);
         return () => clearInterval(timer);
     }, []);
 
+    // Sort teams by mapsFinished (descending)
+    const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
+
+    if (loading) {
+        return (
+            <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>🏁</div>
+                    <p>Loading live data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+                    <p style={{ color: "#f87171" }}>{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{ marginTop: 16, padding: "8px 16px", background: "#3b82f6", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
-            {/* Header removed, using global layout */}
-
             <main style={{ padding: "24px", maxWidth: 1600, margin: "0 auto" }}>
-                {/* Dashboard Header - Centered Timer */}
+                {/* Dashboard Header */}
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "1fr auto 1fr",
@@ -367,32 +382,25 @@ export default function LeaderboardPage() {
                     marginBottom: 24,
                     gap: 16
                 }}>
-                    {/* Left: Title */}
                     <div>
                         <h1 style={{ fontSize: 36, fontWeight: "bold", background: "linear-gradient(to right, #60a5fa, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: 0 }}>
                             LIVE LEADERBOARD
                         </h1>
                         <p style={{ opacity: 0.6, marginTop: 4, fontSize: 14 }}>TOTD Flashback Event • Real-time tracking</p>
                     </div>
-
-
-
-                    {/* Right: Empty (for balance) */}
                     <div></div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
-                    {/* LEFT COLUMN: Teams Grid & Timeline */}
+                    {/* LEFT COLUMN: Teams Grid */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-                        {/* Teams Grid (4 columns now since Joker removed) */}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                             {sortedTeams.map((team, index) => (
-                                <TeamCard key={team.id} team={{ ...team, rank: index + 1 }} />
+                                <TeamCard key={team.id} team={{ ...team, id: index + 1 }} />
                             ))}
                         </div>
 
-                        {/* Visual Timeline (Static Mockup) */}
+                        {/* Progress Timeline */}
                         <div style={{ background: "#1e293b", padding: "16px 16px 40px 16px", borderRadius: 12, border: "1px solid #334155" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                                 <h3 style={{ margin: 0, fontSize: 16 }}>Event Timeline</h3>
@@ -400,22 +408,13 @@ export default function LeaderboardPage() {
                             </div>
 
                             <div style={{ position: "relative", height: 32, background: "#0f172a", borderRadius: 20, display: "flex", alignItems: "center", padding: "0 10px" }}>
-                                {/* Timeline Track */}
                                 <div style={{ position: "absolute", left: 10, right: 10, height: 4, background: "#334155", borderRadius: 2 }}></div>
-
-                                {/* Start Marker (Dec 2025) */}
                                 <div style={{ position: "absolute", left: "2%", top: 34, fontSize: 10, opacity: 0.5 }}>Dec 2025</div>
-
-                                {/* End Marker (July 2020) */}
                                 <div style={{ position: "absolute", right: "2%", top: 34, fontSize: 10, opacity: 0.5 }}>July 2020</div>
 
-                                {/* Team Markers */}
-                                {teams.map((team, i) => {
-                                    // Calculate fake position based on mapsFinished
+                                {sortedTeams.map((team, i) => {
                                     const percent = (team.mapsFinished / team.totalMaps) * 100;
                                     const isTop = i % 2 === 0;
-                                    // Stagger heights: Teams 1&2 (i=0,1) get longer arrows to be outer
-                                    // Teams 3&4 (i=2,3) get shorter arrows to be inner
                                     const arrowHeight = (i < 2) ? 35 : 12;
 
                                     return (
@@ -424,92 +423,20 @@ export default function LeaderboardPage() {
                                             left: `${percent}%`,
                                             top: "50%",
                                             transform: "translate(-50%, -50%)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            zIndex: 5,
-                                            width: 0,
-                                            height: 0
+                                            zIndex: 5
                                         }}>
-                                            {/* The Dot */}
                                             <div style={{
-                                                position: "absolute",
                                                 width: 12,
                                                 height: 12,
                                                 borderRadius: "50%",
                                                 background: team.color,
                                                 border: "2px solid #fff",
-                                                boxShadow: "0 0 10px " + team.color,
-                                                zIndex: 10
+                                                boxShadow: "0 0 10px " + team.color
                                             }} />
-
-                                            {/* Connector & Label */}
-                                            <div style={{
-                                                position: "absolute",
-                                                [isTop ? "bottom" : "top"]: 10, // Start offset from the dot
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                alignItems: "center",
-                                                whiteSpace: "nowrap",
-                                                zIndex: 20
-                                            }}>
-                                                {isTop ? (
-                                                    /* Label Above */
-                                                    <>
-                                                        <div style={{
-                                                            fontSize: 10,
-                                                            color: team.color,
-                                                            fontWeight: "bold",
-                                                            marginBottom: 2,
-                                                            background: "rgba(0, 0, 0, 0.8)",
-                                                            padding: "2px 6px",
-                                                            borderRadius: 4,
-                                                            border: `1px solid ${team.color}44`
-                                                        }}>
-                                                            {team.name}
-                                                        </div>
-                                                        <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
-                                                        {/* Arrow Tip Down */}
-                                                        <div style={{
-                                                            width: 0, height: 0,
-                                                            borderLeft: "4px solid transparent",
-                                                            borderRight: "4px solid transparent",
-                                                            borderTop: `4px solid ${team.color}`,
-                                                            marginBottom: -2
-                                                        }}></div>
-                                                    </>
-                                                ) : (
-                                                    /* Label Below */
-                                                    <>
-                                                        {/* Arrow Tip Up */}
-                                                        <div style={{
-                                                            width: 0, height: 0,
-                                                            borderLeft: "4px solid transparent",
-                                                            borderRight: "4px solid transparent",
-                                                            borderBottom: `4px solid ${team.color}`,
-                                                            marginTop: -2
-                                                        }}></div>
-                                                        <div style={{ width: 2, height: arrowHeight, background: team.color }}></div>
-                                                        <div style={{
-                                                            fontSize: 10,
-                                                            color: team.color,
-                                                            fontWeight: "bold",
-                                                            marginTop: 2,
-                                                            background: "rgba(0, 0, 0, 0.8)",
-                                                            padding: "2px 6px",
-                                                            borderRadius: 4,
-                                                            border: `1px solid ${team.color}44`
-                                                        }}>
-                                                            {team.name}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                            <div style={{ height: 16 }}></div>
                         </div>
                     </div>
 
@@ -527,22 +454,22 @@ export default function LeaderboardPage() {
                         }}>
                             <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {feed.map(event => (
+                                {feed.length > 0 ? feed.map(event => (
                                     <div key={event.id} style={{
                                         paddingRight: 8,
-                                        borderLeft: `3px solid ${event.teamId ? INITIAL_TEAMS.find(t => t.id === event.teamId)?.color : "#fff"}`,
+                                        borderLeft: `3px solid ${event.teamId ? TEAM_COLORS[event.teamId]?.color : "#fff"}`,
                                         paddingLeft: 12
                                     }}>
                                         <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{event.timestamp}</div>
-                                        <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-                                            {event.message}
-                                        </div>
+                                        <div style={{ fontSize: 13, lineHeight: 1.4 }}>{event.message}</div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div style={{ opacity: 0.5, textAlign: "center", padding: 20 }}>No recent events</div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Timer moved below feed */}
+                        {/* Timer */}
                         <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
                             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
                             <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
@@ -552,7 +479,6 @@ export default function LeaderboardPage() {
                     </div>
                 </div>
             </main>
-
         </div>
     );
 }

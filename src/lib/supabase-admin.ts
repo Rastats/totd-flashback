@@ -13,3 +13,8 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
         persistSession: false
     }
 });
+
+// Function alias for compatibility
+export function getSupabaseAdmin() {
+    return supabaseAdmin;
+}
