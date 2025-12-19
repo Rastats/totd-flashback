@@ -261,7 +261,13 @@ export async function POST(request: Request) {
                 mapsCompleted: myTeamStatus?.maps_completed || 0,
                 mapsTotal: myTeamStatus?.maps_total || 2000,
                 redoRemaining: myTeamStatus?.redo_remaining || 0
-            }
+            },
+
+            // All teams' progress (for leaderboard display)
+            allTeamsProgress: (teamStatuses.data || []).map(t => ({
+                team_id: t.team_id,
+                maps_completed: t.maps_completed || 0
+            }))
         });
 
     } catch (error) {
