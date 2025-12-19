@@ -69,11 +69,48 @@ export async function POST(request: Request) {
 
         const data: SyncPayload = await request.json();
 
+        const supabase = getSupabaseAdmin();
+
+        // ============================================
+        // PUBLIC ONLY MODE: For non-roster players who just want to view data
+        // Skip account_id validation and return public team data
+        // ============================================
+        if ((data as any).public_only === true) {
+            console.log(`[Sync] Public data request from team_id=${data.team_id}`);
+
+            // Get all public data in parallel
+            const [campaignData, teamPots, teamStatuses] = await Promise.all([
+                getCampaignData(),
+                getTeamPots(),
+                supabase.from('team_status').select('*').order('team_id')
+            ]);
+
+            return NextResponse.json({
+                success: true,
+                public_only: true,
+
+                // Donations data
+                donations: {
+                    totalAmount: campaignData.totalAmount,
+                    currency: campaignData.currency,
+                    goal: campaignData.goal,
+                    teamPots: teamPots,
+                    recentDonations: [] // No recent donations for public requests
+                },
+
+                // All teams' progress (for leaderboard display)
+                allTeamsProgress: (teamStatuses.data || []).map(t => ({
+                    team_id: t.team_id,
+                    maps_completed: t.maps_completed || 0,
+                    active_player: t.active_player || null
+                }))
+            });
+        }
+
+        // For non-public requests, account_id is required
         if (!data.account_id) {
             return NextResponse.json({ error: 'Missing account_id' }, { status: 400 });
         }
-
-        const supabase = getSupabaseAdmin();
 
         // Check if account_id is in the players roster
         const { data: player, error: playerError } = await supabase
