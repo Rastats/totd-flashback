@@ -266,7 +266,8 @@ export async function POST(request: Request) {
             // All teams' progress (for leaderboard display)
             allTeamsProgress: (teamStatuses.data || []).map(t => ({
                 team_id: t.team_id,
-                maps_completed: t.maps_completed || 0
+                maps_completed: t.maps_completed || 0,
+                active_player: t.active_player || null
             }))
         });
 
