@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { validateApiKey } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export interface EventLogEntry {
     id: string;
-    event_type: 'donation' | 'penalty_applied' | 'penalty_completed' | 'shield_activated' | 'shield_expired' | 'milestone' | 'month_finished';
+    event_type: 'donation' | 'penalty_applied' | 'penalty_completed' | 'shield_activated' | 'shield_expired' | 'milestone' | 'month_finished' | 'penalty_active' | 'shield_active' | 'player_switch';
     team_id: number | null;
     message: string;
     metadata: Record<string, unknown>;
@@ -55,20 +56,35 @@ export async function GET(request: Request) {
 
 // POST /api/event-log
 // Creates a new event log entry
-// Body: { event_type, team_id?, message, metadata? }
+// Body: { event_type, team_id?, message, metadata?, player_name?, details? }
+// Requires X-API-Key header from plugin
 export async function POST(request: Request) {
     try {
+        // Validate API key (plugin authentication)
+        if (!validateApiKey(request)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await request.json();
-        const { event_type, team_id, message, metadata } = body;
+        let { event_type, team_id, message, metadata, player_name, details } = body;
+
+        // Build message from plugin data if not provided
+        if (!message && details) {
+            message = details;
+        }
 
         if (!event_type || !message) {
             return NextResponse.json(
-                { error: 'Missing event_type or message' },
+                { error: 'Missing event_type or message/details' },
                 { status: 400 }
             );
         }
 
-        const validTypes = ['donation', 'penalty_applied', 'penalty_completed', 'shield_activated', 'shield_expired', 'milestone', 'month_finished'];
+        const validTypes = [
+            'donation', 'penalty_applied', 'penalty_completed', 
+            'shield_activated', 'shield_expired', 'milestone', 'month_finished',
+            'penalty_active', 'shield_active', 'player_switch'  // Plugin event types
+        ];
         if (!validTypes.includes(event_type)) {
             return NextResponse.json(
                 { error: `Invalid event_type. Must be one of: ${validTypes.join(', ')}` },
@@ -82,7 +98,10 @@ export async function POST(request: Request) {
                 event_type,
                 team_id: team_id || null,
                 message,
-                metadata: metadata || {},
+                metadata: {
+                    ...metadata,
+                    player_name: player_name || null,
+                },
                 created_at: new Date().toISOString()
             })
             .select()
