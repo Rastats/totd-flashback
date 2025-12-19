@@ -11,7 +11,7 @@ interface TeamProgress {
     isOnline: boolean;
 }
 
-const TOTAL_MAPS = 99; // Maps 1902 to 2000
+const TOTAL_MAPS = 2000; // All TOTDs
 
 export default function OverlayProgressPage() {
     const [teams, setTeams] = useState<TeamProgress[]>([]);
@@ -33,7 +33,7 @@ export default function OverlayProgressPage() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds
+        const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -45,10 +45,11 @@ export default function OverlayProgressPage() {
         <div style={{
             display: "flex",
             flexDirection: "column",
-            gap: 12,
-            padding: 16,
+            gap: 6,
+            padding: 8,
             fontFamily: "'Segoe UI', Roboto, sans-serif",
             background: "transparent",
+            width: 380,
         }}>
             {teams.map((team) => {
                 const progress = Math.min((team.mapsCompleted / TOTAL_MAPS) * 100, 100);
@@ -57,15 +58,16 @@ export default function OverlayProgressPage() {
                     <div key={team.id} style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 12,
+                        gap: 8,
                     }}>
                         {/* Team Label */}
                         <div style={{
-                            width: 80,
-                            fontSize: 16,
+                            width: 50,
+                            fontSize: 11,
                             fontWeight: "bold",
                             color: team.color,
-                            textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+                            textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                            whiteSpace: "nowrap",
                         }}>
                             {team.name}
                         </div>
@@ -73,9 +75,9 @@ export default function OverlayProgressPage() {
                         {/* Progress Bar Container */}
                         <div style={{
                             flex: 1,
-                            height: 36,
-                            background: "rgba(0,0,0,0.6)",
-                            borderRadius: 8,
+                            height: 26,
+                            background: "rgba(0,0,0,0.7)",
+                            borderRadius: 5,
                             border: `2px solid ${team.color}`,
                             overflow: "hidden",
                             position: "relative",
@@ -92,29 +94,29 @@ export default function OverlayProgressPage() {
                             <div style={{
                                 position: "absolute",
                                 top: 0,
-                                left: 12,
-                                right: 12,
+                                left: 8,
+                                right: 8,
                                 height: "100%",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "space-between",
                             }}>
                                 <span style={{
-                                    fontSize: 14,
+                                    fontSize: 11,
                                     fontWeight: 600,
                                     color: "#fff",
-                                    textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                                    textShadow: "0 1px 2px rgba(0,0,0,0.9)",
                                     opacity: team.isOnline ? 1 : 0.5,
                                 }}>
                                     {team.isOnline ? (team.activePlayer || "—") : "Offline"}
                                 </span>
                                 <span style={{
-                                    fontSize: 14,
+                                    fontSize: 11,
                                     fontWeight: "bold",
                                     color: "#fff",
-                                    textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                                    textShadow: "0 1px 2px rgba(0,0,0,0.9)",
                                 }}>
-                                    {team.mapsCompleted} / {TOTAL_MAPS}
+                                    {team.mapsCompleted}
                                 </span>
                             </div>
                         </div>

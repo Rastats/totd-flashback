@@ -26,10 +26,11 @@ export default function OverlayDonationsPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch("/api/donations?limit=3");
+                const res = await fetch("/api/donations");
                 if (res.ok) {
                     const data = await res.json();
-                    setDonations(data.donations || []);
+                    // API returns recentDonations, take first 3
+                    setDonations((data.recentDonations || []).slice(0, 3));
                 }
             } catch (err) {
                 console.error("Failed to fetch donations:", err);
@@ -37,18 +38,23 @@ export default function OverlayDonationsPage() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
+        const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
     }, []);
+
+    if (donations.length === 0) {
+        return <div style={{ background: "transparent", padding: 8, color: "#666", fontSize: 11 }}>No donations yet</div>;
+    }
 
     return (
         <div style={{
             display: "flex",
             flexDirection: "column",
-            gap: 8,
-            padding: 12,
+            gap: 6,
+            padding: 8,
             fontFamily: "'Segoe UI', Roboto, sans-serif",
             background: "transparent",
+            width: 280,
         }}>
             {donations.map((don) => {
                 const teamColor = TEAM_COLORS[don.penalty_team] || "#888";
@@ -57,39 +63,42 @@ export default function OverlayDonationsPage() {
                     <div key={don.donation_id} style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 12,
-                        padding: "10px 14px",
-                        background: "rgba(0,0,0,0.75)",
-                        borderRadius: 8,
-                        borderLeft: `4px solid ${teamColor}`,
+                        gap: 8,
+                        padding: "6px 10px",
+                        background: "rgba(0,0,0,0.8)",
+                        borderRadius: 6,
+                        borderLeft: `3px solid ${teamColor}`,
                     }}>
                         {/* Amount */}
                         <div style={{
-                            fontSize: 18,
+                            fontSize: 14,
                             fontWeight: "bold",
                             color: "#22c55e",
-                            minWidth: 70,
-                            textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                            minWidth: 50,
+                            textShadow: "0 1px 2px rgba(0,0,0,0.9)",
                         }}>
                             £{don.amount.toFixed(0)}
                         </div>
 
                         {/* Details */}
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, overflow: "hidden" }}>
                             <div style={{
-                                fontSize: 14,
+                                fontSize: 11,
                                 fontWeight: 600,
                                 color: "#fff",
                                 textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
                             }}>
                                 {don.donor_name}
                             </div>
                             <div style={{
-                                fontSize: 12,
+                                fontSize: 10,
                                 color: teamColor,
                                 fontWeight: 500,
                             }}>
-                                {don.penalty_name} → Team {don.penalty_team}
+                                {don.penalty_name} → T{don.penalty_team}
                             </div>
                         </div>
                     </div>
