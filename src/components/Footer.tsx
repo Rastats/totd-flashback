@@ -60,10 +60,10 @@ export default function Footer() {
                                 ❤️ Donate
                             </button>
                             <div style={{
-                                padding: "6px 12px",
+                                padding: "10px 16px",
                                 background: "#2a2a3a",
-                                borderRadius: 6,
-                                fontSize: 14,
+                                borderRadius: 8,
+                                fontSize: 15,
                             }}>
                                 💰 <strong>£{totalRaised !== null ? totalRaised.toFixed(2) : '...'}</strong> raised
                             </div>
@@ -74,7 +74,7 @@ export default function Footer() {
                                 href="https://discord.gg/invite/8CtzptmJ4s"
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ color: "#7289da", fontSize: 14, fontWeight: 500, textDecoration: "none" }}
+                                style={{ color: "#7289da", fontSize: 16, fontWeight: 500, textDecoration: "none" }}
                             >
                                 📱 Discord
                             </a>
@@ -82,7 +82,7 @@ export default function Footer() {
                                 href="https://twitch.tv/rastats"
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ color: "#a855f7", fontSize: 14, fontWeight: 500, textDecoration: "none" }}
+                                style={{ color: "#a855f7", fontSize: 16, fontWeight: 500, textDecoration: "none" }}
                             >
                                 📺 Twitch
                             </a>
@@ -90,7 +90,7 @@ export default function Footer() {
                                 href="https://www.savethechildren.org.uk/christmas-jumper-day"
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ color: "#f87171", fontSize: 14, fontWeight: 500, textDecoration: "none" }}
+                                style={{ color: "#f87171", fontSize: 16, fontWeight: 500, textDecoration: "none" }}
                             >
                                 🎄 Save the Children UK
                             </a>
@@ -99,25 +99,25 @@ export default function Footer() {
 
                     {/* Quick Links */}
                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
-                        <Link href="/penalties" style={{ color: "#f87171", fontSize: 13, textDecoration: "none", opacity: 0.9 }}>
+                        <Link href="/penalties" style={{ color: "#f87171", fontSize: 15, textDecoration: "none", opacity: 0.9 }}>
                             ⚠️ Penalties
                         </Link>
-                        <Link href="/shields" style={{ color: "#4ade80", fontSize: 13, textDecoration: "none", opacity: 0.9 }}>
+                        <Link href="/shields" style={{ color: "#4ade80", fontSize: 15, textDecoration: "none", opacity: 0.9 }}>
                             🛡️ Shields
                         </Link>
-                        <Link href="/how-to-join" style={{ color: "#60a5fa", fontSize: 13, textDecoration: "none", opacity: 0.9 }}>
+                        <Link href="/how-to-join" style={{ color: "#60a5fa", fontSize: 15, textDecoration: "none", opacity: 0.9 }}>
                             📋 How to Join
                         </Link>
-                        <Link href="/signup/player" style={{ color: "#60a5fa", fontSize: 13, textDecoration: "none", opacity: 0.9 }}>
+                        <Link href="/signup/player" style={{ color: "#60a5fa", fontSize: 15, textDecoration: "none", opacity: 0.9 }}>
                             🎮 Apply as Player
                         </Link>
-                        <Link href="/signup/caster" style={{ color: "#a855f7", fontSize: 13, textDecoration: "none", opacity: 0.9 }}>
+                        <Link href="/signup/caster" style={{ color: "#a855f7", fontSize: 15, textDecoration: "none", opacity: 0.9 }}>
                             🎙️ Apply as Caster
                         </Link>
                     </div>
 
                     {/* Bottom: Copyright */}
-                    <div style={{ textAlign: "center", fontSize: 12, opacity: 0.5 }}>
+                    <div style={{ textAlign: "center", fontSize: 14, opacity: 0.5 }}>
                         Organized by Rastats • TOTD Flashback © 2025
                     </div>
                 </div>
