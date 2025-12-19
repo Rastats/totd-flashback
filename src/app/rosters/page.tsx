@@ -200,12 +200,15 @@ export default function RostersPage() {
                                                 )}
                                             </div>
                                             {player.twitchUsername && (
-                                                <div style={{ fontSize: 12, color: "#a78bfa", marginTop: 2 }}>
+                                                <a href={`https://twitch.tv/${player.twitchUsername}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#a78bfa", marginTop: 2, textDecoration: "none" }}>
                                                     twitch.tv/{player.twitchUsername}
-                                                </div>
+                                                </a>
                                             )}
                                         </div>
-                                        {player.canStream && (
+                                        {player.canStream && player.twitchUsername && (
+                                            <a href={`https://twitch.tv/${player.twitchUsername}`} target="_blank" rel="noopener noreferrer" title="Watch on Twitch" style={{ fontSize: 14, textDecoration: "none" }}>📺</a>
+                                        )}
+                                        {player.canStream && !player.twitchUsername && (
                                             <span title="Streamer" style={{ fontSize: 14 }}>📺</span>
                                         )}
                                     </div>
