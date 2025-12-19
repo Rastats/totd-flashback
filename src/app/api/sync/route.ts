@@ -29,6 +29,7 @@ interface SyncPayload {
         maps_completed: number;
         maps_total: number;
         redo_remaining: number;
+        completed_ids?: number[];  // Array of completed map indices
     };
 
     penalties: {
