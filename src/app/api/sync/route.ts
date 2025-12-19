@@ -197,6 +197,9 @@ export async function POST(request: Request) {
                 maps_completed: finalMapsCompleted,
                 maps_total: finalMapsTotal,
                 redo_remaining: data.progress?.redo_remaining || 0,
+                
+                // Completed map IDs (merged from team_progress)
+                completed_map_ids: data.progress?.completed_ids || [],
 
                 // Penalties (stored as JSONB)
                 penalties_active: data.penalties?.active || [],
