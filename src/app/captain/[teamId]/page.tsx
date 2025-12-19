@@ -61,31 +61,25 @@ const getLocalTimeForHourIndex = (hourIndex: number, tzOffset: number): { day: n
     const cetDay = Math.floor(cetTotalHours / 24);
     const cetHour = cetTotalHours % 24;
 
-    // Convert CET to target timezone
+    // Convert CET to target timezone using proper modular arithmetic
     const offsetDiff = tzOffset - 1; // CET is +1
-    let localHour = cetHour + offsetDiff;
-    let localDay = cetDay;
-
-    while (localHour >= 24) { localHour -= 24; localDay += 1; }
-    while (localHour < 0) { localHour += 24; localDay -= 1; }
+    const totalLocalHours = cetDay * 24 + cetHour + offsetDiff;
+    const localDay = Math.floor(totalLocalHours / 24);
+    const localHour = ((totalLocalHours % 24) + 24) % 24; // Handle negative correctly
 
     return { day: localDay, hour: localHour };
 };
 
 // Convert local day+hour back to hourIndex
 const getHourIndexForLocal = (localDay: number, localHour: number, tzOffset: number): number => {
-    // Convert to CET first
+    // Convert to CET using proper modular arithmetic
     const offsetDiff = tzOffset - 1;
-    let cetHour = localHour - offsetDiff;
-    let cetDay = localDay;
-
-    while (cetHour >= 24) { cetHour -= 24; cetDay += 1; }
-    while (cetHour < 0) { cetHour += 24; cetDay -= 1; }
-
+    const totalLocalHours = localDay * 24 + localHour;
+    const totalCetHours = totalLocalHours - offsetDiff;
+    
     // Calculate hourIndex
-    const cetTotalHours = cetDay * 24 + cetHour;
-    const startTotalHours = 21 * 24 + 21; // Dec 21, 21:00
-    return cetTotalHours - startTotalHours;
+    const startTotalHours = 21 * 24 + 21; // Dec 21, 21:00 CET
+    return totalCetHours - startTotalHours;
 };
 
 // Get column days for timezone
@@ -312,6 +306,36 @@ export default function CaptainPage() {
     const saveToServer = async () => {
         setSaving(true);
         try {
+            // Fetch current server state to check for conflicts
+            const checkRes = await fetch(`/api/captain/${teamId}`);
+            if (checkRes.ok) {
+                const serverData = await checkRes.json();
+                const serverSlots = serverData.planning?.slots || {};
+                
+                // Find conflicting slots (different mainPlayerId for same hourIndex)
+                const conflicts: number[] = [];
+                for (const slot of slots) {
+                    const serverSlot = serverSlots[slot.hourIndex];
+                    if (serverSlot?.mainPlayerId && serverSlot.mainPlayerId !== slot.mainPlayerId) {
+                        conflicts.push(slot.hourIndex);
+                    }
+                }
+                
+                if (conflicts.length > 0) {
+                    const proceed = confirm(
+                        `⚠️ Conflict detected!\n\n` +
+                        `${conflicts.length} slot(s) were modified by another captain.\n` +
+                        `Overwrite server changes?`
+                    );
+                    if (!proceed) {
+                        setSaving(false);
+                        // Reload to get latest
+                        window.location.reload();
+                        return;
+                    }
+                }
+            }
+            
             const slotsObj: Record<number, TeamSlotAssignment> = {};
             for (const slot of slots) {
                 slotsObj[slot.hourIndex] = { mainPlayerId: slot.mainPlayerId, subPlayerId: slot.subPlayerId };

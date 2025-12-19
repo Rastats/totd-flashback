@@ -301,11 +301,18 @@ export async function POST(request: Request) {
             },
 
             // All teams' progress (for leaderboard display)
-            allTeamsProgress: (teamStatuses.data || []).map(t => ({
-                team_id: t.team_id,
-                maps_completed: t.maps_completed || 0,
-                active_player: t.active_player || null
-            }))
+            allTeamsProgress: (teamStatuses.data || []).map(t => {
+                // If data is older than 45 seconds, assume offline (active player crashed/quit)
+                const updatedAt = new Date(t.updated_at).getTime();
+                const now = Date.now();
+                const isOffline = (now - updatedAt) > 45000; // 45s timeout
+
+                return {
+                    team_id: t.team_id,
+                    maps_completed: t.maps_completed || 0,
+                    active_player: isOffline ? null : (t.active_player || null)
+                };
+            })
         });
 
     } catch (error) {

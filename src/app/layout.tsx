@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DonationNotifications from "@/components/DonationNotifications";
 import AuthProvider from "@/components/AuthProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +33,9 @@ export default function RootLayout({
         <AuthProvider>
           <Header />
           <DonationNotifications />
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
           <Footer />
         </AuthProvider>
       </body>

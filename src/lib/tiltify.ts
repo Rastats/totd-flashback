@@ -166,6 +166,22 @@ async function processDonation(donation: {
         return;
     }
 
+    // RACE CONDITION FIX: Use atomic check-and-increment
+    // Re-check pot_incremented in a single query with update
+    const { data: lockCheck, error: lockError } = await supabaseAdmin
+        .from('processed_donations')
+        .update({ pot_incremented: true })
+        .eq('donation_id', donation.id)
+        .eq('pot_incremented', false)  // Only update if still false
+        .select('donation_id')
+        .single();
+
+    if (lockError || !lockCheck) {
+        // Another process already incremented pot
+        console.log(`[Tiltify] Pot increment skipped (concurrent update) for ${donation.id}`);
+        return;
+    }
+
     // Update team pots
     if (potTeam !== null) {
         // Specific team gets the full amount

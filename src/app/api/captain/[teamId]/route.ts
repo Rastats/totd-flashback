@@ -100,36 +100,37 @@ export async function POST(
             });
         }
 
-        // Upsert each slot into the normalized table
-        const upsertPromises = Object.entries(slots).map(async ([hourIndex, slot]) => {
-            const hourIdx = parseInt(hourIndex, 10);
+        // FIXED: First DELETE all existing slots for this team,
+        // then INSERT only the ones in the payload.
+        // This ensures deleted slots are actually removed from the database.
+        const { error: deleteError } = await supabase
+            .from('team_planning')
+            .delete()
+            .eq('team_id', teamId);
 
-            // If both are null/empty, delete the row
-            if (!slot.mainPlayerId && !slot.subPlayerId) {
+        if (deleteError) {
+            console.error('Error deleting old slots:', deleteError);
+        }
+
+        // Now insert only the slots that have a mainPlayerId
+        const insertPromises = Object.entries(slots)
+            .filter(([, slot]) => slot.mainPlayerId) // Only insert slots with a player
+            .map(([hourIndex, slot]) => {
+                const hourIdx = parseInt(hourIndex, 10);
                 return supabase
                     .from('team_planning')
-                    .delete()
-                    .eq('team_id', teamId)
-                    .eq('hour_index', hourIdx);
-            }
+                    .insert({
+                        team_id: teamId,
+                        hour_index: hourIdx,
+                        main_player_id: slot.mainPlayerId,
+                        main_player_name: slot.mainPlayerId ? playerNames[slot.mainPlayerId] || null : null,
+                        sub_player_id: slot.subPlayerId || null,
+                        sub_player_name: slot.subPlayerId ? playerNames[slot.subPlayerId] || null : null,
+                        updated_at: new Date().toISOString()
+                    });
+            });
 
-            // Otherwise upsert with names
-            return supabase
-                .from('team_planning')
-                .upsert({
-                    team_id: teamId,
-                    hour_index: hourIdx,
-                    main_player_id: slot.mainPlayerId || null,
-                    main_player_name: slot.mainPlayerId ? playerNames[slot.mainPlayerId] || null : null,
-                    sub_player_id: slot.subPlayerId || null,
-                    sub_player_name: slot.subPlayerId ? playerNames[slot.subPlayerId] || null : null,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'team_id,hour_index'
-                });
-        });
-
-        await Promise.all(upsertPromises);
+        await Promise.all(insertPromises);
 
         return NextResponse.json({ success: true, teamId });
     } catch (err: any) {
