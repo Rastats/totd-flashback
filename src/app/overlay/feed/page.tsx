@@ -50,9 +50,9 @@ const EVENT_ICONS: Record<string, string> = {
 };
 
 const MONTH_THRESHOLDS = [
-    { maps: 31, name: "Janvier 2020" },
-    { maps: 60, name: "Février 2020" },
-    { maps: 91, name: "Mars 2020" },
+    { maps: 31, name: "January 2020" },
+    { maps: 60, name: "February 2020" },
+    { maps: 91, name: "March 2020" },
     // ... continues for each month
 ];
 
@@ -94,11 +94,11 @@ export default function OverlayFeedPage() {
                             seenDonations.current.add(don.donation_id);
                             
                             // New donation event
-                            const potText = don.pot_team ? `Pot → T${don.pot_team}` : "Pot réparti";
+                            const potText = don.pot_team ? `Pot → T${don.pot_team}` : "Pot split";
                             addEvent({
                                 type: "donation",
                                 teamId: don.penalty_team,
-                                message: `£${don.amount.toFixed(0)} de ${don.donor_name}`,
+                                message: `£${don.amount.toFixed(0)} from ${don.donor_name}`,
                                 subtext: `${don.penalty_name} → T${don.penalty_team} | ${potText}`,
                             });
                         }
@@ -110,8 +110,8 @@ export default function OverlayFeedPage() {
                         addEvent({
                             type: "pot_milestone",
                             teamId: null,
-                            message: `£${currentMilestone} atteints !`,
-                            subtext: `Objectif en cours...`,
+                            message: `£${currentMilestone} reached!`,
+                            subtext: `Goal in progress...`,
                         });
                     }
                     lastPotMilestone.current = currentMilestone;
@@ -128,7 +128,7 @@ export default function OverlayFeedPage() {
                             addEvent({
                                 type: "top_donor",
                                 teamId: null,
-                                message: `${topDonor[0]} est le top donateur !`,
+                                message: `${topDonor[0]} is the top donor!`,
                                 subtext: `Total: £${topDonor[1].toFixed(0)}`,
                             });
                         }
@@ -152,7 +152,7 @@ export default function OverlayFeedPage() {
                                     type: "player_change",
                                     teamId: team.id,
                                     message: `${team.name}: ${team.activePlayer}`,
-                                    subtext: prev.player ? `Remplace ${prev.player}` : "Prend le relais",
+                                    subtext: prev.player ? `Replaces ${prev.player}` : "Takes over",
                                 });
                             }
 
@@ -165,8 +165,8 @@ export default function OverlayFeedPage() {
                                 addEvent({
                                     type: "month_complete",
                                     teamId: team.id,
-                                    message: `${team.name} termine un mois !`,
-                                    subtext: `${team.mapsCompleted} maps complétées`,
+                                    message: `${team.name} finished a month!`,
+                                    subtext: `${team.mapsCompleted} maps completed`,
                                 });
                             }
                         }
@@ -192,8 +192,8 @@ export default function OverlayFeedPage() {
                                     addEvent({
                                         type: "team_overtake",
                                         teamId: leader.id,
-                                        message: `${leader.name} prend la tête !`,
-                                        subtext: `+${lead} maps d'avance`,
+                                        message: `${leader.name} takes the lead!`,
+                                        subtext: `+${lead} maps ahead`,
                                     });
                                 }
                             }
