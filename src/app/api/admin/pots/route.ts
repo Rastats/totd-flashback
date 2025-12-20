@@ -10,21 +10,27 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from('team_pots')
-            .select('*')
-            .order('team_number');
+            .select('team_id, pot_amount, updated_at')
+            .order('team_id');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        return NextResponse.json(data || []);
+        // Transform to consistent format for frontend
+        const pots = (data || []).map(p => ({
+            team_number: p.team_id,
+            amount: p.pot_amount || 0
+        }));
+
+        return NextResponse.json(pots);
     } catch (error) {
         console.error('[Admin Pots] GET error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
-// PATCH - Update a team pot
+// PATCH - Update a team pot (direct set, no penalties triggered)
 export async function PATCH(request: Request) {
     try {
         const data = await request.json();
@@ -39,8 +45,8 @@ export async function PATCH(request: Request) {
         // Get current pot value
         const { data: current, error: fetchError } = await supabase
             .from('team_pots')
-            .select('amount')
-            .eq('team_number', team_number)
+            .select('pot_amount')
+            .eq('team_id', team_number)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
@@ -53,7 +59,7 @@ export async function PATCH(request: Request) {
             newAmount = amount;
         } else if (adjustment !== undefined) {
             // Relative adjustment
-            newAmount = (current?.amount || 0) + adjustment;
+            newAmount = (current?.pot_amount || 0) + adjustment;
         } else {
             return NextResponse.json({ error: 'Either amount or adjustment required' }, { status: 400 });
         }
@@ -65,23 +71,23 @@ export async function PATCH(request: Request) {
         const { error: upsertError } = await supabase
             .from('team_pots')
             .upsert({
-                team_number,
-                amount: newAmount,
+                team_id: team_number,
+                pot_amount: newAmount,
                 updated_at: new Date().toISOString()
             }, {
-                onConflict: 'team_number'
+                onConflict: 'team_id'
             });
 
         if (upsertError) {
             return NextResponse.json({ error: upsertError.message }, { status: 500 });
         }
 
-        console.log(`[Admin Pots] Team ${team_number} pot updated: ${current?.amount || 0} → ${newAmount} (${reason || 'manual adjustment'})`);
+        console.log(`[Admin Pots] Team ${team_number} pot updated: ${current?.pot_amount || 0} → ${newAmount} (${reason || 'manual adjustment'})`);
 
         return NextResponse.json({
             success: true,
             team_number,
-            previous_amount: current?.amount || 0,
+            previous_amount: current?.pot_amount || 0,
             new_amount: newAmount,
             reason
         });
