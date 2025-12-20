@@ -4,15 +4,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { TEAMS } from "@/lib/config";
 
-// Define penalty types
+// Define penalty types matching plugin (Penalty.as CreatePenalty IDs)
 const PENALTY_TYPES = [
-    "Pedal to the Metal",
-    "Can't Turn Right", 
-    "Russian Roulette",
-    "Blind Mode",
-    "Mirror Mode",
-    "No HUD",
-    "First Person Only"
+    { id: 1, name: "Russian Roulette" },
+    { id: 2, name: "Camera Shuffle" },
+    { id: 3, name: "Cursed Controller" },
+    { id: 4, name: "Clean Run Only" },
+    { id: 5, name: "Pedal to the Metal" },
+    { id: 6, name: "Tunnel Vision" },
+    { id: 7, name: "Player Switch" },
+    { id: 8, name: "Can't Turn Right" },
+    { id: 9, name: "AT or Bust" },
+    { id: 10, name: "Back to the Future" }
 ];
 
 const inputStyle = {
@@ -84,7 +87,7 @@ export default function EventControlPanel() {
     const [loading, setLoading] = useState(true);
     
     // Form states
-    const [newPenalty, setNewPenalty] = useState({ team_id: 1, penalty_name: PENALTY_TYPES[0] });
+    const [newPenalty, setNewPenalty] = useState({ team_id: 1, penalty_id: PENALTY_TYPES[0].id, penalty_name: PENALTY_TYPES[0].name });
     const [newEventMessage, setNewEventMessage] = useState({ message: "", event_type: "milestone", team_id: "" });
     const [newVersion, setNewVersion] = useState("");
     const [progressUpdate, setProgressUpdate] = useState<Record<number, string>>({});
@@ -334,11 +337,15 @@ export default function EventControlPanel() {
                         {TEAMS.map(t => <option key={t.number} value={t.number}>{t.name}</option>)}
                     </select>
                     <select
-                        value={newPenalty.penalty_name}
-                        onChange={(e) => setNewPenalty(prev => ({ ...prev, penalty_name: e.target.value }))}
+                        value={newPenalty.penalty_id}
+                        onChange={(e) => {
+                            const id = parseInt(e.target.value);
+                            const penalty = PENALTY_TYPES.find(p => p.id === id);
+                            setNewPenalty(prev => ({ ...prev, penalty_id: id, penalty_name: penalty?.name || '' }));
+                        }}
                         style={{ ...inputStyle, minWidth: 180 }}
                     >
-                        {PENALTY_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+                        {PENALTY_TYPES.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                     <button onClick={addPenalty} style={{ ...buttonStyle, background: "#dc2626", color: "#fff" }}>
                         + Add Penalty
