@@ -60,6 +60,23 @@ export default function Header() {
                     </Link>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        {/* Leaderboard Link (Public) */}
+                        <Link href="/leaderboard" style={{
+                            padding: "8px 16px",
+                            background: "rgba(168, 85, 247, 0.1)",
+                            border: "1px solid #a855f7",
+                            borderRadius: 8,
+                            color: "#a855f7",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                            fontSize: 13,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6
+                        }}>
+                            📊 Leaderboard
+                        </Link>
+
                         {/* Admin Dashboard Link */}
                         {(session?.user?.isAdmin || captainInfo?.isAdmin) && (
                             <Link href="/admin" style={{
