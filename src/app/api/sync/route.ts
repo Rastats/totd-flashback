@@ -70,6 +70,36 @@ export async function POST(request: Request) {
 
         const data: SyncPayload = await request.json();
 
+        // ============================================
+        // VERSION VALIDATION: Block old/unauthorized plugin versions
+        // Set ALLOWED_PLUGIN_VERSIONS env var as comma-separated list
+        // e.g., "1.43.6,1.43.7" or "1.43.6" for single version
+        // If not set, all versions are allowed (backward compatibility)
+        // ============================================
+        const allowedVersionsEnv = process.env.ALLOWED_PLUGIN_VERSIONS;
+        if (allowedVersionsEnv) {
+            const allowedVersions = allowedVersionsEnv.split(',').map(v => v.trim());
+            const pluginVersion = (data as any).plugin_version;
+            
+            if (!pluginVersion) {
+                console.warn(`[Sync] Rejected: No plugin_version in request`);
+                return NextResponse.json({ 
+                    error: 'Plugin version required', 
+                    message: 'Please update your plugin to the latest version'
+                }, { status: 403 });
+            }
+            
+            if (!allowedVersions.includes(pluginVersion)) {
+                console.warn(`[Sync] Rejected: Plugin version ${pluginVersion} not in allowed list: ${allowedVersions.join(', ')}`);
+                return NextResponse.json({ 
+                    error: 'Plugin version not allowed', 
+                    message: `Version ${pluginVersion} is outdated. Please update to: ${allowedVersions.join(' or ')}`
+                }, { status: 403 });
+            }
+            
+            console.log(`[Sync] Version ${pluginVersion} validated`);
+        }
+
         const supabase = getSupabaseAdmin();
 
         // ============================================
