@@ -258,31 +258,15 @@ export default function LeaderboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch live status
-                const liveRes = await fetch('/api/live-status');
-                if (!liveRes.ok) throw new Error('Failed to fetch live status');
-                const liveData = await liveRes.json();
-
-                // Fetch team progress
-                const progressRes = await fetch('/api/team-progress');
-                const progressData = progressRes.ok ? await progressRes.json() : [];
-
-                // Fetch pending penalties
-                const penaltyPromises = [1, 2, 3, 4].map(teamId =>
-                    fetch(`/api/penalty-status?team_id=${teamId}`).then(r => r.ok ? r.json() : { pending_penalties: [] })
-                );
-                const penaltyData = await Promise.all(penaltyPromises);
-
-                // Fetch shield status
-                const shieldsRes = await fetch('/api/admin/shields');
-                const shieldsData = shieldsRes.ok ? await shieldsRes.json() : { shields: [] };
+                // Single API call for all leaderboard data (P1 optimization)
+                const res = await fetch('/api/leaderboard-data');
+                if (!res.ok) throw new Error('Failed to fetch leaderboard data');
+                const data = await res.json();
 
                 // Transform team data
-                const transformedTeams: TeamStatus[] = liveData.teams.map((t: any, index: number) => {
+                const transformedTeams: TeamStatus[] = data.teams.map((t: any) => {
                     const teamId = t.id;
-                    const progress = progressData.find((p: any) => p.team_id === teamId);
-                    const penalties = penaltyData[index]?.pending_penalties || [];
-                    const mapsCompleted = progress?.maps_completed || t.mapsCompleted || 0;
+                    const mapsCompleted = t.mapsCompleted || 0;
 
                     // Get current map info from API first, fall back to totds lookup
                     let mapInfo = null;
@@ -305,32 +289,25 @@ export default function LeaderboardPage() {
 
                     return {
                         id: teamId,
-                        name: TEAM_COLORS[teamId]?.name || `Team ${teamId}`,
-                        color: TEAM_COLORS[teamId]?.color || "#888",
+                        name: t.name || `Team ${teamId}`,
+                        color: t.color || "#888",
                         mapsFinished: mapsCompleted,
                         totalMaps: TOTAL_MAPS,
                         activePlayer: t.activePlayer,
                         currentMap: mapInfo,
-                        activeShield: (() => {
-                            const shield = (shieldsData.shields || []).find((s: any) => s.team_id === teamId);
-                            if (shield?.active && shield.remaining_ms > 0) {
-                                return {
-                                    type: shield.type as "small" | "big",
-                                    timeLeft: Math.floor(shield.remaining_ms / 1000)
-                                };
-                            }
-                            return null;
-                        })(),
-                        activePenalties: penalties
-                            .filter((p: any) => p.is_active)
+                        activeShield: t.shield?.active ? {
+                            type: t.shield.type as "small" | "big",
+                            timeLeft: Math.floor((t.shield.remaining_ms || 0) / 1000)
+                        } : null,
+                        activePenalties: (t.penalties?.active || [])
                             .slice(0, 2)
                             .map((p: any) => ({
-                                name: p.penalty_name,
+                                name: p.name,
                                 timeLeft: p.timer_remaining_ms ? Math.floor(p.timer_remaining_ms / 1000) : 0,
                                 mapsRemaining: p.maps_remaining || 0
                             })),
-                        penaltyQueue: Math.max(0, penalties.filter((p: any) => !p.is_active).length),
-                        penaltyQueueNames: penalties.filter((p: any) => !p.is_active).map((p: any) => p.penalty_name),
+                        penaltyQueue: (t.penalties?.waitlist || []).length,
+                        penaltyQueueNames: (t.penalties?.waitlist || []).map((p: any) => p.name),
                         isOnline: t.isOnline,
                         teamPot: t.potAmount || 0
                     };

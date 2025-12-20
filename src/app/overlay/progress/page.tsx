@@ -16,6 +16,7 @@ const TOTAL_MAPS = 2000; // All TOTDs
 export default function OverlayProgressPage() {
     const [teams, setTeams] = useState<TeamProgress[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isConnected, setIsConnected] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -24,9 +25,13 @@ export default function OverlayProgressPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setTeams(data.teams || []);
+                    setIsConnected(true);
+                } else {
+                    setIsConnected(false);
                 }
             } catch (err) {
                 console.error("Failed to fetch live status:", err);
+                setIsConnected(false);
             } finally {
                 setLoading(false);
             }
@@ -39,6 +44,24 @@ export default function OverlayProgressPage() {
 
     if (loading) {
         return <div style={{ background: "transparent" }} />;
+    }
+
+    // Show disconnected indicator (U2 improvement)
+    if (!isConnected && teams.length === 0) {
+        return (
+            <div style={{
+                padding: 12,
+                background: "rgba(0,0,0,0.8)",
+                borderRadius: 6,
+                border: "2px solid #ef4444",
+                color: "#ef4444",
+                fontFamily: "'Segoe UI', Roboto, sans-serif",
+                fontSize: 12,
+                textAlign: "center",
+            }}>
+                ⚠️ Connection Lost
+            </div>
+        );
     }
 
     return (

@@ -1,0 +1,99 @@
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { TEAMS } from '@/lib/config';
+
+export const dynamic = 'force-dynamic';
+
+// Build team metadata from config
+const TEAM_META = Object.fromEntries(
+    TEAMS.map(t => [t.number, { name: t.name, color: t.color }])
+);
+
+// GET /api/leaderboard-data
+// Combined endpoint returning all data needed for leaderboard in one call
+// Replaces: /api/live-status, /api/penalty-status (x4), /api/admin/shields
+export async function GET() {
+    try {
+        const supabase = getSupabaseAdmin();
+        const now = new Date();
+
+        // Get all team statuses in one query
+        const { data: statusData, error: statusError } = await supabase
+            .from('team_status')
+            .select('*')
+            .order('updated_at', { ascending: false });
+
+        if (statusError) {
+            console.error('[LeaderboardData] Error:', statusError);
+            return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
+        }
+
+        // Process all teams data
+        const teams = [];
+        for (let teamId = 1; teamId <= 4; teamId++) {
+            const teamMeta = TEAM_META[teamId] as { name: string; color: string };
+            const entry = statusData?.find(e => e.team_id === teamId);
+
+            // Calculate online status
+            let isOnline = false;
+            if (entry?.updated_at) {
+                const updatedAt = new Date(entry.updated_at);
+                isOnline = (now.getTime() - updatedAt.getTime()) < 60000;
+            }
+
+            // Calculate shield remaining time
+            let shieldData = null;
+            if (entry?.shield_active && entry?.shield_expires_at) {
+                const remainingMs = Math.max(0, new Date(entry.shield_expires_at).getTime() - now.getTime());
+                if (remainingMs > 0) {
+                    shieldData = {
+                        active: true,
+                        type: entry.shield_type,
+                        remaining_ms: remainingMs
+                    };
+                }
+            }
+
+            // Process penalties (active + waitlist)
+            const activePenalties = (entry?.penalties_active || []).map((p: any) => ({
+                name: p.name || `Penalty ${p.id}`,
+                is_active: true,
+                maps_remaining: p.maps_remaining || 0,
+                timer_remaining_ms: p.timer_remaining_ms || 0
+            }));
+
+            const waitlistPenalties = (entry?.penalties_waitlist || []).map((p: any) => ({
+                name: p.name || `Penalty ${p.id}`,
+                is_active: false
+            }));
+
+            teams.push({
+                id: teamId,
+                name: teamMeta.name,
+                color: teamMeta.color,
+                activePlayer: entry?.active_player || null,
+                currentMapId: entry?.current_map_id || null,
+                currentMapName: entry?.current_map_name || null,
+                currentMapAuthor: entry?.current_map_author || null,
+                mapsCompleted: entry?.maps_completed || 0,
+                potAmount: entry?.pot_amount || 0,
+                potCurrency: entry?.pot_currency || 'GBP',
+                lastUpdated: entry?.updated_at || null,
+                isOnline,
+                shield: shieldData,
+                penalties: {
+                    active: activePenalties,
+                    waitlist: waitlistPenalties
+                }
+            });
+        }
+
+        return NextResponse.json({
+            teams,
+            timestamp: now.toISOString(),
+        });
+    } catch (error) {
+        console.error('[LeaderboardData] Error:', error);
+        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    }
+}

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from '@/lib/tiltify';
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
-// Throttle syncDonations to prevent excessive Tiltify API calls
-let lastSyncTime = 0;
+// Throttle syncDonations using database timestamp (works across serverless instances)
 const SYNC_THROTTLE_MS = 30000; // 30 seconds
 
 // GET /api/donations
@@ -16,12 +16,24 @@ export async function GET(request: Request) {
         const rateLimited = applyRateLimit(request, RATE_LIMITS.plugin);
         if (rateLimited) return rateLimited;
 
-        // Only sync if enough time has passed since last sync
+        // Check if we should sync by getting last sync time from Supabase
         const now = Date.now();
-        if (now - lastSyncTime >= SYNC_THROTTLE_MS) {
+        let shouldSync = true;
+        
+        const { data: lastSync } = await supabaseAdmin
+            .from('campaign_data')
+            .select('cached_at')
+            .eq('id', 1)
+            .single();
+        
+        if (lastSync?.cached_at) {
+            const lastSyncTime = new Date(lastSync.cached_at).getTime();
+            shouldSync = (now - lastSyncTime) >= SYNC_THROTTLE_MS;
+        }
+        
+        if (shouldSync) {
             try {
                 await syncDonations();
-                lastSyncTime = now;
             } catch (syncError) {
                 // Log sync error but don't fail the request - return cached data
                 console.error('[Donations] Sync error (continuing with cached data):', syncError);

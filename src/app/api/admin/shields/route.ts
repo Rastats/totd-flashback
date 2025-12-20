@@ -60,15 +60,16 @@ export async function POST(request: Request) {
         const durationMs = type === 'big' ? 30 * 60 * 1000 : 10 * 60 * 1000; // 30 or 10 minutes
         const expiresAt = new Date(Date.now() + durationMs).toISOString();
         
+        // Update only shield columns (preserves all other team data)
         const { error } = await supabase
             .from('team_status')
-            .upsert({
-                team_id: team_id,
+            .update({
                 shield_active: true,
                 shield_type: type,
                 shield_expires_at: expiresAt,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'team_id' });
+            })
+            .eq('team_id', team_id);
         
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });

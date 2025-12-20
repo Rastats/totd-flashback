@@ -17,7 +17,7 @@ export default function Header() {
             .then(data => setCaptainInfo(data))
             .catch(err => console.error("Failed to fetch captain status:", err));
 
-        // Fetch donation total
+        // Fetch donation total (every 5 minutes - P3 optimization)
         const fetchTotal = async () => {
             try {
                 const res = await fetch('/api/donations');
@@ -28,7 +28,7 @@ export default function Header() {
             } catch (e) { /* ignore */ }
         };
         fetchTotal();
-        const interval = setInterval(fetchTotal, 60000);
+        const interval = setInterval(fetchTotal, 300000); // 5 minutes
         return () => clearInterval(interval);
     }, []);
 
