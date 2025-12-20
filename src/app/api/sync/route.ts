@@ -76,14 +76,16 @@ export async function POST(request: Request) {
         // ============================================
         // VERSION VALIDATION: Block old/unauthorized plugin versions
         // SKIP for public_only requests (non-roster players just viewing data)
+        // SKIP for lightweight requests (waiting/spectator players just polling)
         // Set ALLOWED_PLUGIN_VERSIONS env var as comma-separated list
         // e.g., "1.43.6,1.43.7" or "1.43.6" for single version
         // If not set, all versions are allowed (backward compatibility)
         // ============================================
         const isPublicOnly = (data as any).public_only === true;
+        const isLightweight = (data as any).lightweight === true;
         const allowedVersionsEnv = process.env.ALLOWED_PLUGIN_VERSIONS;
         
-        if (allowedVersionsEnv && !isPublicOnly) {
+        if (allowedVersionsEnv && !isPublicOnly && !isLightweight) {
             const allowedVersions = allowedVersionsEnv.split(',').map(v => v.trim());
             const pluginVersion = (data as any).plugin_version;
             
@@ -350,7 +352,9 @@ export async function POST(request: Request) {
             teamProgress: {
                 mapsCompleted: myTeamStatus?.maps_completed || 0,
                 mapsTotal: myTeamStatus?.maps_total || 2000,
-                redoRemaining: myTeamStatus?.redo_remaining || 0
+                redoRemaining: myTeamStatus?.redo_remaining || 0,
+                // Return completed IDs for recovery if plugin loses local data
+                completedMapIds: myTeamStatus?.completed_map_ids || []
             },
 
             // All teams' progress (for leaderboard display)
