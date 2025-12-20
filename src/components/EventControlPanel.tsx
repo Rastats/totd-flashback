@@ -360,13 +360,13 @@ export default function EventControlPanel() {
                                             onClick={() => activateShield(team.number, "small")}
                                             style={{ ...buttonStyle, background: "#1a3a2a", color: "#4ade80", flex: 1, fontSize: 11 }}
                                         >
-                                            Small (5m)
+                                            Small (10m)
                                         </button>
                                         <button 
                                             onClick={() => activateShield(team.number, "big")}
                                             style={{ ...buttonStyle, background: "#22543d", color: "#4ade80", flex: 1, fontSize: 11 }}
                                         >
-                                            BIG (15m)
+                                            BIG (30m)
                                         </button>
                                     </div>
                                 )}

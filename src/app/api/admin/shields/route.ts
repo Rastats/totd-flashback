@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         const supabase = getSupabaseAdmin();
         
         // Calculate expiration time
-        const durationMs = type === 'big' ? 15 * 60 * 1000 : 5 * 60 * 1000; // 15 or 5 minutes
+        const durationMs = type === 'big' ? 30 * 60 * 1000 : 10 * 60 * 1000; // 30 or 10 minutes
         const expiresAt = new Date(Date.now() + durationMs).toISOString();
         
         const { error } = await supabase
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         await supabase.from('event_log').insert({
             event_type: 'shield_activated',
             team_id: team_id,
-            message: `[Admin] Activated ${type} shield (${type === 'big' ? '15' : '5'} min)`,
+            message: `[Admin] Activated ${type} shield (${type === 'big' ? '30' : '10'} min)`,
             metadata: { shield_type: type, admin_action: true }
         });
         
