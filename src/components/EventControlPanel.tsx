@@ -155,7 +155,16 @@ export default function EventControlPanel() {
     }, []);
 
     // ============= PENALTIES =============
+    const MAX_PENALTIES_PER_TEAM = 4; // 2 active + 2 waitlist
+    
     const addPenalty = async () => {
+        // Check if team already has max penalties
+        const teamPenalties = penalties.filter(p => p.penalty_team === newPenalty.team_id);
+        if (teamPenalties.length >= MAX_PENALTIES_PER_TEAM) {
+            alert(`Team ${newPenalty.team_id} already has ${MAX_PENALTIES_PER_TEAM} penalties (max 2 active + 2 waitlist)`);
+            return;
+        }
+        
         const res = await fetch("/api/admin/penalties", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -285,8 +294,17 @@ export default function EventControlPanel() {
                                 minHeight: 120
                             }}>
                                 <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
-                                <div style={{ fontSize: 12, marginBottom: 8, opacity: 0.6 }}>
-                                    {teamPenalties.length} pending
+                                <div style={{ fontSize: 11, marginBottom: 8 }}>
+                                    <span style={{ color: teamPenalties.length >= 2 ? "#f87171" : "#4ade80" }}>
+                                        {Math.min(teamPenalties.length, 2)} active
+                                    </span>
+                                    <span style={{ opacity: 0.5 }}> | </span>
+                                    <span style={{ color: teamPenalties.length > 2 ? "#fbbf24" : "#888" }}>
+                                        {Math.max(0, teamPenalties.length - 2)} waitlist
+                                    </span>
+                                    <span style={{ opacity: 0.4, marginLeft: 4 }}>
+                                        ({4 - teamPenalties.length} slots)
+                                    </span>
                                 </div>
                                 {teamPenalties.length === 0 ? (
                                     <div style={{ fontSize: 11, opacity: 0.4, fontStyle: "italic" }}>No penalties</div>
