@@ -59,6 +59,8 @@ const MONTH_THRESHOLDS = [
 // ============ COMPONENT ============
 export default function OverlayFeedPage() {
     const [events, setEvents] = useState<FeedEvent[]>([]);
+    const [isError, setIsError] = useState(false);
+    const [consecutiveErrors, setConsecutiveErrors] = useState(0);
     
     // Tracking refs for change detection
     const seenDonations = useRef<Set<string>>(new Set());
@@ -229,8 +231,17 @@ export default function OverlayFeedPage() {
                     }
                 }
 
+                // Reset error state on any success
+                setIsError(false);
+                setConsecutiveErrors(0);
+
             } catch (err) {
                 console.error("Feed fetch error:", err);
+                setConsecutiveErrors(prev => {
+                    const newCount = prev + 1;
+                    if (newCount >= 3) setIsError(true);
+                    return newCount;
+                });
             }
         };
 
@@ -261,6 +272,18 @@ export default function OverlayFeedPage() {
             background: "transparent",
             width: 320,
         }}>
+            {isError && (
+                <div style={{
+                    padding: "6px 10px",
+                    background: "rgba(239,68,68,0.2)",
+                    borderRadius: 4,
+                    borderLeft: "3px solid #ef4444",
+                    fontSize: 11,
+                    color: "#f87171",
+                }}>
+                    ⚠️ Connection Lost
+                </div>
+            )}
             {visibleEvents.map((event) => {
                 const teamColor = event.teamId ? TEAM_COLORS[event.teamId] || "#888" : "#a855f7";
                 const icon = EVENT_ICONS[event.type] || "📢";

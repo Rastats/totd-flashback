@@ -22,6 +22,8 @@ const TEAM_COLORS: Record<number, string> = {
 
 export default function OverlayDonationsPage() {
     const [donations, setDonations] = useState<Donation[]>([]);
+    const [isError, setIsError] = useState(false);
+    const [consecutiveErrors, setConsecutiveErrors] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -31,19 +33,30 @@ export default function OverlayDonationsPage() {
                     const data = await res.json();
                     // API returns recentDonations, take first 3
                     setDonations((data.recentDonations || []).slice(0, 3));
+                    setIsError(false);
+                    setConsecutiveErrors(0);
+                } else {
+                    setConsecutiveErrors(prev => prev + 1);
+                    if (consecutiveErrors >= 2) setIsError(true);
                 }
             } catch (err) {
                 console.error("Failed to fetch donations:", err);
+                setConsecutiveErrors(prev => prev + 1);
+                if (consecutiveErrors >= 2) setIsError(true);
             }
         };
 
         fetchData();
         const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [consecutiveErrors]);
 
-    if (donations.length === 0) {
+    if (donations.length === 0 && !isError) {
         return <div style={{ background: "transparent", padding: 8, color: "#666", fontSize: 11 }}>No donations yet</div>;
+    }
+
+    if (isError && donations.length === 0) {
+        return <div style={{ background: "rgba(239,68,68,0.2)", padding: 8, color: "#f87171", fontSize: 11, borderRadius: 4 }}>⚠️ Connection Lost</div>;
     }
 
     return (
