@@ -6,6 +6,9 @@ import { syncDonations, getCampaignData, getTeamPots, getRecentDonations } from 
 
 export const dynamic = 'force-dynamic';
 
+// Event cap: Only TOTDs 1-2000 count for the event (2001+ are excluded)
+const EVENT_MAX_MAP_ID = 2000;
+
 // Structure expected from the plugin
 interface SyncPayload {
     account_id: string;
@@ -236,13 +239,14 @@ export async function POST(request: Request) {
                 current_map_author: data.current_map?.author || null,
                 current_map_status: data.current_map?.status || null,
 
-                // Progress - use conditional values
-                maps_completed: finalMapsCompleted,
-                maps_total: finalMapsTotal,
+                // Progress - use conditional values with EVENT_MAX_MAP_ID cap
+                // Cap maps_completed to EVENT_MAX_MAP_ID (excludes TOTDs 2001+)
+                maps_completed: Math.min(finalMapsCompleted, EVENT_MAX_MAP_ID),
+                maps_total: EVENT_MAX_MAP_ID,  // Fixed at 2000 for this event
                 redo_remaining: data.progress?.redo_remaining || 0,
                 
-                // Completed map IDs (merged from team_progress)
-                completed_map_ids: data.progress?.completed_ids || [],
+                // Completed map IDs - filter out any > EVENT_MAX_MAP_ID
+                completed_map_ids: (data.progress?.completed_ids || []).filter((id: number) => id <= EVENT_MAX_MAP_ID),
 
                 // Penalties (stored as JSONB)
                 penalties_active: data.penalties?.active || [],
