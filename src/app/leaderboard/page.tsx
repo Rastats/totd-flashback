@@ -33,6 +33,7 @@ interface TeamStatus {
     penaltyQueue: number;
     penaltyQueueNames: string[];
     isOnline: boolean;
+    teamPot: number;  // Team donation pot amount
 }
 
 interface FeedEvent {
@@ -144,6 +145,9 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                 )}
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
                     {team.mapsFinished} / {team.totalMaps} maps
+                </div>
+                <div style={{ fontSize: 14, color: "#fbbf24", marginTop: 6, fontWeight: "bold" }}>
+                    💰 £{team.teamPot.toFixed(2)}
                 </div>
             </div>
 
@@ -266,6 +270,10 @@ export default function LeaderboardPage() {
                 );
                 const penaltyData = await Promise.all(penaltyPromises);
 
+                // Fetch donations data for team pots
+                const donationsRes = await fetch('/api/donations');
+                const donationsData = donationsRes.ok ? await donationsRes.json() : { teamPots: {} };
+
                 // Transform team data
                 const transformedTeams: TeamStatus[] = liveData.teams.map((t: any, index: number) => {
                     const teamId = t.id;
@@ -292,7 +300,8 @@ export default function LeaderboardPage() {
                         })),
                         penaltyQueue: Math.max(0, penalties.length - 2),
                         penaltyQueueNames: penalties.slice(2).map((p: any) => p.penalty_name),
-                        isOnline: t.isOnline
+                        isOnline: t.isOnline,
+                        teamPot: donationsData.teamPots?.[teamId] || 0
                     };
                 });
 
