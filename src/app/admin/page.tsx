@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { PlayerApplication, CasterApplication, ApplicationStatus, TeamAssignment } from "@/lib/types";
 import RequireAuth from "@/components/RequireAuth";
+import EventControlPanel from "@/components/EventControlPanel";
 
 const inputStyle = {
     padding: "8px 12px",
@@ -30,7 +31,7 @@ export default function AdminPage() {
     const [pots, setPots] = useState<{ team_number: number, amount: number }[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [activeTab, setActiveTab] = useState<"players" | "casters" | "coverage" | "pots">("players");
+    const [activeTab, setActiveTab] = useState<"players" | "casters" | "coverage" | "pots" | "event">("players");
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
     const [selectedPlayer, setSelectedPlayer] = useState<PlayerApplication | null>(null);
     const [selectedCaster, setSelectedCaster] = useState<CasterApplication | null>(null);
@@ -490,7 +491,7 @@ export default function AdminPage() {
                 )}
 
                 <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-                    {(["players", "casters", "coverage", "pots"] as const).map((tab) => (
+                    {(["players", "casters", "coverage", "pots", "event"] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1184,6 +1185,12 @@ export default function AdminPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Event Control Tab */}
+                {activeTab === "event" && (
+                    <EventControlPanel />
+                )}
+
                 {/* Edit Availability Modal */}
                 {editAvailPlayer && (
                     <div style={{
