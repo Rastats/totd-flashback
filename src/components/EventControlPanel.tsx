@@ -46,6 +46,7 @@ interface Penalty {
     penalty_team: number;
     penalty_name: string;
     donor_name: string;
+    is_active: boolean;
     created_at: string;
 }
 
@@ -185,6 +186,21 @@ export default function EventControlPanel() {
         if (res.ok) fetchData();
     };
 
+    const togglePenaltyStatus = async (id: string, currentlyActive: boolean) => {
+        const newStatus = !currentlyActive;
+        const res = await fetch("/api/admin/penalties", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, is_active: newStatus })
+        });
+        if (res.ok) {
+            fetchData();
+        } else {
+            const err = await res.json();
+            alert(err.error || "Failed to toggle penalty status");
+        }
+    };
+
     // ============= SHIELDS =============
     const activateShield = async (team_id: number, type: "small" | "big") => {
         // Check if team already has an active shield
@@ -309,55 +325,64 @@ export default function EventControlPanel() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const teamPenalties = penalties.filter(p => p.penalty_team === team.number);
+                        const activePenalties = teamPenalties.filter(p => p.is_active);
+                        const waitlistPenalties = teamPenalties.filter(p => !p.is_active);
                         return (
                             <div key={team.number} style={{ 
                                 padding: 12, 
                                 background: "#1a1a2a", 
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`,
-                                minHeight: 120
+                                minHeight: 150
                             }}>
                                 <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
-                                <div style={{ fontSize: 11, marginBottom: 8 }}>
-                                    <span style={{ color: teamPenalties.length >= 2 ? "#f87171" : "#4ade80" }}>
-                                        {Math.min(teamPenalties.length, 2)} active
-                                    </span>
-                                    <span style={{ opacity: 0.5 }}> | </span>
-                                    <span style={{ color: teamPenalties.length > 2 ? "#fbbf24" : "#888" }}>
-                                        {Math.max(0, teamPenalties.length - 2)} waitlist
-                                    </span>
-                                    <span style={{ opacity: 0.4, marginLeft: 4 }}>
-                                        ({4 - teamPenalties.length} slots)
-                                    </span>
-                                </div>
-                                {teamPenalties.length === 0 ? (
-                                    <div style={{ fontSize: 11, opacity: 0.4, fontStyle: "italic" }}>No penalties</div>
-                                ) : (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                        {teamPenalties.map(p => (
-                                            <div key={p.id} style={{ 
-                                                display: "flex", 
-                                                justifyContent: "space-between", 
-                                                alignItems: "center",
-                                                padding: "4px 8px",
-                                                background: "#2a1a1a",
-                                                borderRadius: 4,
-                                                fontSize: 11
-                                            }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ color: "#f87171" }}>{p.penalty_name}</div>
-                                                    <div style={{ opacity: 0.5, fontSize: 10 }}>{p.donor_name}</div>
-                                                </div>
-                                                <button 
-                                                    onClick={() => removePenalty(p.id)} 
-                                                    style={{ ...buttonStyle, padding: "2px 6px", background: "#4a1a1a", color: "#f87171", fontSize: 10 }}
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ))}
+                                
+                                {/* Active Section */}
+                                <div style={{ marginBottom: 8 }}>
+                                    <div style={{ fontSize: 10, color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>
+                                        🔴 ACTIVE ({activePenalties.length}/2)
                                     </div>
-                                )}
+                                    {activePenalties.length === 0 ? (
+                                        <div style={{ fontSize: 10, opacity: 0.4, fontStyle: "italic" }}>None</div>
+                                    ) : (
+                                        activePenalties.map(p => (
+                                            <div key={p.id} style={{ 
+                                                display: "flex", alignItems: "center", gap: 4,
+                                                padding: "2px 4px", background: "#2a1a1a", borderRadius: 3, marginBottom: 2, fontSize: 10
+                                            }}>
+                                                <span style={{ flex: 1, color: "#f87171" }}>{p.penalty_name}</span>
+                                                <button onClick={() => togglePenaltyStatus(p.id, true)} 
+                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
+                                                <button onClick={() => removePenalty(p.id)} 
+                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                
+                                {/* Waitlist Section */}
+                                <div>
+                                    <div style={{ fontSize: 10, color: "#fbbf24", fontWeight: "bold", marginBottom: 4 }}>
+                                        ⏳ WAITLIST ({waitlistPenalties.length}/2)
+                                    </div>
+                                    {waitlistPenalties.length === 0 ? (
+                                        <div style={{ fontSize: 10, opacity: 0.4, fontStyle: "italic" }}>None</div>
+                                    ) : (
+                                        waitlistPenalties.map(p => (
+                                            <div key={p.id} style={{ 
+                                                display: "flex", alignItems: "center", gap: 4,
+                                                padding: "2px 4px", background: "#1a1a1a", borderRadius: 3, marginBottom: 2, fontSize: 10
+                                            }}>
+                                                <span style={{ flex: 1, color: "#fbbf24" }}>{p.penalty_name}</span>
+                                                <button onClick={() => togglePenaltyStatus(p.id, false)} 
+                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#4ade80", color: "#000", fontSize: 8 }}
+                                                    disabled={activePenalties.length >= 2}>↑</button>
+                                                <button onClick={() => removePenalty(p.id)} 
+                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
