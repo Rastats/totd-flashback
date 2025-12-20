@@ -270,6 +270,10 @@ export default function LeaderboardPage() {
                 );
                 const penaltyData = await Promise.all(penaltyPromises);
 
+                // Fetch shield status
+                const shieldsRes = await fetch('/api/admin/shields');
+                const shieldsData = shieldsRes.ok ? await shieldsRes.json() : { shields: [] };
+
                 // Fetch donations data for team pots
                 const donationsRes = await fetch('/api/donations');
                 const donationsData = donationsRes.ok ? await donationsRes.json() : { teamPots: {} };
@@ -293,7 +297,16 @@ export default function LeaderboardPage() {
                         totalMaps: TOTAL_MAPS,
                         activePlayer: t.activePlayer,
                         currentMap: mapInfo,
-                        activeShield: null, // TODO: fetch from shield status API
+                        activeShield: (() => {
+                            const shield = (shieldsData.shields || []).find((s: any) => s.team_id === teamId);
+                            if (shield?.active && shield.remaining_ms > 0) {
+                                return {
+                                    type: shield.type as "small" | "big",
+                                    timeLeft: Math.floor(shield.remaining_ms / 1000)
+                                };
+                            }
+                            return null;
+                        })(),
                         activePenalties: penalties.slice(0, 2).map((p: any) => ({
                             name: p.penalty_name,
                             timeLeft: 0 // Real-time countdown would need WebSocket

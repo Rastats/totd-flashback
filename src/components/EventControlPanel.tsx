@@ -141,6 +141,19 @@ export default function EventControlPanel() {
         return () => clearInterval(interval);
     }, [fetchData]);
 
+    // Real-time shield countdown - updates every second
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setShields(prev => prev.map(s => {
+                if (s.active && s.remaining_ms > 0) {
+                    return { ...s, remaining_ms: Math.max(0, s.remaining_ms - 1000) };
+                }
+                return s;
+            }));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // ============= PENALTIES =============
     const addPenalty = async () => {
         const res = await fetch("/api/admin/penalties", {
@@ -259,34 +272,54 @@ export default function EventControlPanel() {
                     </button>
                 </div>
 
-                {penalties.length === 0 ? (
-                    <p style={{ opacity: 0.5 }}>No pending penalties</p>
-                ) : (
-                    <div style={{ display: "grid", gap: 8 }}>
-                        {penalties.map(p => (
-                            <div key={p.id} style={{ 
-                                display: "flex", 
-                                justifyContent: "space-between", 
-                                alignItems: "center",
-                                padding: "8px 12px",
-                                background: "#1a1a2a",
-                                borderRadius: 4,
-                                border: `1px solid ${TEAMS.find(t => t.number === p.penalty_team)?.color || "#666"}`
+                {/* Penalties per team grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                    {TEAMS.map(team => {
+                        const teamPenalties = penalties.filter(p => p.penalty_team === team.number);
+                        return (
+                            <div key={team.number} style={{ 
+                                padding: 12, 
+                                background: "#1a1a2a", 
+                                borderRadius: 6,
+                                border: `1px solid ${team.color}`,
+                                minHeight: 120
                             }}>
-                                <div>
-                                    <span style={{ color: TEAMS.find(t => t.number === p.penalty_team)?.color }}>
-                                        {TEAMS.find(t => t.number === p.penalty_team)?.name}
-                                    </span>
-                                    <span style={{ marginLeft: 8 }}>{p.penalty_name}</span>
-                                    <span style={{ marginLeft: 8, opacity: 0.5, fontSize: 12 }}>by {p.donor_name}</span>
+                                <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
+                                <div style={{ fontSize: 12, marginBottom: 8, opacity: 0.6 }}>
+                                    {teamPenalties.length} pending
                                 </div>
-                                <button onClick={() => removePenalty(p.id)} style={{ ...buttonStyle, background: "#4a1a1a", color: "#f87171" }}>
-                                    ✕ Remove
-                                </button>
+                                {teamPenalties.length === 0 ? (
+                                    <div style={{ fontSize: 11, opacity: 0.4, fontStyle: "italic" }}>No penalties</div>
+                                ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                        {teamPenalties.map(p => (
+                                            <div key={p.id} style={{ 
+                                                display: "flex", 
+                                                justifyContent: "space-between", 
+                                                alignItems: "center",
+                                                padding: "4px 8px",
+                                                background: "#2a1a1a",
+                                                borderRadius: 4,
+                                                fontSize: 11
+                                            }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ color: "#f87171" }}>{p.penalty_name}</div>
+                                                    <div style={{ opacity: 0.5, fontSize: 10 }}>{p.donor_name}</div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => removePenalty(p.id)} 
+                                                    style={{ ...buttonStyle, padding: "2px 6px", background: "#4a1a1a", color: "#f87171", fontSize: 10 }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                )}
+                        );
+                    })}
+                </div>
             </div>
 
             {/* ============= SHIELDS SECTION ============= */}
