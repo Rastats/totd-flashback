@@ -253,6 +253,10 @@ export default function LeaderboardPage() {
     const [timeLeftMs, setTimeLeftMs] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [penaltyHistory, setPenaltyHistory] = useState<{
+        penalties: { penaltyId: number; penaltyName: string; team1: number; team2: number; team3: number; team4: number; total: number }[];
+        totals: { team1: number; team2: number; team3: number; team4: number; total: number };
+    } | null>(null);
 
     // Fetch live data
     useEffect(() => {
@@ -411,6 +415,22 @@ export default function LeaderboardPage() {
         return () => clearInterval(timer);
     }, []);
 
+    // Fetch penalty history (every 30 seconds)
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const res = await fetch('/api/penalty-history');
+                if (res.ok) {
+                    const data = await res.json();
+                    setPenaltyHistory(data);
+                }
+            } catch (e) { /* ignore */ }
+        };
+        fetchHistory();
+        const interval = setInterval(fetchHistory, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
     // Sort teams by mapsFinished (descending)
     const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
 
@@ -547,6 +567,49 @@ export default function LeaderboardPage() {
                                 {formatCountdown(timeLeftMs)}
                             </div>
                         </div>
+
+                        {/* Penalty History Table */}
+                        {penaltyHistory && (
+                            <div style={{
+                                background: "#1e293b",
+                                borderRadius: 12,
+                                border: "1px solid #334155",
+                                padding: 16,
+                            }}>
+                                <h3 style={{ margin: "0 0 12px 0", fontSize: 14, borderBottom: "1px solid #334155", paddingBottom: 8 }}>
+                                    Penalties Completed ({penaltyHistory.totals.total})
+                                </h3>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: "1px solid #334155" }}>
+                                            <th style={{ textAlign: "left", padding: "4px 2px", opacity: 0.7 }}>Penalty</th>
+                                            <th style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[1]?.color, width: 30 }}>T1</th>
+                                            <th style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[2]?.color, width: 30 }}>T2</th>
+                                            <th style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[3]?.color, width: 30 }}>T3</th>
+                                            <th style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[4]?.color, width: 30 }}>T4</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {penaltyHistory.penalties.map(p => (
+                                            <tr key={p.penaltyId} style={{ borderBottom: "1px solid #1e293b" }}>
+                                                <td style={{ padding: "3px 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{p.penaltyName}</td>
+                                                <td style={{ textAlign: "center", padding: "3px 2px", fontFamily: "monospace" }}>{p.team1 || "—"}</td>
+                                                <td style={{ textAlign: "center", padding: "3px 2px", fontFamily: "monospace" }}>{p.team2 || "—"}</td>
+                                                <td style={{ textAlign: "center", padding: "3px 2px", fontFamily: "monospace" }}>{p.team3 || "—"}</td>
+                                                <td style={{ textAlign: "center", padding: "3px 2px", fontFamily: "monospace" }}>{p.team4 || "—"}</td>
+                                            </tr>
+                                        ))}
+                                        <tr style={{ fontWeight: "bold", borderTop: "1px solid #475569" }}>
+                                            <td style={{ padding: "4px 2px" }}>Total</td>
+                                            <td style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[1]?.color }}>{penaltyHistory.totals.team1}</td>
+                                            <td style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[2]?.color }}>{penaltyHistory.totals.team2}</td>
+                                            <td style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[3]?.color }}>{penaltyHistory.totals.team3}</td>
+                                            <td style={{ textAlign: "center", padding: "4px 2px", color: TEAM_COLORS[4]?.color }}>{penaltyHistory.totals.team4}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
