@@ -974,7 +974,7 @@ export default function AdminPage() {
                                             {teams.map((team) => (
                                                 <tr key={team}>
                                                     <td style={{ padding: 8, fontWeight: 500, position: "sticky", left: 0, background: "#0a0a0f" }}>
-                                                        {team === "joker" ? "🃏 Joker" : `Team ${team.replace("team", "")}`}
+                                                        {team === "joker" ? "🃏 Joker" : (TEAMS.find(t => t.id === team)?.name || team)}
                                                     </td>
                                                     {coverage[team].map((data, i) => {
                                                         const count = data.count;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApplicationStatus, AvailabilitySlot } from "@/lib/types";
-import { TEAM_IDS } from "@/lib/config";
+import { TEAMS, TEAM_IDS, JOKER_TEAM } from "@/lib/config";
 
 interface RosterPlayer {
     id: string;
@@ -24,7 +24,7 @@ interface CasterRoster {
     status: ApplicationStatus;
 }
 
-const TEAMS = TEAM_IDS;
+// No reassignment needed - use TEAMS and TEAM_IDS directly from imports
 
 export default function RostersPage() {
     const [players, setPlayers] = useState<RosterPlayer[]>([]);
@@ -151,12 +151,13 @@ export default function RostersPage() {
                 </div>
 
                 {/* Teams Section */}
-                {TEAMS.map(team => {
-                    const teamPlayers = getTeamPlayers(team);
-                    const isJoker = team === "joker";
+                {TEAM_IDS.map(teamId => {
+                    const teamPlayers = getTeamPlayers(teamId);
+                    const isJoker = teamId === "joker";
+                    const teamConfig = TEAMS.find(t => t.id === teamId);
 
                     return (
-                        <div key={team} style={{
+                        <div key={teamId} style={{
                             background: "#1e293b",
                             borderRadius: 12,
                             border: "1px solid #334155",
@@ -169,7 +170,7 @@ export default function RostersPage() {
                                 textAlign: "center"
                             }}>
                                 <h2 style={{ fontSize: 20, fontWeight: "bold", margin: 0 }}>
-                                    {isJoker ? "🃏 Jokers" : `Team ${team.replace("team", "")}`}
+                                    {isJoker ? "🃏 Jokers" : (teamConfig?.name || teamId)}
                                 </h2>
                                 <span style={{ fontSize: 13, opacity: 0.7 }}>
                                     {teamPlayers.length} players
