@@ -417,6 +417,23 @@ export default function LeaderboardPage() {
         return () => clearInterval(timer);
     }, []);
 
+    // Real-time penalty countdown (updates every second)
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTeams(prev => prev.map(team => {
+                const updatedPenalties = team.activePenalties.map(p => ({
+                    ...p,
+                    timeLeft: p.timeLeft > 0 ? Math.max(0, p.timeLeft - 1) : p.timeLeft
+                }));
+                return {
+                    ...team,
+                    activePenalties: updatedPenalties
+                };
+            }));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Sort teams by mapsFinished (descending)
     const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
 
