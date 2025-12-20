@@ -147,7 +147,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                     {team.mapsFinished} / {team.totalMaps} maps
                 </div>
                 <div style={{ fontSize: 14, color: "#fbbf24", marginTop: 6, fontWeight: "bold" }}>
-                    💰 £{team.teamPot.toFixed(2)}
+                    💰 £{(team.teamPot ?? 0).toFixed(2)}
                 </div>
             </div>
 
