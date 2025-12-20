@@ -301,7 +301,7 @@ export default function LeaderboardPage() {
                         penaltyQueue: Math.max(0, penalties.length - 2),
                         penaltyQueueNames: penalties.slice(2).map((p: any) => p.penalty_name),
                         isOnline: t.isOnline,
-                        teamPot: donationsData.teamPots?.[teamId] || 0
+                        teamPot: (Array.isArray(donationsData.teamPots) ? donationsData.teamPots.find((p: any) => p.team_id === teamId)?.pot_amount : donationsData.teamPots?.[teamId]) || 0
                     };
                 });
 
