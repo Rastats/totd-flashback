@@ -201,9 +201,18 @@ export async function POST(request: Request) {
         }
 
         // Determine final values: -1 means "don't update", use existing
-        const finalMapsCompleted = data.progress?.maps_completed === -1
-            ? existingMapsCompleted
-            : (data.progress?.maps_completed ?? 0);
+        // Also: NEVER allow maps_completed to decrease (monotonic increase only)
+        // This prevents progress reset when plugin sends 0 after restart
+        let finalMapsCompleted: number;
+        if (data.progress?.maps_completed === -1) {
+            finalMapsCompleted = existingMapsCompleted;
+        } else {
+            const newValue = data.progress?.maps_completed ?? 0;
+            finalMapsCompleted = Math.max(existingMapsCompleted, newValue);
+            if (newValue < existingMapsCompleted && newValue > 0) {
+                console.log(`[Sync] Prevented progress regression: ${newValue} < ${existingMapsCompleted}, keeping ${finalMapsCompleted}`);
+            }
+        }
         const finalMapsTotal = data.progress?.maps_total === -1
             ? existingMapsTotal
             : (data.progress?.maps_total ?? 2000);
