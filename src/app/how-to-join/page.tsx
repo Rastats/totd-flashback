@@ -26,7 +26,7 @@ export default function HowToJoinPage() {
                         <strong>PC Only</strong> — The Openplanet plugin required for the event is not available on consoles
                     </li>
                     <li>
-                        <strong>Trackmania Standard Access</strong> — You need access to TOTDs
+                        <strong>Trackmania Club Access</strong> — You need access to TOTDs
                     </li>
                     <li>
                         <strong>Openplanet</strong> — Required for the TOTD Flashback plugin
