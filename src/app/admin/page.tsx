@@ -31,7 +31,7 @@ export default function AdminPage() {
     const [pots, setPots] = useState<{ team_number: number, amount: number }[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [activeTab, setActiveTab] = useState<"players" | "casters" | "coverage" | "pots" | "event">("players");
+    const [activeTab, setActiveTab] = useState<"players" | "casters" | "coverage" | "event">("players");
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
     const [selectedPlayer, setSelectedPlayer] = useState<PlayerApplication | null>(null);
     const [selectedCaster, setSelectedCaster] = useState<CasterApplication | null>(null);
@@ -491,7 +491,7 @@ export default function AdminPage() {
                 )}
 
                 <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-                    {(["players", "casters", "coverage", "pots", "event"] as const).map((tab) => (
+                    {(["players", "casters", "coverage", "event"] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1056,132 +1056,6 @@ export default function AdminPage() {
                                     </ul>
                                 );
                             })()}
-                        </div>
-                    </div>
-                )}
-
-                {/* Pots Tab */}
-                {activeTab === "pots" && (
-                    <div>
-                        <h2 style={{ marginBottom: 16 }}>Team Pots Management</h2>
-                        <p style={{ opacity: 0.7, marginBottom: 24 }}>
-                            Adjust team penalty pots manually. Positive = add penalties, Negative = subtract.
-                        </p>
-
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-                            {[1, 2, 3, 4].map(teamNum => {
-                                const pot = pots.find(p => p.team_number === teamNum);
-                                const currentAmount = pot?.amount || 0;
-                                const adjustmentValue = potAdjustments[teamNum] || "";
-
-                                return (
-                                    <div key={teamNum} style={{
-                                        padding: 20,
-                                        background: "#12121a",
-                                        borderRadius: 8,
-                                        border: "1px solid #2a2a3a",
-                                        textAlign: "center"
-                                    }}>
-                                        <h3 style={{ marginBottom: 12, color: "#60a5fa" }}>Team {teamNum}</h3>
-                                        <div style={{ fontSize: 32, fontWeight: "bold", marginBottom: 16 }}>
-                                            {currentAmount}
-                                        </div>
-                                        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                                            <input
-                                                type="number"
-                                                placeholder="+/-"
-                                                value={adjustmentValue}
-                                                onChange={(e) => setPotAdjustments(prev => ({
-                                                    ...prev,
-                                                    [teamNum]: e.target.value
-                                                }))}
-                                                style={{
-                                                    ...inputStyle,
-                                                    width: "100%",
-                                                    textAlign: "center"
-                                                }}
-                                            />
-                                        </div>
-                                        <div style={{ display: "flex", gap: 8 }}>
-                                            <button
-                                                onClick={async () => {
-                                                    const adj = parseInt(adjustmentValue) || 0;
-                                                    if (adj === 0) return;
-                                                    await fetch("/api/admin/pots", {
-                                                        method: "PATCH",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({
-                                                            team_number: teamNum,
-                                                            adjustment: adj,
-                                                            reason: "manual admin adjustment"
-                                                        })
-                                                    });
-                                                    setPotAdjustments(prev => ({ ...prev, [teamNum]: "" }));
-                                                    fetchData();
-                                                }}
-                                                style={{
-                                                    ...buttonStyle,
-                                                    flex: 1,
-                                                    background: "#22543d",
-                                                    color: "#4ade80"
-                                                }}
-                                            >
-                                                Apply
-                                            </button>
-                                            <button
-                                                onClick={async () => {
-                                                    if (!confirm(`Reset Team ${teamNum} pot to 0?`)) return;
-                                                    await fetch("/api/admin/pots", {
-                                                        method: "PATCH",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({
-                                                            team_number: teamNum,
-                                                            amount: 0,
-                                                            reason: "manual reset"
-                                                        })
-                                                    });
-                                                    fetchData();
-                                                }}
-                                                style={{
-                                                    ...buttonStyle,
-                                                    background: "#4a1a1a",
-                                                    color: "#f87171"
-                                                }}
-                                            >
-                                                Reset
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        <div style={{ marginTop: 32, padding: 16, background: "#1a1a2a", borderRadius: 8 }}>
-                            <h3 style={{ marginBottom: 12 }}>Quick Actions</h3>
-                            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                                <button
-                                    onClick={async () => {
-                                        if (!confirm("Reset ALL team pots to 0?")) return;
-                                        for (const teamNum of [1, 2, 3, 4]) {
-                                            await fetch("/api/admin/pots", {
-                                                method: "PATCH",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({ team_number: teamNum, amount: 0, reason: "full reset" })
-                                            });
-                                        }
-                                        fetchData();
-                                    }}
-                                    style={{ ...buttonStyle, background: "#4a1a1a", color: "#f87171" }}
-                                >
-                                    Reset All Pots
-                                </button>
-                                <button
-                                    onClick={() => fetchData()}
-                                    style={{ ...buttonStyle, background: "#2a2a4a", color: "#fff" }}
-                                >
-                                    Refresh
-                                </button>
-                            </div>
                         </div>
                     </div>
                 )}

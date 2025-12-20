@@ -79,6 +79,7 @@ export default function EventControlPanel() {
     const [teams, setTeams] = useState<TeamInfo[]>([]);
     const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
     const [allowedVersions, setAllowedVersions] = useState<string[]>([]);
+    const [teamPots, setTeamPots] = useState<{ team_number: number, amount: number }[]>([]);
     const [loading, setLoading] = useState(true);
     
     // Form states
@@ -86,16 +87,18 @@ export default function EventControlPanel() {
     const [newEventMessage, setNewEventMessage] = useState({ message: "", event_type: "milestone", team_id: "" });
     const [newVersion, setNewVersion] = useState("");
     const [progressUpdate, setProgressUpdate] = useState<Record<number, string>>({});
+    const [potCorrection, setPotCorrection] = useState<Record<number, string>>({});
 
     const fetchData = useCallback(async () => {
         try {
-            const [penaltiesRes, shieldsRes, playerSwitchRes, progressRes, versionsRes, eventLogRes] = await Promise.all([
+            const [penaltiesRes, shieldsRes, playerSwitchRes, progressRes, versionsRes, eventLogRes, potsRes] = await Promise.all([
                 fetch("/api/admin/penalties"),
                 fetch("/api/admin/shields"),
                 fetch("/api/admin/player-switch"),
                 fetch("/api/admin/progression"),
                 fetch("/api/admin/versions"),
-                fetch("/api/event-log?limit=20")
+                fetch("/api/event-log?limit=20"),
+                fetch("/api/admin/pots")
             ]);
 
             if (penaltiesRes.ok) {
@@ -128,6 +131,10 @@ export default function EventControlPanel() {
             if (eventLogRes.ok) {
                 const data = await eventLogRes.json();
                 setEventLog(data.events || []);
+            }
+            if (potsRes.ok) {
+                const data = await potsRes.json();
+                setTeamPots(data || []);
             }
         } catch (err) {
             console.error("EventControl fetch error:", err);
@@ -255,6 +262,22 @@ export default function EventControlPanel() {
         });
         if (res.ok) {
             setProgressUpdate(prev => ({ ...prev, [team_id]: "" }));
+            fetchData();
+        }
+    };
+
+    // ============= POT CORRECTION =============
+    const updatePot = async (team_number: number) => {
+        const value = parseFloat(potCorrection[team_number] || "0");
+        if (isNaN(value)) return alert("Invalid number");
+        
+        const res = await fetch("/api/admin/pots", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ team_number, amount: value, reason: "Admin correction" })
+        });
+        if (res.ok) {
+            setPotCorrection(prev => ({ ...prev, [team_number]: "" }));
             fetchData();
         }
     };
@@ -574,6 +597,49 @@ export default function EventControlPanel() {
                 <p style={{ fontSize: 11, opacity: 0.5, marginTop: 8 }}>
                     ⚠️ This only logs the request. Update ALLOWED_PLUGIN_VERSIONS in Vercel dashboard manually.
                 </p>
+            </div>
+
+            {/* ============= POT CORRECTION SECTION ============= */}
+            <div style={sectionStyle}>
+                <h3 style={{ marginTop: 0, marginBottom: 16, color: "#fbbf24" }}>💰 Team Pots Correction</h3>
+                <p style={{ fontSize: 11, opacity: 0.5, marginBottom: 12 }}>
+                    Correct team pot amounts directly. No penalties will be triggered.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                    {TEAMS.map(team => {
+                        const pot = teamPots.find(p => p.team_number === team.number);
+                        const currentAmount = pot?.amount || 0;
+                        return (
+                            <div key={team.number} style={{ 
+                                padding: 12, 
+                                background: "#1a1a2a", 
+                                borderRadius: 6,
+                                border: `1px solid ${team.color}`
+                            }}>
+                                <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
+                                <div style={{ fontSize: 12, marginBottom: 8 }}>
+                                    Current: <strong>£{currentAmount.toFixed(2)}</strong>
+                                </div>
+                                <div style={{ display: "flex", gap: 4 }}>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="New amount"
+                                        value={potCorrection[team.number] || ""}
+                                        onChange={(e) => setPotCorrection(prev => ({ ...prev, [team.number]: e.target.value }))}
+                                        style={{ ...inputStyle, flex: 1, width: 80 }}
+                                    />
+                                    <button
+                                        onClick={() => updatePot(team.number)}
+                                        style={{ ...buttonStyle, background: "#fbbf24", color: "#000" }}
+                                    >
+                                        Set
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* ============= EVENT LOG SECTION ============= */}

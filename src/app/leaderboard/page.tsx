@@ -380,6 +380,25 @@ export default function LeaderboardPage() {
         return () => clearInterval(timer);
     }, []);
 
+    // Real-time shield countdown (updates every second)
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTeams(prev => prev.map(team => {
+                if (team.activeShield && team.activeShield.timeLeft > 0) {
+                    return {
+                        ...team,
+                        activeShield: {
+                            ...team.activeShield,
+                            timeLeft: Math.max(0, team.activeShield.timeLeft - 1)
+                        }
+                    };
+                }
+                return team;
+            }));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Sort teams by mapsFinished (descending)
     const sortedTeams = [...teams].sort((a, b) => b.mapsFinished - a.mapsFinished);
 
