@@ -281,10 +281,24 @@ export default function LeaderboardPage() {
                     const penalties = penaltyData[index]?.pending_penalties || [];
                     const mapsCompleted = progress?.maps_completed || t.mapsCompleted || 0;
 
-                    // Get current map info from API (currentMapId is the TOTD number)
-                    // Fall back to calculated value only if API doesn't have it
-                    const currentMapNumber = t.currentMapId || (TOTAL_MAPS - mapsCompleted);
-                    const mapInfo = getTotdInfo(currentMapNumber);
+                    // Get current map info from API first, fall back to totds lookup
+                    let mapInfo = null;
+                    if (t.currentMapId && t.currentMapName) {
+                        // Use data from API (synced from plugin)
+                        const totdData = getTotdInfo(t.currentMapId);
+                        mapInfo = {
+                            name: t.currentMapName,
+                            authorName: t.currentMapAuthor || totdData?.authorName || 'Unknown',
+                            mapUid: totdData?.mapUid || '',
+                            date: totdData?.date || '',
+                            authorTime: totdData?.authorTime || '',
+                            thumbnailUrl: totdData?.thumbnailUrl || ''
+                        };
+                    } else {
+                        // Fall back to totds lookup
+                        const currentMapNumber = TOTAL_MAPS - mapsCompleted;
+                        mapInfo = getTotdInfo(currentMapNumber);
+                    }
 
                     return {
                         id: teamId,
