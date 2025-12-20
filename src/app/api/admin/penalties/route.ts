@@ -111,11 +111,12 @@ export async function POST(request: Request) {
         
         const { error: updateError } = await supabase
             .from('team_status')
-            .update({
+            .upsert({
+                team_id: team_id,
+                penalties_active: currentActive,
                 penalties_waitlist: updatedWaitlist,
                 updated_at: new Date().toISOString()
-            })
-            .eq('team_id', team_id);
+            }, { onConflict: 'team_id' });
         
         if (updateError) {
             return NextResponse.json({ error: updateError.message }, { status: 500 });
