@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     
     let query = supabase
         .from('team_status')
-        .select('team_id, shield_active, shield_type, shield_expires_at, updated_at');
+        .select('team_id, shield_active, shield_type, shield_expires_at, shield_cooldown_ms, updated_at');
     
     if (teamId) {
         query = query.eq('team_id', parseInt(teamId));
@@ -24,24 +24,17 @@ export async function GET(request: Request) {
     
     // Calculate remaining time for active shields
     const shields = data?.map(team => {
-        if (team.shield_active && team.shield_expires_at) {
-            const expiresAt = new Date(team.shield_expires_at).getTime();
-            const now = Date.now();
-            const remainingMs = Math.max(0, expiresAt - now);
-            return {
-                team_id: team.team_id,
-                active: remainingMs > 0,
-                type: team.shield_type,
-                remaining_ms: remainingMs,
-                expires_at: team.shield_expires_at
-            };
-        }
+        const remainingMs = team.shield_active && team.shield_expires_at
+            ? Math.max(0, new Date(team.shield_expires_at).getTime() - Date.now())
+            : 0;
+        
         return {
             team_id: team.team_id,
-            active: false,
-            type: null,
-            remaining_ms: 0,
-            expires_at: null
+            active: remainingMs > 0,
+            type: team.shield_type,
+            remaining_ms: remainingMs,
+            expires_at: team.shield_expires_at,
+            cooldown_ms: team.shield_cooldown_ms || 0
         };
     }) || [];
     

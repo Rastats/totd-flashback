@@ -56,6 +56,7 @@ interface Shield {
     type: string | null;
     remaining_ms: number;
     expires_at: string | null;
+    cooldown_ms: number;
 }
 
 interface TeamInfo {
@@ -445,19 +446,29 @@ export default function EventControlPanel() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div style={{ display: "flex", gap: 4 }}>
-                                        <button 
-                                            onClick={() => activateShield(team.number, "small")}
-                                            style={{ ...buttonStyle, background: "#1a3a2a", color: "#4ade80", flex: 1, fontSize: 11 }}
-                                        >
-                                            Small (10m)
-                                        </button>
-                                        <button 
-                                            onClick={() => activateShield(team.number, "big")}
-                                            style={{ ...buttonStyle, background: "#22543d", color: "#4ade80", flex: 1, fontSize: 11 }}
-                                        >
-                                            BIG (30m)
-                                        </button>
+                                    <div>
+                                        {shield?.cooldown_ms && shield.cooldown_ms > 0 ? (
+                                            <div style={{ marginBottom: 8 }}>
+                                                <div style={{ color: "#fbbf24", fontSize: 11 }}>⏳ Cooldown</div>
+                                                <div style={{ fontFamily: "monospace", color: "#fbbf24" }}>
+                                                    {formatTime(shield.cooldown_ms)}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                        <div style={{ display: "flex", gap: 4 }}>
+                                            <button 
+                                                onClick={() => activateShield(team.number, "small")}
+                                                style={{ ...buttonStyle, background: "#1a3a2a", color: "#4ade80", flex: 1, fontSize: 11 }}
+                                            >
+                                                Small (10m)
+                                            </button>
+                                            <button 
+                                                onClick={() => activateShield(team.number, "big")}
+                                                style={{ ...buttonStyle, background: "#22543d", color: "#4ade80", flex: 1, fontSize: 11 }}
+                                            >
+                                                BIG (30m)
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>

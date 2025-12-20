@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 }
 
 // GET /api/penalty-status?team_id=X
-// Get pending penalties for a team (not yet completed)
+// Get pending penalties for a team from team_status
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -79,15 +79,14 @@ export async function GET(request: Request) {
             );
         }
 
-        // Get pending penalties (not yet completed) for this team
+        // Get penalties from team_status (JSONB columns)
         const { data, error } = await supabaseAdmin
-            .from('processed_donations')
-            .select('donation_id, amount, donor_name, penalty_id, penalty_name, penalty_applied, penalty_completed, processed_at')
-            .eq('penalty_team', parseInt(teamId))
-            .eq('penalty_completed', false)
-            .order('processed_at', { ascending: true });
+            .from('team_status')
+            .select('penalties_active, penalties_waitlist')
+            .eq('team_id', parseInt(teamId))
+            .single();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
             console.error('[PenaltyStatus] Query error:', error);
             return NextResponse.json(
                 { error: 'Database error' },
@@ -95,9 +94,24 @@ export async function GET(request: Request) {
             );
         }
 
+        // Combine active and waitlist penalties into a flat array
+        const activePenalties = (data?.penalties_active || []).map((p: any, i: number) => ({
+            penalty_id: `active_${i}`,
+            penalty_name: p.name || `Penalty ${p.id}`,
+            is_active: true,
+            maps_remaining: p.maps_remaining,
+            timer_remaining_ms: p.timer_remaining_ms
+        }));
+
+        const waitlistPenalties = (data?.penalties_waitlist || []).map((p: any, i: number) => ({
+            penalty_id: `waitlist_${i}`,
+            penalty_name: p.name || `Penalty ${p.id}`,
+            is_active: false
+        }));
+
         return NextResponse.json({
             team_id: parseInt(teamId),
-            pending_penalties: data ?? []
+            pending_penalties: [...activePenalties, ...waitlistPenalties]
         });
 
     } catch (error) {
