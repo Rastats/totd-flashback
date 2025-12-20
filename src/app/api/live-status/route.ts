@@ -14,7 +14,9 @@ interface TeamLiveStatus {
     name: string;
     color: string;
     activePlayer: string | null;
+    currentMapId: number | null;
     currentMapName: string | null;
+    currentMapAuthor: string | null;
     currentMapStatus: string | null;
     mapsCompleted: number;
     lastUpdated: string | null;
@@ -59,7 +61,9 @@ export async function GET() {
                 name: teamMeta.name,
                 color: teamMeta.color,
                 activePlayer: entry?.active_player || null,
+                currentMapId: entry?.current_map_id || null,
                 currentMapName: entry?.current_map_name || null,
+                currentMapAuthor: entry?.current_map_author || null,
                 currentMapStatus: entry?.current_map_status || null,
                 mapsCompleted: entry?.maps_completed || 0,
                 lastUpdated: entry?.updated_at || null,

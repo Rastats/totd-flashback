@@ -285,8 +285,9 @@ export default function LeaderboardPage() {
                     const penalties = penaltyData[index]?.pending_penalties || [];
                     const mapsCompleted = progress?.maps_completed || t.mapsCompleted || 0;
 
-                    // Calculate current map number (TOTD #X where X = TOTAL_MAPS - mapsCompleted)
-                    const currentMapNumber = TOTAL_MAPS - mapsCompleted;
+                    // Get current map info from API (currentMapId is the TOTD number)
+                    // Fall back to calculated value only if API doesn't have it
+                    const currentMapNumber = t.currentMapId || (TOTAL_MAPS - mapsCompleted);
                     const mapInfo = getTotdInfo(currentMapNumber);
 
                     return {
