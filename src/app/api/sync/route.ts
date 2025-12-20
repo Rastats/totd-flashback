@@ -239,10 +239,13 @@ export async function POST(request: Request) {
                 penalties_active: data.penalties?.active || [],
                 penalties_waitlist: data.penalties?.waitlist || [],
 
-                // Shield
+                // Shield - Calculate expires_at from remaining_ms
                 shield_active: data.shield?.active || false,
                 shield_type: data.shield?.type || null,
                 shield_remaining_ms: data.shield?.remaining_ms || 0,
+                shield_expires_at: data.shield?.active && data.shield?.remaining_ms > 0
+                    ? new Date(Date.now() + data.shield.remaining_ms).toISOString()
+                    : null,
                 shield_cooldown_ms: data.shield?.cooldown_remaining_ms || 0,
 
                 // Mode
