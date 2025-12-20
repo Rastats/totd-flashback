@@ -19,6 +19,8 @@ interface TeamLiveStatus {
     currentMapAuthor: string | null;
     currentMapStatus: string | null;
     mapsCompleted: number;
+    potAmount: number;
+    potCurrency: string;
     lastUpdated: string | null;
     isOnline: boolean; // true if updated in last 60 seconds
 }
@@ -66,6 +68,8 @@ export async function GET() {
                 currentMapAuthor: entry?.current_map_author || null,
                 currentMapStatus: entry?.current_map_status || null,
                 mapsCompleted: entry?.maps_completed || 0,
+                potAmount: entry?.pot_amount || 0,
+                potCurrency: entry?.pot_currency || 'GBP',
                 lastUpdated: entry?.updated_at || null,
                 isOnline,
             });

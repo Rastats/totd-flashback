@@ -274,10 +274,6 @@ export default function LeaderboardPage() {
                 const shieldsRes = await fetch('/api/admin/shields');
                 const shieldsData = shieldsRes.ok ? await shieldsRes.json() : { shields: [] };
 
-                // Fetch donations data for team pots
-                const donationsRes = await fetch('/api/donations');
-                const donationsData = donationsRes.ok ? await donationsRes.json() : { teamPots: {} };
-
                 // Transform team data
                 const transformedTeams: TeamStatus[] = liveData.teams.map((t: any, index: number) => {
                     const teamId = t.id;
@@ -315,7 +311,7 @@ export default function LeaderboardPage() {
                         penaltyQueue: Math.max(0, penalties.length - 2),
                         penaltyQueueNames: penalties.slice(2).map((p: any) => p.penalty_name),
                         isOnline: t.isOnline,
-                        teamPot: (Array.isArray(donationsData.teamPots) ? donationsData.teamPots.find((p: any) => p.team_id === teamId)?.pot_amount : donationsData.teamPots?.[teamId]) || 0
+                        teamPot: t.potAmount || 0
                     };
                 });
 

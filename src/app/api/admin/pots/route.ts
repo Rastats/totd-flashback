@@ -3,14 +3,14 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
-// GET - Fetch all team pots
+// GET - Fetch all team pots from team_status
 export async function GET() {
     try {
         const supabase = getSupabaseAdmin();
 
         const { data, error } = await supabase
-            .from('team_pots')
-            .select('team_id, pot_amount, updated_at')
+            .from('team_status')
+            .select('team_id, pot_amount, pot_currency, updated_at')
             .order('team_id');
 
         if (error) {
@@ -20,7 +20,8 @@ export async function GET() {
         // Transform to consistent format for frontend
         const pots = (data || []).map(p => ({
             team_number: p.team_id,
-            amount: p.pot_amount || 0
+            amount: p.pot_amount || 0,
+            currency: p.pot_currency || 'GBP'
         }));
 
         return NextResponse.json(pots);
@@ -30,7 +31,7 @@ export async function GET() {
     }
 }
 
-// PATCH - Update a team pot (direct set, no penalties triggered)
+// PATCH - Update a team pot in team_status (direct set, no penalties triggered)
 export async function PATCH(request: Request) {
     try {
         const data = await request.json();
@@ -42,9 +43,9 @@ export async function PATCH(request: Request) {
 
         const supabase = getSupabaseAdmin();
 
-        // Get current pot value
+        // Get current pot value from team_status
         const { data: current, error: fetchError } = await supabase
-            .from('team_pots')
+            .from('team_status')
             .select('pot_amount')
             .eq('team_id', team_number)
             .single();
@@ -67,9 +68,9 @@ export async function PATCH(request: Request) {
         // Ensure non-negative
         newAmount = Math.max(0, newAmount);
 
-        // Upsert the pot
+        // Upsert to team_status
         const { error: upsertError } = await supabase
-            .from('team_pots')
+            .from('team_status')
             .upsert({
                 team_id: team_number,
                 pot_amount: newAmount,

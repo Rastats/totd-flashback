@@ -270,7 +270,7 @@ export async function getCampaignData(): Promise<{
     };
 }
 
-// Get team pots from Supabase
+// Get team pots from team_status table
 export async function getTeamPots(): Promise<Array<{
     team_id: number;
     pot_amount: number;
@@ -278,8 +278,8 @@ export async function getTeamPots(): Promise<Array<{
     updated_at: string;
 }>> {
     const { data, error } = await supabaseAdmin
-        .from('team_pots')
-        .select('*')
+        .from('team_status')
+        .select('team_id, pot_amount, pot_currency, updated_at')
         .order('team_id');
 
     if (error) {
@@ -287,7 +287,13 @@ export async function getTeamPots(): Promise<Array<{
         return [];
     }
 
-    return data || [];
+    // Transform to expected format
+    return (data || []).map(row => ({
+        team_id: row.team_id,
+        pot_amount: row.pot_amount || 0,
+        currency: row.pot_currency || 'GBP',
+        updated_at: row.updated_at
+    }));
 }
 
 // Get recent processed donations from Supabase
