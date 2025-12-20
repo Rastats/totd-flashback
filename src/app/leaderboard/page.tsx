@@ -29,6 +29,7 @@ interface TeamStatus {
     activePenalties: {
         name: string;
         timeLeft: number;
+        mapsRemaining: number;
     }[];
     penaltyQueue: number;
     penaltyQueueNames: string[];
@@ -220,7 +221,9 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                                 {team.activePenalties.map((p, i) => (
                                     <div key={i} style={{ background: "rgba(248, 113, 113, 0.2)", border: "1px solid #f87171", borderRadius: 4, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                                         <span style={{ color: "#f87171" }}>⚠️ {p.name}</span>
-                                        <span style={{ fontFamily: "monospace" }}>{formatTime(p.timeLeft)}</span>
+                                        <span style={{ fontFamily: "monospace" }}>
+                                            {p.timeLeft > 0 ? formatTime(p.timeLeft) : p.mapsRemaining > 0 ? `${p.mapsRemaining} maps` : ""}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -318,12 +321,16 @@ export default function LeaderboardPage() {
                             }
                             return null;
                         })(),
-                        activePenalties: penalties.slice(0, 2).map((p: any) => ({
-                            name: p.penalty_name,
-                            timeLeft: 0 // Real-time countdown would need WebSocket
-                        })),
-                        penaltyQueue: Math.max(0, penalties.length - 2),
-                        penaltyQueueNames: penalties.slice(2).map((p: any) => p.penalty_name),
+                        activePenalties: penalties
+                            .filter((p: any) => p.is_active)
+                            .slice(0, 2)
+                            .map((p: any) => ({
+                                name: p.penalty_name,
+                                timeLeft: p.timer_remaining_ms ? Math.floor(p.timer_remaining_ms / 1000) : 0,
+                                mapsRemaining: p.maps_remaining || 0
+                            })),
+                        penaltyQueue: Math.max(0, penalties.filter((p: any) => !p.is_active).length),
+                        penaltyQueueNames: penalties.filter((p: any) => !p.is_active).map((p: any) => p.penalty_name),
                         isOnline: t.isOnline,
                         teamPot: t.potAmount || 0
                     };
