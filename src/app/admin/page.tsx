@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { PlayerApplication, CasterApplication, ApplicationStatus, TeamAssignment } from "@/lib/types";
+import { TEAMS } from "@/lib/config";
 import RequireAuth from "@/components/RequireAuth";
 import EventControlPanel from "@/components/EventControlPanel";
 
@@ -319,7 +320,8 @@ export default function AdminPage() {
     const getTeamLabel = (team: TeamAssignment) => {
         if (!team) return "—";
         if (team === "joker") return "🃏 Joker";
-        return `Team ${team.replace("team", "")}`;
+        const teamConfig = TEAMS.find(t => t.id === team);
+        return teamConfig ? teamConfig.name : team;
     };
 
     // Get player hours as indices (for team suggestion)
@@ -811,10 +813,7 @@ export default function AdminPage() {
                                                         style={inputStyle}
                                                     >
                                                         <option value="">Unassigned</option>
-                                                        <option value="team1">Team 1</option>
-                                                        <option value="team2">Team 2</option>
-                                                        <option value="team3">Team 3</option>
-                                                        <option value="team4">Team 4</option>
+                                                        {TEAMS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                                         <option value="joker">Joker</option>
                                                     </select>
 
