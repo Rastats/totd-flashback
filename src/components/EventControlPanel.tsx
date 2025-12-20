@@ -158,6 +158,13 @@ export default function EventControlPanel() {
     const MAX_PENALTIES_PER_TEAM = 4; // 2 active + 2 waitlist
     
     const addPenalty = async () => {
+        // Check if team has an active shield (blocks penalties)
+        const teamShield = shields.find(s => s.team_id === newPenalty.team_id);
+        if (teamShield?.active && teamShield.remaining_ms > 0) {
+            alert(`Team ${newPenalty.team_id} has an active shield! Penalties are blocked.`);
+            return;
+        }
+        
         // Check if team already has max penalties
         const teamPenalties = penalties.filter(p => p.penalty_team === newPenalty.team_id);
         if (teamPenalties.length >= MAX_PENALTIES_PER_TEAM) {
@@ -180,12 +187,29 @@ export default function EventControlPanel() {
 
     // ============= SHIELDS =============
     const activateShield = async (team_id: number, type: "small" | "big") => {
+        // Check if team already has an active shield
+        const teamShield = shields.find(s => s.team_id === team_id);
+        if (teamShield?.active) {
+            alert(`Team ${team_id} already has a shield active! Deactivate it first.`);
+            return;
+        }
+        
         const res = await fetch("/api/admin/shields", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ team_id, type })
         });
-        if (res.ok) fetchData();
+        
+        if (res.ok) {
+            // If Big Shield, clear all penalties for this team (matches plugin behavior)
+            if (type === "big") {
+                const teamPenaltyIds = penalties.filter(p => p.penalty_team === team_id).map(p => p.id);
+                for (const id of teamPenaltyIds) {
+                    await fetch(`/api/admin/penalties?id=${id}`, { method: "DELETE" });
+                }
+            }
+            fetchData();
+        }
     };
 
     const deactivateShield = async (team_id: number) => {
