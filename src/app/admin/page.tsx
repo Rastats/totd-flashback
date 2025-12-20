@@ -415,18 +415,39 @@ export default function AdminPage() {
                 const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
-                for (let h = slot.startHour; h < slot.endHour; h++) {
+                // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
+                const isOvernight = slot.endHour < slot.startHour;
+
+                const processHour = (day: number, h: number) => {
                     let hourIndex: number;
-                    if (dayIndex === 0) {
+                    if (day === 0) {
                         // Dec 21: only hours 21-23 are valid (indices 0-2)
                         hourIndex = h - 21;
                     } else {
                         // Dec 22: 3 + h, Dec 23: 27 + h, Dec 24: 51 + h
-                        hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+                        hourIndex = 3 + ((day - 1) * 24) + h;
                     }
                     if (hourIndex >= 0 && hourIndex < 69 && coverage[team]) {
                         coverage[team][hourIndex].count++;
                         coverage[team][hourIndex].names.push(player.trackmaniaName || player.discordUsername);
+                    }
+                };
+
+                if (isOvernight) {
+                    // Slot crosses midnight: process current day startHour to 24
+                    for (let h = slot.startHour; h < 24; h++) {
+                        processHour(dayIndex, h);
+                    }
+                    // Then process next day 0 to endHour (if next day exists within event)
+                    if (dayIndex < 3) { // Can't go past Dec 24
+                        for (let h = 0; h < slot.endHour; h++) {
+                            processHour(dayIndex + 1, h);
+                        }
+                    }
+                } else {
+                    // Normal slot within same day
+                    for (let h = slot.startHour; h < slot.endHour; h++) {
+                        processHour(dayIndex, h);
                     }
                 }
             });
@@ -445,16 +466,37 @@ export default function AdminPage() {
                 const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
-                for (let h = slot.startHour; h < slot.endHour; h++) {
+                // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
+                const isOvernight = slot.endHour < slot.startHour;
+
+                const processHour = (day: number, h: number) => {
                     let hourIndex: number;
-                    if (dayIndex === 0) {
+                    if (day === 0) {
                         hourIndex = h - 21;
                     } else {
-                        hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+                        hourIndex = 3 + ((day - 1) * 24) + h;
                     }
                     if (hourIndex >= 0 && hourIndex < 69) {
                         hours[hourIndex].count++;
                         hours[hourIndex].names.push(caster.displayName || caster.discordUsername);
+                    }
+                };
+
+                if (isOvernight) {
+                    // Slot crosses midnight: process current day startHour to 24
+                    for (let h = slot.startHour; h < 24; h++) {
+                        processHour(dayIndex, h);
+                    }
+                    // Then process next day 0 to endHour (if next day exists within event)
+                    if (dayIndex < 3) {
+                        for (let h = 0; h < slot.endHour; h++) {
+                            processHour(dayIndex + 1, h);
+                        }
+                    }
+                } else {
+                    // Normal slot within same day
+                    for (let h = slot.startHour; h < slot.endHour; h++) {
+                        processHour(dayIndex, h);
                     }
                 }
             });
