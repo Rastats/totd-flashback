@@ -18,6 +18,8 @@ export async function GET(request: Request) {
 }
 
 // PUT: Update maps_completed for team
+// Setting maps_completed = N will mark TOTDs #2000 down to #(2001-N) as completed
+// Example: N=50 → completed_map_ids = [2000, 1999, ..., 1951]
 export async function PUT(request: Request) {
     try {
         const { team_id, maps_completed } = await request.json();
@@ -39,13 +41,22 @@ export async function PUT(request: Request) {
             .eq('team_id', team_id)
             .single();
         
+        // Generate completed_map_ids: maps #2000 down to #(2001-maps_completed)
+        // For N=50: [2000, 1999, 1998, ..., 1951]
+        const completed_map_ids: number[] = [];
+        for (let i = 0; i < maps_completed; i++) {
+            completed_map_ids.push(2000 - i);
+        }
+        
         const { error } = await supabase
             .from('team_status')
-            .update({
+            .upsert({
+                team_id: team_id,
                 maps_completed: maps_completed,
+                completed_map_ids: completed_map_ids,
+                maps_total: 2000,
                 updated_at: new Date().toISOString()
-            })
-            .eq('team_id', team_id);
+            }, { onConflict: 'team_id' });
         
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -63,7 +74,7 @@ export async function PUT(request: Request) {
             }
         });
         
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, completed_map_ids });
     } catch (error) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
