@@ -5,17 +5,15 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { TEAMS } from "@/lib/config";
 
-// Same timezones as Captain Dashboard
+// Same timezones as Captain Dashboard - ordered west to east
 const TIMEZONES = [
-    { label: "🇫🇷 Paris (UTC+1)", offset: 1 },
-    { label: "🇬🇧 London (UTC+0)", offset: 0 },
-    { label: "🇺🇸 New York (UTC-5)", offset: -5 },
-    { label: "🇺🇸 Chicago (UTC-6)", offset: -6 },
-    { label: "🇺🇸 Denver (UTC-7)", offset: -7 },
     { label: "🇺🇸 Los Angeles (UTC-8)", offset: -8 },
+    { label: "🇺🇸 Denver (UTC-7)", offset: -7 },
+    { label: "🇺🇸 Chicago (UTC-6)", offset: -6 },
+    { label: "🇺🇸 New York (UTC-5)", offset: -5 },
     { label: "🇧🇷 São Paulo (UTC-3)", offset: -3 },
-    { label: "🇵🇹 Lisbon (UTC+0)", offset: 0 },
-    { label: "🇩🇪 Berlin (UTC+1)", offset: 1 },
+    { label: "🇬🇧 London (UTC+0)", offset: 0 },
+    { label: "🇫🇷 Paris (UTC+1)", offset: 1 },
     { label: "🇷🇺 Moscow (UTC+3)", offset: 3 },
     { label: "🇨🇳 Beijing (UTC+8)", offset: 8 },
     { label: "🇯🇵 Tokyo (UTC+9)", offset: 9 },
