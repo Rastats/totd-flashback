@@ -338,7 +338,8 @@ export default function EventControlPanel() {
         }
     };
 
-    const formatTime = (ms: number) => {
+    const formatTime = (ms: number | undefined | null) => {
+        if (ms === undefined || ms === null || isNaN(ms)) return "0:00";
         const totalSecs = Math.floor(ms / 1000);
         const mins = Math.floor(totalSecs / 60);
         const secs = totalSecs % 60;
