@@ -4,14 +4,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { TEAMS } from "@/lib/config";
-
-// Event days for the grid (Dec 21-24, 2025)
-const EVENT_DAYS = [
-    { date: "2025-12-21", label: "Dec 21" },
-    { date: "2025-12-22", label: "Dec 22" },
-    { date: "2025-12-23", label: "Dec 23" },
-    { date: "2025-12-24", label: "Dec 24" },
-];
+import { COMMON_TIMEZONES, getEventDays, EVENT_START_UTC, EVENT_END_UTC } from "@/lib/timezones";
 
 interface AvailabilitySlot {
     date: string;
@@ -35,9 +28,25 @@ export default function MyAvailabilityPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [timezone, setTimezone] = useState("Europe/Paris");
 
     // State for tracking selected cells (day -> Set of hours)
     const [selectedCells, setSelectedCells] = useState<Record<string, Set<number>>>({});
+
+    // Get event days adjusted for selected timezone
+    const eventDays = useMemo(() => getEventDays(timezone), [timezone]);
+
+    useEffect(() => {
+        // Try to detect user's timezone
+        try {
+            const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (COMMON_TIMEZONES.some(tz => tz.value === detectedTz)) {
+                setTimezone(detectedTz);
+            }
+        } catch (e) {
+            // Keep default
+        }
+    }, []);
 
     useEffect(() => {
         const fetchAvailability = async () => {
@@ -144,6 +153,11 @@ export default function MyAvailabilityPage() {
         }
     };
 
+    // Check if hour is within event bounds for this day
+    const isHourInEvent = (day: { date: string; startHour: number; endHour: number }, hour: number): boolean => {
+        return hour >= day.startHour && hour < day.endHour;
+    };
+
     // Get team info
     const teamInfo = player?.teamAssignment ? TEAMS.find(t => t.id === player.teamAssignment) : null;
 
@@ -200,7 +214,7 @@ export default function MyAvailabilityPage() {
                 </p>
             </div>
 
-            {/* Player Info */}
+            {/* Player Info + Timezone Selector */}
             {player && (
                 <div style={{ 
                     background: "#1e293b", 
@@ -209,7 +223,9 @@ export default function MyAvailabilityPage() {
                     marginBottom: 24,
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 16
                 }}>
                     <div>
                         <div style={{ fontWeight: "bold", fontSize: 18 }}>{player.name}</div>
@@ -222,21 +238,43 @@ export default function MyAvailabilityPage() {
                             )}
                         </div>
                     </div>
-                    <button
-                        onClick={saveAvailability}
-                        disabled={saving}
-                        style={{
-                            padding: "10px 24px",
-                            background: saving ? "#475569" : "#22c55e",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 6,
-                            fontWeight: "bold",
-                            cursor: saving ? "wait" : "pointer",
-                        }}
-                    >
-                        {saving ? "Saving..." : "💾 Save Changes"}
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {/* Timezone Selector */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <label style={{ fontSize: 13, color: "#94a3b8" }}>🌍 Timezone:</label>
+                            <select
+                                value={timezone}
+                                onChange={(e) => setTimezone(e.target.value)}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#0f172a",
+                                    border: "1px solid #334155",
+                                    borderRadius: 6,
+                                    color: "#fff",
+                                    fontSize: 13,
+                                }}
+                            >
+                                {COMMON_TIMEZONES.map(tz => (
+                                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button
+                            onClick={saveAvailability}
+                            disabled={saving}
+                            style={{
+                                padding: "10px 24px",
+                                background: saving ? "#475569" : "#22c55e",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 6,
+                                fontWeight: "bold",
+                                cursor: saving ? "wait" : "pointer",
+                            }}
+                        >
+                            {saving ? "Saving..." : "💾 Save Changes"}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -255,14 +293,14 @@ export default function MyAvailabilityPage() {
             {/* Availability Grid */}
             <div style={{ 
                 display: "grid", 
-                gridTemplateColumns: `60px repeat(${EVENT_DAYS.length}, 1fr)`,
+                gridTemplateColumns: `60px repeat(${eventDays.length}, 1fr)`,
                 background: "#1e293b",
                 borderRadius: 12,
                 overflow: "hidden"
             }}>
                 {/* Header */}
                 <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
-                {EVENT_DAYS.map(day => (
+                {eventDays.map(day => (
                     <div key={day.date} style={{ 
                         background: "#0f172a", 
                         padding: 12, 
@@ -286,16 +324,9 @@ export default function MyAvailabilityPage() {
                         }}>
                             {hour.toString().padStart(2, '0')}:00
                         </div>
-                        {EVENT_DAYS.map(day => {
+                        {eventDays.map(day => {
                             const isSelected = selectedCells[day.date]?.has(hour);
-                            
-                            // Check if hour is within event bounds
-                            const isInEvent = (
-                                (day.date === "2025-12-21" && hour >= 21) ||
-                                (day.date === "2025-12-22") ||
-                                (day.date === "2025-12-23") ||
-                                (day.date === "2025-12-24" && hour < 18)
-                            );
+                            const isInEvent = isHourInEvent(day, hour);
 
                             return (
                                 <div
@@ -319,7 +350,7 @@ export default function MyAvailabilityPage() {
             </div>
 
             <p style={{ fontSize: 12, color: "#64748b", marginTop: 16 }}>
-                ⏰ Times shown in CET (Paris time). Event runs Dec 21 21:00 - Dec 24 18:00 CET.
+                ⏰ Times shown in {COMMON_TIMEZONES.find(tz => tz.value === timezone)?.label || timezone}. Event runs Dec 21 21:00 - Dec 24 18:00 CET.
             </p>
         </div>
     );
