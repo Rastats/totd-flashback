@@ -57,6 +57,12 @@ interface SyncPayload {
         cooldown_remaining_ms: number;
     };
 
+    session?: {
+        elapsed_ms: number;
+        remaining_ms: number;
+        is_warning: boolean;
+    };
+
     mode: string;
 }
 
@@ -265,6 +271,10 @@ export async function POST(request: Request) {
 
                 // Mode
                 mode: data.mode || 'Normal',
+
+                // Session (3-hour limit)
+                session_elapsed_ms: data.session?.elapsed_ms ?? null,
+                session_remaining_ms: data.session?.remaining_ms ?? null,
 
                 // Timestamp
                 updated_at: new Date().toISOString(),

@@ -80,6 +80,8 @@ export async function GET() {
                 potCurrency: entry?.pot_currency || 'GBP',
                 lastUpdated: entry?.updated_at || null,
                 isOnline,
+                sessionElapsedMs: entry?.session_elapsed_ms || null,
+                sessionRemainingMs: entry?.session_remaining_ms || null,
                 shield: shieldData,
                 penalties: {
                     active: activePenalties,
