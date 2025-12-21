@@ -215,21 +215,24 @@ export async function POST(request: Request) {
             });
         }
 
-        // Get existing team_status to preserve maps_completed if -1 is sent
+        // Get existing team_status to preserve data and merge penalties
         let existingMapsCompleted = 0;
         let existingMapsTotal = 2000;
+        let existingPenaltiesActive: any[] = [];
+        let existingPenaltiesWaitlist: any[] = [];
 
-        if (data.progress?.maps_completed === -1 || data.progress?.maps_total === -1) {
-            const { data: existing } = await supabase
-                .from('team_status')
-                .select('maps_completed, maps_total')
-                .eq('team_id', teamId)
-                .single();
+        // Always fetch existing penalties to merge with admin-added ones
+        const { data: existing } = await supabase
+            .from('team_status')
+            .select('maps_completed, maps_total, penalties_active, penalties_waitlist')
+            .eq('team_id', teamId)
+            .single();
 
-            if (existing) {
-                existingMapsCompleted = existing.maps_completed || 0;
-                existingMapsTotal = existing.maps_total || 2000;
-            }
+        if (existing) {
+            existingMapsCompleted = existing.maps_completed || 0;
+            existingMapsTotal = existing.maps_total || 2000;
+            existingPenaltiesActive = existing.penalties_active || [];
+            existingPenaltiesWaitlist = existing.penalties_waitlist || [];
         }
 
         // Determine final values: -1 means "don't update", use existing
@@ -277,9 +280,18 @@ export async function POST(request: Request) {
                 // Completed map IDs - filter out any > EVENT_MAX_MAP_ID
                 completed_map_ids: (data.progress?.completed_ids || []).filter((id: number) => id <= EVENT_MAX_MAP_ID),
 
-                // Penalties (stored as JSONB)
+                // Penalties - Plugin is source of truth for active, but merge waitlist
+                // Admin-added penalties have high timestamps, plugin donations have their own IDs
+                // Strategy: Plugin provides active penalties; for waitlist, merge plugin + admin-added
+                // (Admin-added penalties have "id" as timestamp number from Date.now())
                 penalties_active: data.penalties?.active || [],
-                penalties_waitlist: data.penalties?.waitlist || [],
+                penalties_waitlist: (() => {
+                    const pluginWaitlist = data.penalties?.waitlist || [];
+                    const pluginIds = new Set(pluginWaitlist.map((p: any) => p.id));
+                    // Keep admin-added waitlist entries that aren't in plugin data
+                    const adminOnly = existingPenaltiesWaitlist.filter((p: any) => !pluginIds.has(p.id));
+                    return [...pluginWaitlist, ...adminOnly];
+                })(),
 
                 // Shield - Calculate expires_at from remaining_ms
                 shield_active: data.shield?.active || false,
