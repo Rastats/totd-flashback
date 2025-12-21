@@ -406,6 +406,16 @@ export default function CaptainPage() {
                                 const slot = slots.find(s => s.hourIndex === hourIndex);
                                 const isHovered = hoveredSlot === hourIndex;
 
+                                // Check availability status
+                                const anyPlayerAvailable = isInEvent && players.some(p => isPlayerAvailable(p, hourIndex));
+                                const mainPlayerUnavailable = slot && !players.find(p => p.id === slot.mainPlayerId && isPlayerAvailable(p, hourIndex));
+                                const subPlayerUnavailable = slot?.subPlayerId && !players.find(p => p.id === slot.subPlayerId && isPlayerAvailable(p, hourIndex));
+                                const hasAvailabilityWarning = mainPlayerUnavailable || subPlayerUnavailable;
+
+                                // Show indicator: empty slot but players available (🟡) or filled with unavailable player (⚠️)
+                                const showEmptyWarning = isInEvent && !slot && anyPlayerAvailable;
+                                const showUnavailableWarning = isInEvent && slot && hasAvailabilityWarning;
+
                                 return (
                                     <div
                                         key={`${day}-${hour}`}
@@ -424,10 +434,30 @@ export default function CaptainPage() {
                                             backgroundImage: isInEvent ? undefined : "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.3) 5px, rgba(0,0,0,0.3) 10px)",
                                         }}
                                     >
+                                        {/* Empty slot but players available indicator */}
+                                        {showEmptyWarning && (
+                                            <div style={{ 
+                                                position: "absolute", 
+                                                top: "50%", 
+                                                left: "50%", 
+                                                transform: "translate(-50%, -50%)",
+                                                fontSize: 16,
+                                                opacity: 0.6
+                                            }} title="Empty slot - players available">
+                                                🟡
+                                            </div>
+                                        )}
                                         {slot && (
                                             <>
-                                                <div style={{ fontSize: 11, fontWeight: "bold", color: "#000" }}>{slot.mainPlayerName}</div>
-                                                {slot.subPlayerName && <div style={{ fontSize: 9, color: "#1e293b" }}>(Sub: {slot.subPlayerName})</div>}
+                                                <div style={{ fontSize: 11, fontWeight: "bold", color: "#000" }}>
+                                                    {slot.mainPlayerName}
+                                                    {mainPlayerUnavailable && <span title="Main player unavailable"> ⚠️</span>}
+                                                </div>
+                                                {slot.subPlayerName && (
+                                                    <div style={{ fontSize: 9, color: "#1e293b" }}>
+                                                        (Sub: {slot.subPlayerName}{subPlayerUnavailable && " ⚠️"})
+                                                    </div>
+                                                )}
                                                 {isHovered && (
                                                     <button onClick={e => { e.stopPropagation(); setSlots(prev => prev.filter(s => s.hourIndex !== hourIndex)); }} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: 4, padding: "2px 6px", cursor: "pointer", fontSize: 12, color: "#fff" }}>🗑️</button>
                                                 )}
