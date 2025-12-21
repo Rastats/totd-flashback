@@ -1152,7 +1152,31 @@ export default function AdminPage() {
                                         <div style={{ fontSize: 12, fontWeight: "bold", padding: "8px 0" }}>{date.slice(5)}</div>
                                         {Array.from({ length: 24 }).map((_, h) => {
                                             // Determine state of this cell
-                                            const slot = tempAvailability.find(s => s.date === date && h >= s.startHour && h < s.endHour);
+                                            // Handle overnight slots (endHour < startHour means it crosses midnight)
+                                            const slot = tempAvailability.find(s => {
+                                                if (s.date === date) {
+                                                    if (s.endHour > s.startHour) {
+                                                        // Normal slot within same day
+                                                        return h >= s.startHour && h < s.endHour;
+                                                    } else {
+                                                        // Overnight slot: check if hour is >= start (this day's portion)
+                                                        return h >= s.startHour;
+                                                    }
+                                                }
+                                                // Check if this is the next day portion of an overnight slot
+                                                const prevDate = date === "2025-12-22" ? "2025-12-21" 
+                                                    : date === "2025-12-23" ? "2025-12-22"
+                                                    : date === "2025-12-24" ? "2025-12-23" : null;
+                                                if (prevDate) {
+                                                    const overnightSlot = tempAvailability.find(os => 
+                                                        os.date === prevDate && 
+                                                        os.endHour < os.startHour && 
+                                                        h < os.endHour
+                                                    );
+                                                    if (overnightSlot) return true;
+                                                }
+                                                return false;
+                                            });
                                             let bg = "#0f172a";
                                             if (slot) {
                                                 bg = slot.preference === 'preferred' ? "#22c55e" : "#3b82f6";
