@@ -2,8 +2,8 @@
 // Centralized configuration for TOTD Flashback event
 
 // Event Dates (UTC)
-export const EVENT_START_UTC = new Date('2025-12-21T20:00:00Z'); // Dec 21, 2025 21:00 CET
-export const EVENT_END_UTC = new Date('2025-12-24T17:00:00Z');   // Dec 24, 2025 18:00 CET
+export const EVENT_START_UTC = new Date('2025-12-26T19:00:00Z'); // Dec 26, 2025 20:00 CET
+export const EVENT_END_UTC = new Date('2025-12-29T16:00:00Z');   // Dec 29, 2025 17:00 CET
 
 // Teams Configuration
 export const TEAMS = [

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 
 // Event times in UTC
-const EVENT_START = new Date("2025-12-21T20:00:00Z"); // 21:00 CET = 20:00 UTC
-const EVENT_END = new Date("2025-12-24T17:00:00Z");   // 18:00 CET = 17:00 UTC
+const EVENT_START = new Date("2025-12-26T19:00:00Z"); // 20:00 CET = 19:00 UTC
+const EVENT_END = new Date("2025-12-29T16:00:00Z");   // 17:00 CET = 16:00 UTC
 
 interface TimeLeft {
     days: number;

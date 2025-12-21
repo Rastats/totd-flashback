@@ -94,13 +94,13 @@ const isPlayerAvailable = (player: PlayerSummary, hourIndex: number): boolean =>
     let dateStr = "";
     let hour = 0;
     if (hourIndex < 3) {
-        dateStr = "2025-12-21";
+        dateStr = "2025-12-26";
         hour = 21 + hourIndex;
     } else {
         const offsetIndex = hourIndex - 3;
         const dayOffset = Math.floor(offsetIndex / 24);
         hour = offsetIndex % 24;
-        dateStr = ["2025-12-22", "2025-12-23", "2025-12-24"][dayOffset] || "2025-12-24";
+        dateStr = ["2025-12-27", "2025-12-28", "2025-12-29"][dayOffset] || "2025-12-29";
     }
     return !!player.availability.find(s => s.date === dateStr && hour >= s.startHour && hour < s.endHour);
 };

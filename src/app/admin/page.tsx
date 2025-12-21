@@ -327,7 +327,7 @@ export default function AdminPage() {
     // Get player hours as indices (for team suggestion)
     const getPlayerHourIndices = (player: PlayerApplication): number[] => {
         const indices: number[] = [];
-        const dates = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"];
+        const dates = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"];
         
         // Helper to add hour index
         const addHour = (dayIndex: number, h: number) => {
@@ -439,7 +439,7 @@ export default function AdminPage() {
             if (!team) return;
 
             player.availability.forEach(slot => {
-                const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
+                const dayIndex = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
                 // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
@@ -490,7 +490,7 @@ export default function AdminPage() {
 
         approvedCasters.forEach(caster => {
             caster.availability.forEach(slot => {
-                const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
+                const dayIndex = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"].indexOf(slot.date);
                 if (dayIndex === -1) return;
 
                 // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
@@ -1147,7 +1147,7 @@ export default function AdminPage() {
                                     <div key={h} style={{ fontSize: 10, textAlign: "center", color: "#64748b" }}>{h}</div>
                                 ))}
 
-                                {["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].map(date => (
+                                {["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"].map(date => (
                                     <>
                                         <div style={{ fontSize: 12, fontWeight: "bold", padding: "8px 0" }}>{date.slice(5)}</div>
                                         {Array.from({ length: 24 }).map((_, h) => {
@@ -1164,9 +1164,9 @@ export default function AdminPage() {
                                                     }
                                                 }
                                                 // Check if this is the next day portion of an overnight slot
-                                                const prevDate = date === "2025-12-22" ? "2025-12-21" 
-                                                    : date === "2025-12-23" ? "2025-12-22"
-                                                    : date === "2025-12-24" ? "2025-12-23" : null;
+                                                const prevDate = date === "2025-12-27" ? "2025-12-26" 
+                                                    : date === "2025-12-28" ? "2025-12-27"
+                                                    : date === "2025-12-29" ? "2025-12-28" : null;
                                                 if (prevDate) {
                                                     const overnightSlot = tempAvailability.find(os => 
                                                         os.date === prevDate && 
@@ -1183,8 +1183,8 @@ export default function AdminPage() {
                                             }
 
                                             // Limit based on event hours if needed, but let's allow all for simplicity or match valid hours
-                                            // Event: 21st 21:00 -> 24th 18:00
-                                            const isInvalid = (date === "2025-12-21" && h < 21) || (date === "2025-12-24" && h >= 18);
+                                            // Event: 26th 20:00 -> 29th 17:00
+                                            const isInvalid = (date === "2025-12-26" && h < 20) || (date === "2025-12-29" && h >= 17);
 
                                             return (
                                                 <div
