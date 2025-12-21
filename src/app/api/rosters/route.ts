@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
             id: p.id,
             trackmaniaName: p.trackmania_name,
             discordUsername: p.discord_username,
-            teamAssignment: p.team_assignment,
+            // Convert 'joker' string to null for plugin compatibility
+            teamAssignment: p.team_assignment === 'joker' ? null : p.team_assignment,
             twitchUsername: p.twitch_username,
             canStream: p.can_stream,
             isCaptain: p.is_captain,
