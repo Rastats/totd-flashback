@@ -12,6 +12,9 @@ interface StatusPayload {
     team_id?: number; // For Jokers who don't have a team_assignment in the roster
 }
 
+// Timeout: If active player hasn't synced in 20s, consider them disconnected
+const HEARTBEAT_TIMEOUT_MS = 20000;
+
 export async function POST(request: Request) {
     try {
         // Rate limiting
@@ -144,9 +147,22 @@ export async function POST(request: Request) {
                     }
                     result = { success: true, reason: 'already_active' };
                 } else {
-                    // Someone else is active, go to waiting
-                    newWaiting = playerName;
-                    result = { success: true, reason: 'added_to_waiting' };
+                    // Someone else is active - check if they timed out
+                    const lastUpdate = teamStatus?.updated_at ? new Date(teamStatus.updated_at).getTime() : 0;
+                    const now = Date.now();
+                    
+                    if (now - lastUpdate > HEARTBEAT_TIMEOUT_MS) {
+                        // Previous active player timed out - take over
+                        console.log(`[PlayerStatus] Previous active ${currentActive} timed out (${Math.round((now - lastUpdate) / 1000)}s), allowing ${playerName} to take over`);
+                        
+                        newActive = playerName;
+                        newWaiting = currentWaiting === playerName ? null : currentWaiting;
+                        result = { success: true, reason: 'took_over_from_timeout' };
+                    } else {
+                        // Someone else is active and not timed out, go to waiting
+                        newWaiting = playerName;
+                        result = { success: true, reason: 'added_to_waiting' };
+                    }
                 }
                 break;
 
@@ -228,7 +244,6 @@ export async function GET(request: Request) {
         }
 
         const supabase = getSupabaseAdmin();
-        const HEARTBEAT_TIMEOUT_MS = 15000; // 15 seconds
 
         const { data, error } = await supabase
             .from('team_status')
