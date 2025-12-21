@@ -84,6 +84,7 @@ export default function EventControlPanel() {
     const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
     const [allowedVersions, setAllowedVersions] = useState<string[]>([]);
     const [teamPots, setTeamPots] = useState<{ team_number: number, amount: number }[]>([]);
+    const [syncEnabled, setSyncEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     
     // Form states
@@ -95,14 +96,15 @@ export default function EventControlPanel() {
 
     const fetchData = useCallback(async () => {
         try {
-            const [penaltiesRes, shieldsRes, playerSwitchRes, progressRes, versionsRes, eventLogRes, potsRes] = await Promise.all([
+            const [penaltiesRes, shieldsRes, playerSwitchRes, progressRes, versionsRes, eventLogRes, potsRes, syncToggleRes] = await Promise.all([
                 fetch("/api/admin/penalties"),
                 fetch("/api/admin/shields"),
                 fetch("/api/admin/player-switch"),
                 fetch("/api/admin/progression"),
                 fetch("/api/admin/versions"),
                 fetch("/api/event-log?limit=20"),
-                fetch("/api/admin/pots")
+                fetch("/api/admin/pots"),
+                fetch("/api/admin/sync-toggle")
             ]);
 
             if (penaltiesRes.ok) {
@@ -139,6 +141,10 @@ export default function EventControlPanel() {
             if (potsRes.ok) {
                 const data = await potsRes.json();
                 setTeamPots(data || []);
+            }
+            if (syncToggleRes.ok) {
+                const data = await syncToggleRes.json();
+                setSyncEnabled(data.enabled);
             }
         } catch (err) {
             console.error("EventControl fetch error:", err);
@@ -292,7 +298,6 @@ export default function EventControlPanel() {
         if (res.ok) fetchData();
     };
 
-    // ============= EVENT LOG =============
     const addEventMessage = async () => {
         if (!newEventMessage.message) return;
         const res = await fetch("/api/event-log", {
@@ -313,6 +318,26 @@ export default function EventControlPanel() {
         }
     };
 
+    // ============= SYNC TOGGLE =============
+    const toggleSync = async () => {
+        const newState = !syncEnabled;
+        const confirmMsg = newState 
+            ? "⚡ ENABLE plugin sync? All plugins will start sending data."
+            : "🛑 DISABLE plugin sync? All plugins will be blocked from sending data.";
+        
+        if (!confirm(confirmMsg)) return;
+        
+        const res = await fetch("/api/admin/sync-toggle", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: newState })
+        });
+        if (res.ok) {
+            setSyncEnabled(newState);
+            fetchData();
+        }
+    };
+
     const formatTime = (ms: number) => {
         const totalSecs = Math.floor(ms / 1000);
         const mins = Math.floor(totalSecs / 60);
@@ -324,6 +349,38 @@ export default function EventControlPanel() {
 
     return (
         <div>
+            {/* ============= SYNC CONTROL SECTION ============= */}
+            <div style={{
+                ...sectionStyle,
+                background: syncEnabled ? "#0a2910" : "#2a1010",
+                border: `2px solid ${syncEnabled ? "#22c55e" : "#dc2626"}`,
+            }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: syncEnabled ? "#22c55e" : "#dc2626" }}>
+                            {syncEnabled ? "🟢 Plugin Sync ENABLED" : "🔴 Plugin Sync DISABLED"}
+                        </h3>
+                        <p style={{ margin: "8px 0 0", fontSize: 13, color: "#94a3b8" }}>
+                            {syncEnabled 
+                                ? "Plugins are sending data to the server. Progress is being tracked."
+                                : "Plugins are blocked from sending data. Enable this when the event starts."}
+                        </p>
+                    </div>
+                    <button
+                        onClick={toggleSync}
+                        style={{
+                            ...buttonStyle,
+                            padding: "12px 24px",
+                            fontSize: 15,
+                            background: syncEnabled ? "#dc2626" : "#22c55e",
+                            color: "#fff",
+                        }}
+                    >
+                        {syncEnabled ? "🛑 Disable Sync" : "⚡ Enable Sync"}
+                    </button>
+                </div>
+            </div>
+
             {/* ============= PENALTIES SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#f87171" }}>⚠️ Penalties Management</h3>

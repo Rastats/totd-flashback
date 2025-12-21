@@ -117,6 +117,27 @@ export async function POST(request: Request) {
         const supabase = getSupabaseAdmin();
 
         // ============================================
+        // SYNC TOGGLE CHECK: Admin can disable all sync from dashboard
+        // This blocks progress updates until the event officially starts
+        // ============================================
+        if (!isPublicOnly && !isLightweight) {
+            const { data: syncSetting } = await supabase
+                .from('event_settings')
+                .select('value')
+                .eq('key', 'sync_enabled')
+                .single();
+            
+            if (syncSetting?.value !== 'true') {
+                console.log(`[Sync] Blocked: Sync is disabled by admin`);
+                return NextResponse.json({ 
+                    success: false,
+                    reason: 'sync_disabled',
+                    message: 'Event sync is currently disabled. Please wait for the event to start.'
+                });
+            }
+        }
+
+        // ============================================
         // PUBLIC ONLY MODE: For non-roster players who just want to view data
         // Skip account_id validation and return public team data
         // ============================================
