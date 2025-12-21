@@ -135,7 +135,7 @@ export async function PATCH(
             }
         }
 
-        // Handle Team Change / Autofill
+        // Handle Team Change - cleanup old planning
         const newTeam = body.teamAssignment;
 
         // If team changed, we MUST clean up the player from old planning to avoid "Unknown" ghosts
@@ -153,23 +153,7 @@ export async function PATCH(
                 .update({ sub_player_id: null, sub_player_name: null })
                 .eq('sub_player_id', id);
 
-            // Trigger Autofill for NEW team
-            if (newTeam !== 'joker') {
-                await autofillSchedule(newTeam, supabaseAdmin);
-            }
-
-            // Trigger Autofill for OLD team (to fill the gap)
-            if (oldTeam && oldTeam !== 'joker') {
-                await autofillSchedule(oldTeam, supabaseAdmin);
-            }
-        }
-        // If team didn't change (just availability update?), maybe re-run autofill for current team?
-        else if (body.availability || (newTeam && newTeam === oldTeam)) {
-            // If availability changed, we might want to re-run autofill for their current team
-            const targetTeam = newTeam || oldTeam;
-            if (targetTeam && targetTeam !== 'joker') {
-                await autofillSchedule(targetTeam, supabaseAdmin);
-            }
+            // NOTE: Autofill disabled - captains manage schedules manually
         }
 
         return NextResponse.json({ success: true });
