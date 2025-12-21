@@ -544,8 +544,8 @@ export default function LeaderboardPage() {
                             top: 24
                         }}>
                             <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {feed.length > 0 ? feed.map(event => (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "500px", overflowY: "auto" }}>
+                                {feed.length > 0 ? feed.slice(0, 15).map(event => (
                                     <div key={event.id} style={{
                                         paddingRight: 8,
                                         borderLeft: `3px solid ${event.teamId ? TEAM_COLORS[event.teamId]?.color : "#fff"}`,
