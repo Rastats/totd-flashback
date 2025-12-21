@@ -38,18 +38,20 @@ export async function GET(
         // 2. Get Planning from normalized 'team_planning_slots' table
         const { data: slotsData, error: slotsError } = await supabase
             .from('team_planning')
-            .select('hour_index, main_player_id, sub_player_id')
+            .select('hour_index, main_player_id, sub_player_id, main_player_name, sub_player_name')
             .eq('team_id', teamId)
             .order('hour_index');
 
         if (slotsError) throw slotsError;
 
         // Convert to the slots object format expected by UI
-        const slots: Record<number, { mainPlayerId: string | null; subPlayerId: string | null }> = {};
+        const slots: Record<number, { mainPlayerId: string | null; subPlayerId: string | null; main_player_name: string | null; sub_player_name: string | null }> = {};
         for (const slot of slotsData || []) {
             slots[slot.hour_index] = {
                 mainPlayerId: slot.main_player_id,
-                subPlayerId: slot.sub_player_id
+                subPlayerId: slot.sub_player_id,
+                main_player_name: slot.main_player_name || null,
+                sub_player_name: slot.sub_player_name || null
             };
         }
 
