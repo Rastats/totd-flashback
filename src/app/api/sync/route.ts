@@ -300,7 +300,7 @@ export async function POST(request: Request) {
                 shield_expires_at: data.shield?.active && data.shield?.remaining_ms > 0
                     ? new Date(Date.now() + data.shield.remaining_ms).toISOString()
                     : null,
-                shield_cooldown_ms: data.shield?.cooldown_remaining_ms || 0,
+                // shield_cooldown_ms removed - cooldowns managed server-side only
 
                 // Mode
                 mode: data.mode || 'Normal',
