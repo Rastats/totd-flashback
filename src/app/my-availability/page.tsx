@@ -4,7 +4,45 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { TEAMS } from "@/lib/config";
-import { COMMON_TIMEZONES, getEventDays, EVENT_START_UTC, EVENT_END_UTC } from "@/lib/timezones";
+
+// Same timezones as Captain Dashboard
+const TIMEZONES = [
+    { label: "🇫🇷 Paris (UTC+1)", offset: 1 },
+    { label: "🇬🇧 London (UTC+0)", offset: 0 },
+    { label: "🇺🇸 New York (UTC-5)", offset: -5 },
+    { label: "🇺🇸 Chicago (UTC-6)", offset: -6 },
+    { label: "🇺🇸 Denver (UTC-7)", offset: -7 },
+    { label: "🇺🇸 Los Angeles (UTC-8)", offset: -8 },
+    { label: "🇧🇷 São Paulo (UTC-3)", offset: -3 },
+    { label: "🇵🇹 Lisbon (UTC+0)", offset: 0 },
+    { label: "🇩🇪 Berlin (UTC+1)", offset: 1 },
+    { label: "🇷🇺 Moscow (UTC+3)", offset: 3 },
+    { label: "🇨🇳 Beijing (UTC+8)", offset: 8 },
+    { label: "🇯🇵 Tokyo (UTC+9)", offset: 9 },
+    { label: "🇦🇺 Sydney (UTC+11)", offset: 11 },
+    { label: "🇳🇿 Auckland (UTC+13)", offset: 13 },
+];
+
+// Get columns (days) to display based on timezone
+function getColumnDays(tzOffset: number): number[] {
+    // Event: Dec 21 21:00 CET to Dec 24 18:00 CET
+    // For UTC+1 (CET), show days 21-24
+    // For timezones ahead of CET, might show day 25
+    // For timezones behind CET, might show day 20
+    if (tzOffset >= 10) return [22, 23, 24, 25]; // Far east (Sydney, Auckland)
+    if (tzOffset <= -5) return [21, 22, 23, 24]; // Americas
+    return [21, 22, 23, 24]; // Europe
+}
+
+// Convert local day+hour to hourIndex (CET-based event index 0-68)
+function getHourIndexForLocal(localDay: number, localHour: number, tzOffset: number): number {
+    const offsetDiff = tzOffset - 1; // CET is +1
+    const totalLocalHours = localDay * 24 + localHour;
+    const totalCetHours = totalLocalHours - offsetDiff;
+    const cetDay = Math.floor(totalCetHours / 24);
+    const cetHour = totalCetHours % 24;
+    return (cetDay - 21) * 24 + cetHour - 21;
+}
 
 interface AvailabilitySlot {
     date: string;
@@ -23,30 +61,17 @@ interface PlayerInfo {
 export default function MyAvailabilityPage() {
     const { data: session, status } = useSession();
     const [player, setPlayer] = useState<PlayerInfo | null>(null);
-    const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
-    const [timezone, setTimezone] = useState("Europe/Paris");
+    const [tzOffset, setTzOffset] = useState(1); // Default: Paris
 
-    // State for tracking selected cells (day -> Set of hours)
-    const [selectedCells, setSelectedCells] = useState<Record<string, Set<number>>>({});
+    // State for tracking selected cells (key: "day-hour", value: true)
+    const [selectedCells, setSelectedCells] = useState<Record<string, boolean>>({});
 
-    // Get event days adjusted for selected timezone
-    const eventDays = useMemo(() => getEventDays(timezone), [timezone]);
-
-    useEffect(() => {
-        // Try to detect user's timezone
-        try {
-            const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (COMMON_TIMEZONES.some(tz => tz.value === detectedTz)) {
-                setTimezone(detectedTz);
-            }
-        } catch (e) {
-            // Keep default
-        }
-    }, []);
+    // Get column days based on timezone
+    const columnDays = useMemo(() => getColumnDays(tzOffset), [tzOffset]);
 
     useEffect(() => {
         const fetchAvailability = async () => {
@@ -55,14 +80,13 @@ export default function MyAvailabilityPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setPlayer(data.player);
-                    setAvailability(data.availability || []);
                     
-                    // Convert availability to selected cells
-                    const cells: Record<string, Set<number>> = {};
+                    // Convert availability slots to selected cells
+                    const cells: Record<string, boolean> = {};
                     for (const slot of data.availability || []) {
-                        if (!cells[slot.date]) cells[slot.date] = new Set();
+                        const day = parseInt(slot.date.split('-')[2]);
                         for (let h = slot.startHour; h < slot.endHour; h++) {
-                            cells[slot.date].add(h);
+                            cells[`${day}-${h}`] = true;
                         }
                     }
                     setSelectedCells(cells);
@@ -85,30 +109,36 @@ export default function MyAvailabilityPage() {
     }, [status]);
 
     // Toggle a cell
-    const toggleCell = (date: string, hour: number) => {
-        setSelectedCells(prev => {
-            const newCells = { ...prev };
-            if (!newCells[date]) newCells[date] = new Set();
-            
-            if (newCells[date].has(hour)) {
-                newCells[date].delete(hour);
-            } else {
-                newCells[date].add(hour);
-            }
-            return newCells;
-        });
+    const toggleCell = (day: number, hour: number) => {
+        const key = `${day}-${hour}`;
+        setSelectedCells(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
         setSuccess(false);
     };
 
-    // Convert selected cells back to availability slots
+    // Convert selected cells back to availability slots for saving
     const convertToSlots = (): AvailabilitySlot[] => {
         const slots: AvailabilitySlot[] = [];
+        const dayHours: Record<number, number[]> = {};
         
-        for (const [date, hours] of Object.entries(selectedCells)) {
-            if (hours.size === 0) continue;
+        // Group by day
+        for (const key of Object.keys(selectedCells)) {
+            if (!selectedCells[key]) continue;
+            const [dayStr, hourStr] = key.split('-');
+            const day = parseInt(dayStr);
+            const hour = parseInt(hourStr);
+            if (!dayHours[day]) dayHours[day] = [];
+            dayHours[day].push(hour);
+        }
+        
+        // Convert to slots
+        for (const [dayStr, hours] of Object.entries(dayHours)) {
+            const day = parseInt(dayStr);
+            const date = `2025-12-${day.toString().padStart(2, '0')}`;
+            const sortedHours = hours.sort((a, b) => a - b);
             
-            // Sort hours and group consecutive ones
-            const sortedHours = Array.from(hours).sort((a, b) => a - b);
             let startHour = sortedHours[0];
             let endHour = startHour + 1;
             
@@ -153,13 +183,9 @@ export default function MyAvailabilityPage() {
         }
     };
 
-    // Check if hour is within event bounds for this day
-    const isHourInEvent = (day: { date: string; startHour: number; endHour: number }, hour: number): boolean => {
-        return hour >= day.startHour && hour < day.endHour;
-    };
-
     // Get team info
     const teamInfo = player?.teamAssignment ? TEAMS.find(t => t.id === player.teamAssignment) : null;
+    const selectedTz = TIMEZONES.find(tz => tz.offset === tzOffset) || TIMEZONES[0];
 
     if (status === "loading" || loading) {
         return (
@@ -240,25 +266,22 @@ export default function MyAvailabilityPage() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         {/* Timezone Selector */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <label style={{ fontSize: 13, color: "#94a3b8" }}>🌍 Timezone:</label>
-                            <select
-                                value={timezone}
-                                onChange={(e) => setTimezone(e.target.value)}
-                                style={{
-                                    padding: "8px 12px",
-                                    background: "#0f172a",
-                                    border: "1px solid #334155",
-                                    borderRadius: 6,
-                                    color: "#fff",
-                                    fontSize: 13,
-                                }}
-                            >
-                                {COMMON_TIMEZONES.map(tz => (
-                                    <option key={tz.value} value={tz.value}>{tz.label}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <select
+                            value={tzOffset}
+                            onChange={(e) => setTzOffset(parseInt(e.target.value))}
+                            style={{
+                                padding: "8px 12px",
+                                background: "#0f172a",
+                                border: "1px solid #334155",
+                                borderRadius: 6,
+                                color: "#fff",
+                                fontSize: 13,
+                            }}
+                        >
+                            {TIMEZONES.map(tz => (
+                                <option key={tz.label} value={tz.offset}>{tz.label}</option>
+                            ))}
+                        </select>
                         <button
                             onClick={saveAvailability}
                             disabled={saving}
@@ -293,22 +316,22 @@ export default function MyAvailabilityPage() {
             {/* Availability Grid */}
             <div style={{ 
                 display: "grid", 
-                gridTemplateColumns: `60px repeat(${eventDays.length}, 1fr)`,
+                gridTemplateColumns: `60px repeat(${columnDays.length}, 1fr)`,
                 background: "#1e293b",
                 borderRadius: 12,
                 overflow: "hidden"
             }}>
                 {/* Header */}
                 <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
-                {eventDays.map(day => (
-                    <div key={day.date} style={{ 
+                {columnDays.map(day => (
+                    <div key={day} style={{ 
                         background: "#0f172a", 
                         padding: 12, 
                         fontWeight: "bold", 
                         textAlign: "center",
                         borderLeft: "1px solid #334155"
                     }}>
-                        {day.label}
+                        Dec {day}
                     </div>
                 ))}
 
@@ -324,14 +347,15 @@ export default function MyAvailabilityPage() {
                         }}>
                             {hour.toString().padStart(2, '0')}:00
                         </div>
-                        {eventDays.map(day => {
-                            const isSelected = selectedCells[day.date]?.has(hour);
-                            const isInEvent = isHourInEvent(day, hour);
+                        {columnDays.map(day => {
+                            const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
+                            const isInEvent = hourIndex >= 0 && hourIndex <= 68;
+                            const isSelected = selectedCells[`${day}-${hour}`];
 
                             return (
                                 <div
-                                    key={`${day.date}-${hour}`}
-                                    onClick={() => isInEvent && toggleCell(day.date, hour)}
+                                    key={`${day}-${hour}`}
+                                    onClick={() => isInEvent && toggleCell(day, hour)}
                                     style={{
                                         borderTop: "1px solid #334155",
                                         borderLeft: "1px solid #334155",
@@ -350,7 +374,7 @@ export default function MyAvailabilityPage() {
             </div>
 
             <p style={{ fontSize: 12, color: "#64748b", marginTop: 16 }}>
-                ⏰ Times shown in {COMMON_TIMEZONES.find(tz => tz.value === timezone)?.label || timezone}. Event runs Dec 21 21:00 - Dec 24 18:00 CET.
+                ⏰ Times shown in {selectedTz.label}. Event runs Dec 21 21:00 - Dec 24 18:00 CET.
             </p>
         </div>
     );
