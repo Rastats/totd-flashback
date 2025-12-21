@@ -136,16 +136,21 @@ export default function Header() {
                         {session ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                                 {session.user?.image && (
-                                    <img
-                                        src={session.user.image}
-                                        alt="User"
-                                        style={{ width: 32, height: 32, borderRadius: "50%", border: "2px solid #334155" }}
-                                    />
+                                    <Link href="/my-availability" style={{ textDecoration: "none" }}>
+                                        <img
+                                            src={session.user.image}
+                                            alt="User"
+                                            style={{ width: 32, height: 32, borderRadius: "50%", border: "2px solid #334155", cursor: "pointer" }}
+                                            title="Edit my availability"
+                                        />
+                                    </Link>
                                 )}
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "end" }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: "#cbd5e1" }}>
-                                        {session.user?.name}
-                                    </span>
+                                    <Link href="/my-availability" style={{ textDecoration: "none" }}>
+                                        <span style={{ fontSize: 13, fontWeight: 600, color: "#cbd5e1", cursor: "pointer" }} title="Edit my availability">
+                                            {session.user?.name}
+                                        </span>
+                                    </Link>
                                     {/* Sign Out (text link for minimalism) */}
                                     <button
                                         onClick={() => signOut()}
