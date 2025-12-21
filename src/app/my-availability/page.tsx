@@ -23,12 +23,8 @@ const TIMEZONES = [
 
 // Get columns (days) to display based on timezone
 function getColumnDays(tzOffset: number): number[] {
-    // Event: Dec 21 21:00 CET to Dec 24 18:00 CET
-    // For UTC+1 (CET), show days 21-24
-    // For timezones ahead of CET, might show day 25
-    // For timezones behind CET, might show day 20
-    if (tzOffset >= 10) return [22, 23, 24, 25]; // Far east (Sydney, Auckland)
-    if (tzOffset <= -5) return [21, 22, 23, 24]; // Americas
+    if (tzOffset >= 10) return [22, 23, 24, 25]; // Far east
+    if (tzOffset <= -5) return [20, 21, 22, 23, 24]; // Americas (show more days)
     return [21, 22, 23, 24]; // Europe
 }
 
@@ -40,6 +36,72 @@ function getHourIndexForLocal(localDay: number, localHour: number, tzOffset: num
     const cetDay = Math.floor(totalCetHours / 24);
     const cetHour = totalCetHours % 24;
     return (cetDay - 21) * 24 + cetHour - 21;
+}
+
+// Convert hourIndex to local day+hour for a timezone
+function getLocalTimeForHourIndex(hourIndex: number, tzOffset: number): { day: number; hour: number } {
+    // hourIndex 0 = Dec 21 21:00 CET
+    const cetTotalHours = 21 * 24 + 21 + hourIndex; // Day 21, hour 21 + index
+    const cetDay = Math.floor(cetTotalHours / 24);
+    const cetHour = cetTotalHours % 24;
+
+    // Convert CET to target timezone
+    const offsetDiff = tzOffset - 1; // CET is +1
+    const totalLocalHours = cetDay * 24 + cetHour + offsetDiff;
+    const localDay = Math.floor(totalLocalHours / 24);
+    const localHour = ((totalLocalHours % 24) + 24) % 24;
+
+    return { day: localDay, hour: localHour };
+}
+
+// Convert availability slots (day-based) to hour indices
+function slotsToHourIndices(slots: AvailabilitySlot[]): Set<number> {
+    const indices = new Set<number>();
+    for (const slot of slots) {
+        const day = parseInt(slot.date.split('-')[2]);
+        for (let h = slot.startHour; h < slot.endHour; h++) {
+            // Slots are stored in Paris timezone (CET = UTC+1)
+            const index = getHourIndexForLocal(day, h, 1);
+            if (index >= 0 && index <= 68) {
+                indices.add(index);
+            }
+        }
+    }
+    return indices;
+}
+
+// Convert hour indices back to slots (for saving, always in Paris time)
+function hourIndicesToSlots(indices: Set<number>): AvailabilitySlot[] {
+    const slots: AvailabilitySlot[] = [];
+    const dayHours: Record<number, number[]> = {};
+    
+    for (const index of indices) {
+        const { day, hour } = getLocalTimeForHourIndex(index, 1); // Paris time
+        if (!dayHours[day]) dayHours[day] = [];
+        dayHours[day].push(hour);
+    }
+    
+    for (const [dayStr, hours] of Object.entries(dayHours)) {
+        const day = parseInt(dayStr);
+        const date = `2025-12-${day.toString().padStart(2, '0')}`;
+        const sortedHours = hours.sort((a, b) => a - b);
+        
+        let startHour = sortedHours[0];
+        let endHour = startHour + 1;
+        
+        for (let i = 1; i < sortedHours.length; i++) {
+            if (sortedHours[i] === endHour) {
+                endHour++;
+            } else {
+                slots.push({ date, startHour, endHour, preference: "available" });
+                startHour = sortedHours[i];
+                endHour = startHour + 1;
+            }
+        }
+        slots.push({ date, startHour, endHour, preference: "available" });
+    }
+    
+    return slots;
 }
 
 interface AvailabilitySlot {
@@ -65,8 +127,8 @@ export default function MyAvailabilityPage() {
     const [success, setSuccess] = useState(false);
     const [tzOffset, setTzOffset] = useState(1); // Default: Paris
 
-    // State for tracking selected cells (key: "day-hour", value: true)
-    const [selectedCells, setSelectedCells] = useState<Record<string, boolean>>({});
+    // Store selected hour indices (timezone-independent, 0-68)
+    const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
     // Get column days based on timezone
     const columnDays = useMemo(() => getColumnDays(tzOffset), [tzOffset]);
@@ -79,15 +141,9 @@ export default function MyAvailabilityPage() {
                     const data = await res.json();
                     setPlayer(data.player);
                     
-                    // Convert availability slots to selected cells
-                    const cells: Record<string, boolean> = {};
-                    for (const slot of data.availability || []) {
-                        const day = parseInt(slot.date.split('-')[2]);
-                        for (let h = slot.startHour; h < slot.endHour; h++) {
-                            cells[`${day}-${h}`] = true;
-                        }
-                    }
-                    setSelectedCells(cells);
+                    // Convert availability slots to hour indices
+                    const indices = slotsToHourIndices(data.availability || []);
+                    setSelectedIndices(indices);
                 } else {
                     const data = await res.json();
                     setError(data.message || data.error);
@@ -106,53 +162,27 @@ export default function MyAvailabilityPage() {
         }
     }, [status]);
 
-    // Toggle a cell
+    // Toggle a cell by converting to hourIndex
     const toggleCell = (day: number, hour: number) => {
-        const key = `${day}-${hour}`;
-        setSelectedCells(prev => ({
-            ...prev,
-            [key]: !prev[key]
-        }));
+        const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
+        if (hourIndex < 0 || hourIndex > 68) return;
+        
+        setSelectedIndices(prev => {
+            const next = new Set(prev);
+            if (next.has(hourIndex)) {
+                next.delete(hourIndex);
+            } else {
+                next.add(hourIndex);
+            }
+            return next;
+        });
         setSuccess(false);
     };
 
-    // Convert selected cells back to availability slots for saving
-    const convertToSlots = (): AvailabilitySlot[] => {
-        const slots: AvailabilitySlot[] = [];
-        const dayHours: Record<number, number[]> = {};
-        
-        // Group by day
-        for (const key of Object.keys(selectedCells)) {
-            if (!selectedCells[key]) continue;
-            const [dayStr, hourStr] = key.split('-');
-            const day = parseInt(dayStr);
-            const hour = parseInt(hourStr);
-            if (!dayHours[day]) dayHours[day] = [];
-            dayHours[day].push(hour);
-        }
-        
-        // Convert to slots
-        for (const [dayStr, hours] of Object.entries(dayHours)) {
-            const day = parseInt(dayStr);
-            const date = `2025-12-${day.toString().padStart(2, '0')}`;
-            const sortedHours = hours.sort((a, b) => a - b);
-            
-            let startHour = sortedHours[0];
-            let endHour = startHour + 1;
-            
-            for (let i = 1; i < sortedHours.length; i++) {
-                if (sortedHours[i] === endHour) {
-                    endHour++;
-                } else {
-                    slots.push({ date, startHour, endHour, preference: "available" });
-                    startHour = sortedHours[i];
-                    endHour = startHour + 1;
-                }
-            }
-            slots.push({ date, startHour, endHour, preference: "available" });
-        }
-        
-        return slots;
+    // Check if a cell is selected (by converting display day+hour to index)
+    const isCellSelected = (day: number, hour: number): boolean => {
+        const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
+        return selectedIndices.has(hourIndex);
     };
 
     const saveAvailability = async () => {
@@ -161,7 +191,7 @@ export default function MyAvailabilityPage() {
         setSuccess(false);
         
         try {
-            const slots = convertToSlots();
+            const slots = hourIndicesToSlots(selectedIndices);
             const res = await fetch("/api/my-availability", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -183,7 +213,7 @@ export default function MyAvailabilityPage() {
 
     // Get team info
     const teamInfo = player?.teamAssignment ? TEAMS.find(t => t.id === player.teamAssignment) : null;
-    const selectedTz = TIMEZONES.find(tz => tz.offset === tzOffset) || TIMEZONES[0];
+    const selectedTz = TIMEZONES.find(tz => tz.offset === tzOffset) || TIMEZONES[6]; // Paris default
 
     if (status === "loading" || loading) {
         return (
@@ -348,7 +378,7 @@ export default function MyAvailabilityPage() {
                         {columnDays.map(day => {
                             const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
                             const isInEvent = hourIndex >= 0 && hourIndex <= 68;
-                            const isSelected = selectedCells[`${day}-${hour}`];
+                            const isSelected = isCellSelected(day, hour);
 
                             return (
                                 <div
