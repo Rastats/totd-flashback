@@ -419,7 +419,7 @@ export default function MyAvailabilityPage() {
             </div>
 
             <p style={{ fontSize: 12, color: "#64748b", marginTop: 16 }}>
-                ⏰ Times shown in {selectedTz.label}. Event runs Dec 21 21:00 - Dec 24 18:00 CET.
+                ⏰ Times shown in {selectedTz.label}. Event runs Dec 26 20:00 - Dec 29 17:00 CET.
             </p>
         </div>
     );

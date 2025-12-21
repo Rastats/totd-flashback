@@ -93,12 +93,12 @@ export default function HomePage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>Start</div>
-            <div style={{ fontSize: 18, fontWeight: 500 }}>Dec 21, 2025 • 21:00 CET</div>
-            <div style={{ fontSize: 13, opacity: 0.6 }}>Right after GranaDy&apos;s BIG Cup</div>
+            <div style={{ fontSize: 18, fontWeight: 500 }}>Dec 26, 2025 • 20:00 CET</div>
+            <div style={{ fontSize: 13, opacity: 0.6 }}>Right after Cup of the Day</div>
           </div>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
             <div style={{ opacity: 0.7, fontSize: 14, marginBottom: 4 }}>End</div>
-            <div style={{ fontSize: 18, fontWeight: 500 }}>Dec 24, 2025 • 18:00 CET</div>
+            <div style={{ fontSize: 18, fontWeight: 500 }}>Dec 29, 2025 • 17:00 CET</div>
             <div style={{ fontSize: 13, opacity: 0.6 }}>69 hours total</div>
           </div>
           <div style={{ padding: 16, background: "#1a1a2e", borderRadius: 8 }}>
