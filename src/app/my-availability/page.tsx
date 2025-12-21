@@ -283,12 +283,29 @@ export default function MyAvailabilityPage() {
                 }}>
                     <div>
                         <div style={{ fontWeight: "bold", fontSize: 18 }}>{player.name}</div>
-                        <div style={{ fontSize: 13, color: "#94a3b8" }}>
-                            Discord: {player.discordUsername}
+                        <div style={{ fontSize: 13, color: "#94a3b8", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span>Discord: {player.discordUsername}</span>
                             {teamInfo && (
-                                <span style={{ color: teamInfo.color, marginLeft: 12 }}>
-                                    • {teamInfo.name}
-                                </span>
+                                <>
+                                    <span style={{ color: teamInfo.color }}>
+                                        • {teamInfo.name}
+                                    </span>
+                                    <Link 
+                                        href={`/schedule/${teamInfo.id}`}
+                                        style={{
+                                            padding: "4px 10px",
+                                            background: teamInfo.color + "22",
+                                            border: `1px solid ${teamInfo.color}`,
+                                            borderRadius: 4,
+                                            color: teamInfo.color,
+                                            fontSize: 11,
+                                            textDecoration: "none",
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        📅 Team Schedule
+                                    </Link>
+                                </>
                             )}
                         </div>
                     </div>
