@@ -215,24 +215,21 @@ export async function POST(request: Request) {
             });
         }
 
-        // Get existing team_status to preserve data and merge penalties
+        // Get existing team_status to preserve server-managed data
+        // SERVER-MANAGED: penalties, shields, pot_amount (admin controls these)
+        // PLUGIN-MANAGED: current_map, progress, session, mode (plugin controls these)
         let existingMapsCompleted = 0;
         let existingMapsTotal = 2000;
-        let existingPenaltiesActive: any[] = [];
-        let existingPenaltiesWaitlist: any[] = [];
 
-        // Always fetch existing penalties to merge with admin-added ones
         const { data: existing } = await supabase
             .from('team_status')
-            .select('maps_completed, maps_total, penalties_active, penalties_waitlist')
+            .select('maps_completed, maps_total')
             .eq('team_id', teamId)
             .single();
 
         if (existing) {
             existingMapsCompleted = existing.maps_completed || 0;
             existingMapsTotal = existing.maps_total || 2000;
-            existingPenaltiesActive = existing.penalties_active || [];
-            existingPenaltiesWaitlist = existing.penalties_waitlist || [];
         }
 
         // Determine final values: -1 means "don't update", use existing
@@ -280,27 +277,13 @@ export async function POST(request: Request) {
                 // Completed map IDs - filter out any > EVENT_MAX_MAP_ID
                 completed_map_ids: (data.progress?.completed_ids || []).filter((id: number) => id <= EVENT_MAX_MAP_ID),
 
-                // Penalties - Plugin is source of truth for active, but merge waitlist
-                // Admin-added penalties have high timestamps, plugin donations have their own IDs
-                // Strategy: Plugin provides active penalties; for waitlist, merge plugin + admin-added
-                // (Admin-added penalties have "id" as timestamp number from Date.now())
-                penalties_active: data.penalties?.active || [],
-                penalties_waitlist: (() => {
-                    const pluginWaitlist = data.penalties?.waitlist || [];
-                    const pluginIds = new Set(pluginWaitlist.map((p: any) => p.id));
-                    // Keep admin-added waitlist entries that aren't in plugin data
-                    const adminOnly = existingPenaltiesWaitlist.filter((p: any) => !pluginIds.has(p.id));
-                    return [...pluginWaitlist, ...adminOnly];
-                })(),
-
-                // Shield - Calculate expires_at from remaining_ms
-                shield_active: data.shield?.active || false,
-                shield_type: data.shield?.type || null,
-                shield_remaining_ms: data.shield?.remaining_ms || 0,
-                shield_expires_at: data.shield?.active && data.shield?.remaining_ms > 0
-                    ? new Date(Date.now() + data.shield.remaining_ms).toISOString()
-                    : null,
-                // shield_cooldown_ms removed - cooldowns managed server-side only
+                // ============================================
+                // SERVER-MANAGED FIELDS - NOT WRITTEN BY PLUGIN SYNC
+                // penalties_active, penalties_waitlist: Managed by /api/admin/penalties and donations
+                // shield_active, shield_type, shield_expires_at: Managed by /api/admin/shields
+                // pot_amount: Managed by /api/donations via increment_team_pot
+                // These fields are READ by the plugin via sync response, but NOT written here
+                // ============================================
 
                 // Mode
                 mode: data.mode || 'Normal',
@@ -398,6 +381,22 @@ export async function POST(request: Request) {
                 redoRemaining: myTeamStatus?.redo_remaining || 0,
                 // Return completed IDs for recovery if plugin loses local data
                 completedMapIds: myTeamStatus?.completed_map_ids || []
+            },
+
+            // SERVER-MANAGED: Penalties (plugin READS these, doesn't write)
+            penalties: {
+                active: myTeamStatus?.penalties_active || [],
+                waitlist: myTeamStatus?.penalties_waitlist || []
+            },
+
+            // SERVER-MANAGED: Shield (plugin READS these, doesn't write)
+            shield: {
+                active: myTeamStatus?.shield_active || false,
+                type: myTeamStatus?.shield_type || null,
+                expires_at: myTeamStatus?.shield_expires_at || null,
+                remaining_ms: myTeamStatus?.shield_expires_at
+                    ? Math.max(0, new Date(myTeamStatus.shield_expires_at).getTime() - Date.now())
+                    : 0
             },
 
             // All teams' progress (for leaderboard display)
