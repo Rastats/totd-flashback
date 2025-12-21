@@ -59,8 +59,8 @@ export default function OBSPenaltiesOverlay() {
                 <div style={{
                     fontSize: 36,
                     fontWeight: 800,
-                    color: "#f59e0b",
-                    textShadow: "0 2px 8px rgba(245, 158, 11, 0.5)",
+                    color: "#22c55e",
+                    textShadow: "0 2px 8px rgba(34, 197, 94, 0.4)",
                     minWidth: 80,
                     textAlign: "center",
                 }}>
@@ -72,7 +72,7 @@ export default function OBSPenaltiesOverlay() {
                     <div style={{
                         fontSize: 24,
                         fontWeight: 700,
-                        color: "#ffffff",
+                        color: "#f59e0b",
                         marginBottom: 4,
                         textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
                     }}>
@@ -80,7 +80,7 @@ export default function OBSPenaltiesOverlay() {
                     </div>
                     <div style={{
                         fontSize: 16,
-                        color: "#94a3b8",
+                        color: "#ffffff",
                         fontWeight: 500,
                     }}>
                         {penalty.desc}
