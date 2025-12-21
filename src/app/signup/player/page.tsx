@@ -306,6 +306,13 @@ export default function PlayerSignupPage() {
         setSubmitting(true);
         setError("");
 
+        // Validate availability - must have at least one slot
+        if (availability.length === 0) {
+            setError("Please add at least one availability slot. We need to know when you can play!");
+            setSubmitting(false);
+            return;
+        }
+
         try {
             const response = await fetch("/api/signup/player", {
                 method: "POST",

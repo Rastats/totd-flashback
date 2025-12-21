@@ -327,19 +327,44 @@ export default function AdminPage() {
     // Get player hours as indices (for team suggestion)
     const getPlayerHourIndices = (player: PlayerApplication): number[] => {
         const indices: number[] = [];
+        const dates = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"];
+        
+        // Helper to add hour index
+        const addHour = (dayIndex: number, h: number) => {
+            let hourIndex: number;
+            if (dayIndex === 0) {
+                hourIndex = h - 21;
+            } else {
+                hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+            }
+            if (hourIndex >= 0 && hourIndex < 69 && !indices.includes(hourIndex)) {
+                indices.push(hourIndex);
+            }
+        };
+        
         player.availability.forEach(slot => {
-            const dayIndex = ["2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24"].indexOf(slot.date);
+            const dayIndex = dates.indexOf(slot.date);
             if (dayIndex === -1) return;
 
-            for (let h = slot.startHour; h < slot.endHour; h++) {
-                let hourIndex: number;
-                if (dayIndex === 0) {
-                    hourIndex = h - 21;
-                } else {
-                    hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+            // Check if overnight slot (endHour <= startHour means it crosses midnight)
+            const isOvernight = slot.endHour <= slot.startHour;
+            
+            if (isOvernight) {
+                // Part 1: From startHour to midnight (24) on current day
+                for (let h = slot.startHour; h < 24; h++) {
+                    addHour(dayIndex, h);
                 }
-                if (hourIndex >= 0 && hourIndex < 69) {
-                    indices.push(hourIndex);
+                // Part 2: From midnight (0) to endHour on next day
+                const nextDayIndex = dayIndex + 1;
+                if (nextDayIndex < dates.length) {
+                    for (let h = 0; h < slot.endHour; h++) {
+                        addHour(nextDayIndex, h);
+                    }
+                }
+            } else {
+                // Normal slot
+                for (let h = slot.startHour; h < slot.endHour; h++) {
+                    addHour(dayIndex, h);
                 }
             }
         });
