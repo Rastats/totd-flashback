@@ -407,14 +407,18 @@ export default function CaptainPage() {
                                 const isHovered = hoveredSlot === hourIndex;
 
                                 // Check availability status
-                                const anyPlayerAvailable = isInEvent && players.some(p => isPlayerAvailable(p, hourIndex));
+                                const availablePlayers = isInEvent ? players.filter(p => isPlayerAvailable(p, hourIndex)) : [];
+                                const anyPlayerAvailable = availablePlayers.length > 0;
+                                const twoOrMoreAvailable = availablePlayers.length >= 2;
                                 const mainPlayerUnavailable = slot && !players.find(p => p.id === slot.mainPlayerId && isPlayerAvailable(p, hourIndex));
                                 const subPlayerUnavailable = slot?.subPlayerId && !players.find(p => p.id === slot.subPlayerId && isPlayerAvailable(p, hourIndex));
-                                const hasAvailabilityWarning = mainPlayerUnavailable || subPlayerUnavailable;
 
-                                // Show indicator: empty slot but players available (🟡) or filled with unavailable player (⚠️)
+                                // Indicators:
+                                // 🟡 = empty slot but players available
+                                // 🔵 = has active but no sub, and 2+ players available  
+                                // ⚠️ = player scheduled outside their availability
                                 const showEmptyWarning = isInEvent && !slot && anyPlayerAvailable;
-                                const showUnavailableWarning = isInEvent && slot && hasAvailabilityWarning;
+                                const showMissingSubWarning = isInEvent && slot && !slot.subPlayerId && twoOrMoreAvailable;
 
                                 return (
                                     <div
@@ -453,9 +457,13 @@ export default function CaptainPage() {
                                                     {slot.mainPlayerName}
                                                     {mainPlayerUnavailable && <span title="Main player unavailable"> ⚠️</span>}
                                                 </div>
-                                                {slot.subPlayerName && (
+                                                {slot.subPlayerName ? (
                                                     <div style={{ fontSize: 9, color: "#1e293b" }}>
                                                         (Sub: {slot.subPlayerName}{subPlayerUnavailable && " ⚠️"})
+                                                    </div>
+                                                ) : showMissingSubWarning && (
+                                                    <div style={{ fontSize: 9, color: "#1e3a5f" }} title="No sub assigned but 2+ players available">
+                                                        +{availablePlayers.length - 1} dispo 🔵
                                                     </div>
                                                 )}
                                                 {isHovered && (
