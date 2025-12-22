@@ -288,11 +288,12 @@ export default function LeaderboardPage() {
                             authorTime: totdData?.authorTime || '',
                             thumbnailUrl: totdData?.thumbnailUrl || ''
                         };
-                    } else {
-                        // Fall back to totds lookup
+                    } else if (mapsCompleted > 0) {
+                        // Only show map if team has actually started (mapsCompleted > 0)
                         const currentMapNumber = TOTAL_MAPS - mapsCompleted;
                         mapInfo = getTotdInfo(currentMapNumber);
                     }
+                    // If mapsCompleted = 0 and no currentMapId, leave mapInfo as null
 
                     return {
                         id: teamId,
