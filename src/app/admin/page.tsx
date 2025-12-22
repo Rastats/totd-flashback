@@ -726,48 +726,6 @@ export default function AdminPage() {
                                             >
                                                 📅 Edit Availability
                                             </button>
-                                            {player.availability.length > 10 && (
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        // Quick dedupe/merge without opening modal
-                                                        const slotMap = new Map<string, any>();
-                                                        for (const slot of player.availability) {
-                                                            for (let h = slot.startHour; h < slot.endHour; h++) {
-                                                                const key = `${slot.date}-${h}`;
-                                                                const existing = slotMap.get(key);
-                                                                if (!existing || (existing.preference === 'ok' && slot.preference === 'preferred')) {
-                                                                    slotMap.set(key, { date: slot.date, startHour: h, endHour: h + 1, preference: slot.preference });
-                                                                }
-                                                            }
-                                                        }
-                                                        const hourSlots = Array.from(slotMap.values()).sort((a, b) =>
-                                                            a.date !== b.date ? a.date.localeCompare(b.date) : a.startHour - b.startHour
-                                                        );
-                                                        const merged: any[] = [];
-                                                        for (const slot of hourSlots) {
-                                                            const last = merged[merged.length - 1];
-                                                            if (last && last.date === slot.date && last.endHour === slot.startHour && last.preference === slot.preference) {
-                                                                last.endHour = slot.endHour;
-                                                            } else {
-                                                                merged.push({ ...slot, id: Math.random().toString() });
-                                                            }
-                                                        }
-                                                        const res = await fetch(`/api/admin/players/${player.id}`, {
-                                                            method: "PATCH",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ availability: merged }),
-                                                        });
-                                                        if (res.ok) {
-                                                            alert(`Fixed! ${player.availability.length} → ${merged.length} slots`);
-                                                            fetchData();
-                                                        }
-                                                    }}
-                                                    style={{ ...buttonStyle, background: "#5a3a2a", color: "#fbbf24" }}
-                                                >
-                                                    🔧 Fix {player.availability.length} slots
-                                                </button>
-                                            )}
                                             {player.status === "approved" && (
                                                 <div style={{ display: "flex", gap: 8 }}>
                                                     <select
