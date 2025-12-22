@@ -16,7 +16,7 @@ export const TEAMS = [
 export const JOKER_TEAM = { id: 'joker', name: 'Jokers', color: '#4c1d95' } as const;
 
 // All team IDs for type safety
-export const TEAM_IDS = ['team1', 'team2', 'team3', 'team4', 'joker'] as const;
+export const TEAM_IDS = [1, 2, 3, 4, 0] as const;
 
 // Currency Exchange Rates (Updated: 2025-12-18)
 export const CURRENCY_RATES = {

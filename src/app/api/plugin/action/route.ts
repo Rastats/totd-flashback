@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         const { data: player, error: playerError } = await supabase
             .from('players')
             .select('id, trackmania_name, team_id, status')
-            .eq('account_id', data.account_id)
+            .eq('trackmania_id', data.account_id)
             .eq('status', 'approved')
             .single();
 
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
                 const { error: updatePlayerError } = await supabase
                     .from('players')
                     .update({ team_id: teamId })
-                    .eq('account_id', data.account_id);
+                    .eq('trackmania_id', data.account_id);
                 
                 if (updatePlayerError) {
                     console.error('[Plugin Action] Failed to update joker team:', updatePlayerError);

@@ -174,7 +174,7 @@ function SlotModal({ isOpen, onClose, onSave, onDelete, players, day, initialSta
                             <option value="">-- Select --</option>
                             {players.map(p => (
                                 <option key={p.id} value={p.id}>
-                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === 0 ? "(Joker)" : ""}
                                 </option>
                             ))}
                         </select>
@@ -186,7 +186,7 @@ function SlotModal({ isOpen, onClose, onSave, onDelete, players, day, initialSta
                             <option value="">-- None --</option>
                             {players.filter(p => p.id !== mainPlayerId).map(p => (
                                 <option key={p.id} value={p.id}>
-                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === "joker" ? "(Joker)" : ""}
+                                    {isPlayerAvailable(p, checkHourIdx) ? "🟢" : "🔴"} {p.name} {p.teamAssignment === 0 ? "(Joker)" : ""}
                                 </option>
                             ))}
                         </select>
@@ -352,7 +352,7 @@ export default function CaptainPage() {
             <div style={{ padding: 20, maxWidth: 1400, margin: "0 auto", color: "#e2e8f0" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
                     <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>
-                        Captain Dashboard - {teamId === "joker" ? "🃏 Jokers" : `Team ${teamId.replace("team", "")}`}
+                        Captain Dashboard - {teamId === "0" ? "🃏 Jokers" : `Team ${teamId.replace("team", "")}`}
                     </h1>
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                         <select value={tzOffset} onChange={e => setTzOffset(parseFloat(e.target.value))} style={{ padding: 8, borderRadius: 6, background: "#334155", color: "#fff", border: "1px solid #475569" }}>
@@ -374,7 +374,7 @@ export default function CaptainPage() {
                                 // 1. Belongs to this team
                                 // 2. OR is showing on the schedule (even if Joker)
                                 const isActive = slots.some(s => s.mainPlayerId === p.id || s.subPlayerId === p.id);
-                                return p.teamAssignment === teamId || isActive;
+                                return p.teamAssignment === parseInt(teamId) || isActive;
                             }).map(p => {
                                 const activeCount = slots.filter(s => s.mainPlayerId === p.id).length;
                                 const subCount = slots.filter(s => s.subPlayerId === p.id).length;

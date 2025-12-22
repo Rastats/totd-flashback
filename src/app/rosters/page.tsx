@@ -9,7 +9,7 @@ interface RosterPlayer {
     id: string;
     trackmaniaName: string;
     discordUsername: string;
-    teamAssignment: "team1" | "team2" | "team3" | "team4" | "joker" | null;
+    teamAssignment: 0 | 1 | 2 | 3 | 4 | null;
     twitchUsername?: string;
     canStream: boolean;
     isCaptain?: boolean;
@@ -71,8 +71,9 @@ export default function RostersPage() {
         fetchData();
     }, []);
 
-    const getTeamPlayers = (team: string) => {
-        return players.filter(p => p.teamAssignment === team);
+    const getTeamPlayers = (teamId: number) => {
+        // Map 0 (joker) to null in API, but filter by teamId
+        return players.filter(p => p.teamAssignment === (teamId === 0 ? null : teamId));
     };
 
     if (loading) {
@@ -153,8 +154,8 @@ export default function RostersPage() {
                 {/* Teams Section */}
                 {TEAM_IDS.map(teamId => {
                     const teamPlayers = getTeamPlayers(teamId);
-                    const isJoker = teamId === "joker";
-                    const teamConfig = TEAMS.find(t => t.id === teamId);
+                    const isJoker = teamId === 0;
+                    const teamConfig = TEAMS.find(t => t.number === teamId);
 
                     return (
                         <div key={teamId} style={{

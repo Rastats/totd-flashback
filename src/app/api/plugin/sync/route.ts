@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         const { data: player, error: playerError } = await supabase
             .from('players')
             .select('id, trackmania_name, team_id, status')
-            .eq('account_id', syncData.account_id)
+            .eq('trackmania_id', syncData.account_id)
             .eq('status', 'approved')
             .single();
 

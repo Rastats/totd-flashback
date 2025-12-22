@@ -101,12 +101,8 @@ function slotsToIntervals(slots: SlotData[]): string[] {
 // Format team assignment (integer or string) to display label
 function formatTeamLabel(team: TeamAssignment, short = false): string {
     if (team === null || team === undefined) return short ? "" : "none";
-    if (team === 0 || team === 'joker') return short ? "J" : "Joker";
-    if (typeof team === 'number') return short ? `T${team}` : `Team ${team}`;
-    if (typeof team === 'string' && team.startsWith('team')) {
-        return short ? team.replace('team', 'T') : team.replace('team', 'Team ');
-    }
-    return String(team);
+    if (team === 0) return short ? "J" : "Joker";
+    return short ? `T${team}` : `Team ${team}`;
 }
 export default function AdminPage() {
     const [players, setPlayers] = useState<PlayerApplication[]>([]);
@@ -270,10 +266,10 @@ export default function AdminPage() {
     };
 
     const getTeamLabel = (team: TeamAssignment) => {
-        if (!team) return "—";
-        if (team === "joker") return "🃏 Joker";
-        const teamConfig = TEAMS.find(t => t.id === team);
-        return teamConfig ? teamConfig.name : team;
+        if (team === null || team === undefined) return "—";
+        if (team === 0) return "🃏 Joker";
+        const teamConfig = TEAMS.find(t => t.number === team);
+        return teamConfig ? teamConfig.name : `Team ${team}`;
     };
 
     // Get player hours as indices (for team suggestion)
@@ -331,8 +327,7 @@ export default function AdminPage() {
                 }
             });
 
-            // Return with string format for TeamAssignment compatibility
-            return { team: `team${teamId}` as TeamAssignment, gapsFilled, score: valuableHours };
+            return { team: teamId, gapsFilled, score: valuableHours };
         });
 
         // Sort by score (descending)
@@ -382,12 +377,9 @@ export default function AdminPage() {
             const team = player.teamAssignment;
             if (team === null || team === undefined) return;
             
-            // Convert string team to number if needed
-            const teamNum = typeof team === 'number' ? team :
-                team === 'joker' ? 0 :
-                team.startsWith('team') ? parseInt(team.replace('team', '')) : null;
-            
-            if (teamNum === null || !coverage[teamNum]) return;
+            // team_id is now always a number (0-4)
+            if (!coverage[team]) return;
+            const teamNum = team;
 
             player.availability.forEach((slot: any) => {
                 let hourIndex: number | undefined;
