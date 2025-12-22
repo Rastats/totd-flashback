@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ shields });
 }
 
-// POST: Activate shield for team
+// POST: Activate shield for team (starts cooldown immediately)
 export async function POST(request: Request) {
     try {
         const { team_id, type } = await request.json();
@@ -67,17 +67,23 @@ export async function POST(request: Request) {
         
         const supabase = getSupabaseAdmin();
         
-        // Calculate expiration time
+        // Calculate expiration time for shield
         const durationMs = type === 'big' ? 30 * 60 * 1000 : 10 * 60 * 1000; // 30 or 10 minutes
         const expiresAt = new Date(Date.now() + durationMs).toISOString();
         
-        // Update only shield columns (preserves all other team data)
+        // Cooldown starts NOW (at activation, not at expiration)
+        // Small shield = 1h cooldown, Big shield = 4h cooldown
+        const cooldownMs = type === 'big' ? COOLDOWN_BIG : COOLDOWN_SMALL;
+        const cooldownExpiresAt = new Date(Date.now() + cooldownMs).toISOString();
+        
+        // Update shield columns + start cooldown
         const { error } = await supabase
             .from('team_server_state')
             .update({
                 shield_active: true,
                 shield_type: type,
                 shield_expires_at: expiresAt,
+                shield_cooldown_expires_at: cooldownExpiresAt,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', team_id);
@@ -186,12 +192,11 @@ export async function PATCH(request: Request) {
     }
 }
 
-// DELETE: Deactivate shield (and start cooldown)
+// DELETE: Deactivate shield (cooldown was already started at activation)
 export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const teamId = searchParams.get('team_id');
-        const startCooldown = searchParams.get('start_cooldown') !== 'false'; // Default true
         
         if (!teamId) {
             return NextResponse.json({ error: 'team_id required' }, { status: 400 });
@@ -199,26 +204,13 @@ export async function DELETE(request: Request) {
         
         const supabase = getSupabaseAdmin();
         
-        // Get current shield type to determine cooldown duration
-        const { data: teamData } = await supabase
-            .from('team_server_state')
-            .select('shield_type')
-            .eq('team_id', parseInt(teamId))
-            .single();
-        
-        const shieldType = teamData?.shield_type || 'small';
-        const cooldownMs = shieldType === 'big' ? COOLDOWN_BIG : COOLDOWN_SMALL;
-        const cooldownExpiresAt = startCooldown 
-            ? new Date(Date.now() + cooldownMs).toISOString()
-            : null;
-        
+        // Deactivate shield but DON'T touch cooldown (it was started at activation)
         const { error } = await supabase
             .from('team_server_state')
             .update({
                 shield_active: false,
                 shield_type: null,
                 shield_expires_at: null,
-                shield_cooldown_expires_at: cooldownExpiresAt,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', parseInt(teamId));
@@ -231,11 +223,11 @@ export async function DELETE(request: Request) {
         await supabase.from('event_log').insert({
             event_type: 'shield_expired',
             team_id: parseInt(teamId),
-            message: `[Admin] Deactivated shield${startCooldown ? ` + started ${shieldType === 'big' ? '4h' : '1h'} cooldown` : ''}`,
-            metadata: { admin_action: true, cooldown_started: startCooldown }
+            message: `[Admin] Deactivated shield`,
+            metadata: { admin_action: true }
         });
         
-        return NextResponse.json({ success: true, cooldown_expires_at: cooldownExpiresAt });
+        return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }

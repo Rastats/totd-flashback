@@ -94,6 +94,7 @@ export default function EventControlPanel() {
     const [progressUpdate, setProgressUpdate] = useState<Record<number, string>>({});
     const [potCorrection, setPotCorrection] = useState<Record<number, string>>({});
     const [cooldownInput, setCooldownInput] = useState<Record<number, string>>({});
+    const [mapInput, setMapInput] = useState<Record<number, string>>({});
 
     const fetchData = useCallback(async () => {
         try {
@@ -246,8 +247,8 @@ export default function EventControlPanel() {
         }
     };
 
-    const deactivateShield = async (team_id: number, startCooldown: boolean = true) => {
-        const res = await fetch(`/api/admin/shields?team_id=${team_id}&start_cooldown=${startCooldown}`, { method: "DELETE" });
+    const deactivateShield = async (team_id: number) => {
+        const res = await fetch(`/api/admin/shields?team_id=${team_id}`, { method: "DELETE" });
         if (res.ok) fetchData();
     };
 
@@ -536,25 +537,23 @@ export default function EventControlPanel() {
                                         {shield?.cooldown_ms && shield.cooldown_ms > 0 ? (
                                             <div style={{ marginBottom: 8 }}>
                                                 <div style={{ color: "#fbbf24", fontSize: 11 }}>⏳ Cooldown</div>
-                                                <div style={{ fontFamily: "monospace", color: "#fbbf24", marginBottom: 4 }}>
+                                                <div style={{ fontFamily: "monospace", color: "#fbbf24", marginBottom: 6, fontSize: 14 }}>
                                                     {formatTime(shield.cooldown_ms)}
                                                 </div>
-                                                <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                                                    <button
-                                                        onClick={() => manageCooldown(team.number, 'reset')}
-                                                        style={{ ...buttonStyle, background: "#4a3a1a", color: "#fbbf24", flex: 1, fontSize: 9, padding: "3px 6px" }}
-                                                        title="Reset to full cooldown (1h small / 4h big)"
-                                                    >
-                                                        🔄 Reset
-                                                    </button>
-                                                    <button
-                                                        onClick={() => manageCooldown(team.number, 'cancel')}
-                                                        style={{ ...buttonStyle, background: "#4a2a2a", color: "#f87171", flex: 1, fontSize: 9, padding: "3px 6px" }}
-                                                        title="Cancel cooldown immediately"
-                                                    >
-                                                        ❌ Cancel
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => manageCooldown(team.number, 'reset')}
+                                                    style={{ ...buttonStyle, background: "#4a3a1a", color: "#fbbf24", width: "100%", fontSize: 11, marginBottom: 4 }}
+                                                    title="Reset to full cooldown (1h small / 4h big)"
+                                                >
+                                                    🔄 Reset Cooldown
+                                                </button>
+                                                <button
+                                                    onClick={() => manageCooldown(team.number, 'cancel')}
+                                                    style={{ ...buttonStyle, background: "#4a2a2a", color: "#f87171", width: "100%", fontSize: 11, marginBottom: 4 }}
+                                                    title="Cancel cooldown immediately"
+                                                >
+                                                    ❌ Cancel Cooldown
+                                                </button>
                                                 <div style={{ display: "flex", gap: 4 }}>
                                                     <input
                                                         type="number"
@@ -563,7 +562,7 @@ export default function EventControlPanel() {
                                                         placeholder="min"
                                                         value={cooldownInput[team.number] || ''}
                                                         onChange={(e) => setCooldownInput(prev => ({ ...prev, [team.number]: e.target.value }))}
-                                                        style={{ ...inputStyle, width: 50, padding: "3px 6px", fontSize: 10 }}
+                                                        style={{ ...inputStyle, flex: 1, padding: "6px 8px", fontSize: 12 }}
                                                     />
                                                     <button
                                                         onClick={() => {
@@ -574,7 +573,7 @@ export default function EventControlPanel() {
                                                                 alert('Enter 0-240 minutes');
                                                             }
                                                         }}
-                                                        style={{ ...buttonStyle, background: "#3a3a4a", color: "#94a3b8", fontSize: 9, padding: "3px 6px" }}
+                                                        style={{ ...buttonStyle, background: "#3a3a4a", color: "#94a3b8", fontSize: 11 }}
                                                     >
                                                         Set
                                                     </button>
@@ -677,6 +676,90 @@ export default function EventControlPanel() {
                                 >
                                     ⚠️ Reset to 0
                                 </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* ============= MAP VALIDATION SECTION ============= */}
+            <div style={sectionStyle}>
+                <h3 style={{ marginTop: 0, marginBottom: 16, color: "#38bdf8" }}>🗺️ Map Validation</h3>
+                <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 12 }}>
+                    Validate (add) or invalidate (remove) a map ID from a team's completed list.
+                </p>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                    {TEAMS.map(team => {
+                        const info = teams.find(t => t.team_id === team.number);
+                        return (
+                            <div key={team.number} style={{ 
+                                padding: 12, 
+                                background: "#1a1a2a", 
+                                borderRadius: 6,
+                                border: `1px solid ${team.color}`
+                            }}>
+                                <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
+                                <div style={{ fontSize: 12, marginBottom: 8 }}>
+                                    <span style={{ opacity: 0.6 }}>Maps:</span> <strong>{info?.maps_completed || 0}</strong> / 2000
+                                </div>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="2000"
+                                    placeholder="Map ID (1-2000)"
+                                    value={mapInput[team.number] || ''}
+                                    onChange={(e) => setMapInput(prev => ({ ...prev, [team.number]: e.target.value }))}
+                                    style={{ ...inputStyle, width: "100%", marginBottom: 8, boxSizing: "border-box" }}
+                                />
+                                <div style={{ display: "flex", gap: 4 }}>
+                                    <button
+                                        onClick={async () => {
+                                            const mapId = parseInt(mapInput[team.number] || '');
+                                            if (isNaN(mapId) || mapId < 1 || mapId > 2000) {
+                                                alert('Enter a valid map ID (1-2000)');
+                                                return;
+                                            }
+                                            const res = await fetch('/api/admin/maps', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ team_id: team.number, map_id: mapId })
+                                            });
+                                            const data = await res.json();
+                                            if (res.ok) {
+                                                setMapInput(prev => ({ ...prev, [team.number]: '' }));
+                                                fetchData();
+                                            } else {
+                                                alert(data.error || 'Failed to validate map');
+                                            }
+                                        }}
+                                        style={{ ...buttonStyle, background: "#1a3a2a", color: "#4ade80", flex: 1, fontSize: 11 }}
+                                    >
+                                        ✓ Validate
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const mapId = parseInt(mapInput[team.number] || '');
+                                            if (isNaN(mapId) || mapId < 1 || mapId > 2000) {
+                                                alert('Enter a valid map ID (1-2000)');
+                                                return;
+                                            }
+                                            const res = await fetch(`/api/admin/maps?team_id=${team.number}&map_id=${mapId}`, {
+                                                method: 'DELETE'
+                                            });
+                                            const data = await res.json();
+                                            if (res.ok) {
+                                                setMapInput(prev => ({ ...prev, [team.number]: '' }));
+                                                fetchData();
+                                            } else {
+                                                alert(data.error || 'Failed to invalidate map');
+                                            }
+                                        }}
+                                        style={{ ...buttonStyle, background: "#4a2a2a", color: "#f87171", flex: 1, fontSize: 11 }}
+                                    >
+                                        ✗ Invalidate
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
