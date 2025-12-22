@@ -34,10 +34,12 @@ export async function GET() {
         const supabase = getSupabaseAdmin();
 
         // Query all completed penalties grouped by penalty_id and penalty_team
+        // Only count donations >= £5 (real penalties, not £4.99 support-only)
         const { data, error } = await supabase
             .from('processed_donations')
-            .select('penalty_id, penalty_team')
-            .eq('penalty_completed', true);
+            .select('penalty_id, penalty_team, amount')
+            .eq('penalty_completed', true)
+            .gte('amount', 5);
 
         if (error) {
             console.error('[PenaltyHistory] Error:', error);
