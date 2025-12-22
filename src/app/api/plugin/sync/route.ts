@@ -105,9 +105,17 @@ export async function POST(request: NextRequest) {
         const syncData: SyncPayload = data;
 
         // Validate required fields
-        if (!syncData.account_id || !syncData.player_name) {
+        // Lightweight polls only need account_id, full syncs need player_name too
+        if (!syncData.account_id) {
             return NextResponse.json({ 
-                error: 'Missing required fields: account_id, player_name' 
+                error: 'Missing required field: account_id' 
+            }, { status: 400 });
+        }
+        
+        // For non-lightweight requests, player_name is required
+        if (!data.lightweight && !syncData.player_name) {
+            return NextResponse.json({ 
+                error: 'Missing required field: player_name' 
             }, { status: 400 });
         }
 
