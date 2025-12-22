@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     
     let query = supabase
         .from('team_server_state')
-        .select('team_id, shield_active, shield_type, shield_expires_at, shield_cooldown_expires_at, updated_at');
+        .select('team_id, shield_active, shield_type, shield_expires_at, shield_small_cooldown_expires_at, shield_big_cooldown_expires_at, updated_at');
     
     if (teamId) {
         query = query.eq('team_id', parseInt(teamId));
@@ -34,8 +34,12 @@ export async function GET(request: Request) {
             ? Math.max(0, new Date(team.shield_expires_at).getTime() - now)
             : 0;
         
-        const cooldownMs = team.shield_cooldown_expires_at
-            ? Math.max(0, new Date(team.shield_cooldown_expires_at).getTime() - now)
+        const smallCooldownMs = team.shield_small_cooldown_expires_at
+            ? Math.max(0, new Date(team.shield_small_cooldown_expires_at).getTime() - now)
+            : 0;
+        
+        const bigCooldownMs = team.shield_big_cooldown_expires_at
+            ? Math.max(0, new Date(team.shield_big_cooldown_expires_at).getTime() - now)
             : 0;
         
         return {
@@ -44,15 +48,15 @@ export async function GET(request: Request) {
             type: team.shield_type,
             remaining_ms: remainingMs,
             expires_at: team.shield_expires_at,
-            cooldown_ms: cooldownMs,
-            cooldown_expires_at: team.shield_cooldown_expires_at
+            small_cooldown_ms: smallCooldownMs,
+            big_cooldown_ms: bigCooldownMs
         };
     }) || [];
     
     return NextResponse.json({ shields });
 }
 
-// POST: Activate shield for team (starts cooldown immediately)
+// POST: Activate shield for team (starts cooldown for that type immediately)
 export async function POST(request: Request) {
     try {
         const { team_id, type } = await request.json();
@@ -67,25 +71,62 @@ export async function POST(request: Request) {
         
         const supabase = getSupabaseAdmin();
         
+        // Check if this type is on cooldown
+        const { data: teamData, error: fetchError } = await supabase
+            .from('team_server_state')
+            .select('shield_small_cooldown_expires_at, shield_big_cooldown_expires_at')
+            .eq('team_id', team_id)
+            .single();
+        
+        if (fetchError && fetchError.code !== 'PGRST116') {
+            return NextResponse.json({ error: fetchError.message }, { status: 500 });
+        }
+        
+        const now = Date.now();
+        if (type === 'small' && teamData?.shield_small_cooldown_expires_at) {
+            const cooldownEnd = new Date(teamData.shield_small_cooldown_expires_at).getTime();
+            if (cooldownEnd > now) {
+                const remainingMin = Math.ceil((cooldownEnd - now) / 60000);
+                return NextResponse.json({ 
+                    error: `Small shield on cooldown (${remainingMin} min remaining)` 
+                }, { status: 400 });
+            }
+        }
+        if (type === 'big' && teamData?.shield_big_cooldown_expires_at) {
+            const cooldownEnd = new Date(teamData.shield_big_cooldown_expires_at).getTime();
+            if (cooldownEnd > now) {
+                const remainingMin = Math.ceil((cooldownEnd - now) / 60000);
+                return NextResponse.json({ 
+                    error: `Big shield on cooldown (${remainingMin} min remaining)` 
+                }, { status: 400 });
+            }
+        }
+        
         // Calculate expiration time for shield
         const durationMs = type === 'big' ? 30 * 60 * 1000 : 10 * 60 * 1000; // 30 or 10 minutes
-        const expiresAt = new Date(Date.now() + durationMs).toISOString();
+        const expiresAt = new Date(now + durationMs).toISOString();
         
-        // Cooldown starts NOW (at activation, not at expiration)
-        // Small shield = 1h cooldown, Big shield = 4h cooldown
+        // Cooldown starts NOW for THIS TYPE ONLY
         const cooldownMs = type === 'big' ? COOLDOWN_BIG : COOLDOWN_SMALL;
-        const cooldownExpiresAt = new Date(Date.now() + cooldownMs).toISOString();
+        const cooldownExpiresAt = new Date(now + cooldownMs).toISOString();
         
-        // Update shield columns + start cooldown
+        // Update shield columns + start cooldown for this type
+        const updateData: any = {
+            shield_active: true,
+            shield_type: type,
+            shield_expires_at: expiresAt,
+            updated_at: new Date().toISOString()
+        };
+        
+        if (type === 'small') {
+            updateData.shield_small_cooldown_expires_at = cooldownExpiresAt;
+        } else {
+            updateData.shield_big_cooldown_expires_at = cooldownExpiresAt;
+        }
+        
         const { error } = await supabase
             .from('team_server_state')
-            .update({
-                shield_active: true,
-                shield_type: type,
-                shield_expires_at: expiresAt,
-                shield_cooldown_expires_at: cooldownExpiresAt,
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('team_id', team_id);
         
         if (error) {
@@ -96,7 +137,7 @@ export async function POST(request: Request) {
         await supabase.from('event_log').insert({
             event_type: 'shield_activated',
             team_id: team_id,
-            message: `[Admin] Activated ${type} shield (${type === 'big' ? '30' : '10'} min)`,
+            message: `[Admin] Activated ${type} shield (${type === 'big' ? '30' : '10'} min) + started ${type === 'big' ? '4h' : '1h'} cooldown`,
             metadata: { shield_type: type, admin_action: true }
         });
         
@@ -106,55 +147,47 @@ export async function POST(request: Request) {
     }
 }
 
-// PATCH: Manage shield cooldown
+// PATCH: Manage shield cooldown (specify which type)
 export async function PATCH(request: Request) {
     try {
-        const { team_id, action, custom_minutes } = await request.json();
+        const { team_id, shield_type, action, custom_minutes } = await request.json();
         
-        if (!team_id || !action) {
-            return NextResponse.json({ error: 'team_id and action required' }, { status: 400 });
+        if (!team_id || !shield_type || !action) {
+            return NextResponse.json({ error: 'team_id, shield_type, and action required' }, { status: 400 });
+        }
+        
+        if (!['small', 'big'].includes(shield_type)) {
+            return NextResponse.json({ error: 'shield_type must be small or big' }, { status: 400 });
         }
         
         const supabase = getSupabaseAdmin();
-        
-        // Get current team state to know shield type
-        const { data: teamData, error: fetchError } = await supabase
-            .from('team_server_state')
-            .select('shield_type')
-            .eq('team_id', team_id)
-            .single();
-        
-        if (fetchError) {
-            return NextResponse.json({ error: fetchError.message }, { status: 500 });
-        }
         
         let cooldownExpiresAt: string | null = null;
         let message = '';
         
         switch (action) {
             case 'reset': {
-                // Reset to full cooldown based on last shield type (default to small if unknown)
-                const type = teamData?.shield_type || 'small';
-                const cooldownMs = type === 'big' ? COOLDOWN_BIG : COOLDOWN_SMALL;
+                const cooldownMs = shield_type === 'big' ? COOLDOWN_BIG : COOLDOWN_SMALL;
                 cooldownExpiresAt = new Date(Date.now() + cooldownMs).toISOString();
-                message = `Reset cooldown to ${type === 'big' ? '4h' : '1h'}`;
+                message = `Reset ${shield_type} cooldown to ${shield_type === 'big' ? '4h' : '1h'}`;
                 break;
             }
             case 'cancel': {
                 cooldownExpiresAt = null;
-                message = 'Cooldown cancelled';
+                message = `${shield_type} cooldown cancelled`;
                 break;
             }
             case 'set': {
-                if (typeof custom_minutes !== 'number' || custom_minutes < 0 || custom_minutes > 240) {
-                    return NextResponse.json({ error: 'custom_minutes must be 0-240' }, { status: 400 });
+                const maxMin = shield_type === 'big' ? 240 : 60;
+                if (typeof custom_minutes !== 'number' || custom_minutes < 0 || custom_minutes > maxMin) {
+                    return NextResponse.json({ error: `custom_minutes must be 0-${maxMin}` }, { status: 400 });
                 }
                 if (custom_minutes === 0) {
                     cooldownExpiresAt = null;
-                    message = 'Cooldown set to 0 (cancelled)';
+                    message = `${shield_type} cooldown set to 0 (cancelled)`;
                 } else {
                     cooldownExpiresAt = new Date(Date.now() + custom_minutes * 60 * 1000).toISOString();
-                    message = `Cooldown set to ${custom_minutes} min`;
+                    message = `${shield_type} cooldown set to ${custom_minutes} min`;
                 }
                 break;
             }
@@ -162,12 +195,16 @@ export async function PATCH(request: Request) {
                 return NextResponse.json({ error: 'Invalid action (reset/cancel/set)' }, { status: 400 });
         }
         
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (shield_type === 'small') {
+            updateData.shield_small_cooldown_expires_at = cooldownExpiresAt;
+        } else {
+            updateData.shield_big_cooldown_expires_at = cooldownExpiresAt;
+        }
+        
         const { error: updateError } = await supabase
             .from('team_server_state')
-            .update({
-                shield_cooldown_expires_at: cooldownExpiresAt,
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('team_id', team_id);
         
         if (updateError) {
@@ -179,7 +216,7 @@ export async function PATCH(request: Request) {
             event_type: 'shield_cooldown_modified',
             team_id: team_id,
             message: `[Admin] ${message}`,
-            metadata: { action, custom_minutes, admin_action: true }
+            metadata: { shield_type, action, custom_minutes, admin_action: true }
         });
         
         return NextResponse.json({ 
@@ -192,7 +229,7 @@ export async function PATCH(request: Request) {
     }
 }
 
-// DELETE: Deactivate shield (cooldown was already started at activation)
+// DELETE: Deactivate shield (cooldowns remain untouched)
 export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -204,7 +241,7 @@ export async function DELETE(request: Request) {
         
         const supabase = getSupabaseAdmin();
         
-        // Deactivate shield but DON'T touch cooldown (it was started at activation)
+        // Deactivate shield but DON'T touch cooldowns
         const { error } = await supabase
             .from('team_server_state')
             .update({
@@ -232,3 +269,4 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+
