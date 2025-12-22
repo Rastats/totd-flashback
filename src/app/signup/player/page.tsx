@@ -100,7 +100,7 @@ export default function PlayerSignupPage() {
 
     if (success) {
         return (
-            <main style={{ maxWidth: 700, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
+            <main style={{ maxWidth: 850, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
                 <div style={{ textAlign: "center", padding: 40 }}>
                     <h1 style={{ color: "#4ade80", marginBottom: 16 }}>✅ Application Submitted!</h1>
                     <p style={{ marginBottom: 24 }}>Thank you for signing up as a player. The staff will review your application.</p>
@@ -111,7 +111,7 @@ export default function PlayerSignupPage() {
     }
 
     return (
-        <main style={{ maxWidth: 700, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
+        <main style={{ maxWidth: 850, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
             <Link href="/" style={{ opacity: 0.7, marginBottom: 16, display: "inline-block" }}>← Back to Home</Link>
 
             <h1 style={{ fontSize: 32, marginBottom: 8 }}>Sign up as player</h1>
