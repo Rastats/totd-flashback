@@ -28,7 +28,16 @@ export async function PATCH(
 
         const updateData: Record<string, unknown> = {};
         if (body.status) updateData.status = body.status;
-        if (body.teamAssignment) updateData.team_assignment = body.teamAssignment;
+        if (body.teamAssignment) {
+            // Convert "team1" -> 1, "team2" -> 2, etc. Store as integer
+            // "joker" stays as "joker" (null for team number)
+            if (body.teamAssignment === 'joker') {
+                updateData.team_assignment = 'joker';
+            } else {
+                const teamNum = parseInt(body.teamAssignment.replace('team', ''));
+                updateData.team_assignment = isNaN(teamNum) ? null : teamNum;
+            }
+        }
         if (typeof body.isCaptain === 'boolean') updateData.is_captain = body.isCaptain;
 
         const { error } = await supabaseAdmin
