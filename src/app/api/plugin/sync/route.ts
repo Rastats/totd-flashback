@@ -3,9 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 
-// Rate limiting
-const lastRequestTime: Map<string, number> = new Map();
-const MIN_REQUEST_INTERVAL = 5000; // 5s minimum between requests
 
 // Stale player cleanup - remove active/waiting players after 60s of no sync
 const STALE_TIMEOUT_MS = 60000; // 60 seconds
@@ -169,17 +166,9 @@ export async function POST(request: NextRequest) {
                 error: 'Missing required field: player_name' 
             }, { status: 400 });
         }
+        // NOTE: Rate limiting removed - doesn't work with serverless (each instance has its own Map)
+        // The plugin enforces its own rate limiting (10s minimum between syncs)
 
-        // Rate limiting per account
-        const now = Date.now();
-        const lastTime = lastRequestTime.get(syncData.account_id) || 0;
-        if (now - lastTime < MIN_REQUEST_INTERVAL) {
-            return NextResponse.json({ 
-                error: 'Rate limited',
-                retry_after_ms: MIN_REQUEST_INTERVAL - (now - lastTime)
-            }, { status: 429 });
-        }
-        lastRequestTime.set(syncData.account_id, now);
 
         const supabase = getSupabaseAdmin();
 
