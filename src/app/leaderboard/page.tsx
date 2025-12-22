@@ -259,7 +259,18 @@ export default function LeaderboardPage() {
         penalties: { penaltyId: number; penaltyName: string; team1: number; team2: number; team3: number; team4: number; total: number }[];
         totals: { team1: number; team2: number; team3: number; team4: number; total: number };
     }>({
-        penalties: [],
+        penalties: [
+            { penaltyId: 1, penaltyName: 'Russian Roulette', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 2, penaltyName: 'Camera Shuffle', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 3, penaltyName: 'Cursed Controller', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 4, penaltyName: 'Clean Run Only', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 5, penaltyName: 'Pedal to the Metal', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 6, penaltyName: 'Tunnel Vision', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 7, penaltyName: 'Player Switch', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 8, penaltyName: "Can't Turn Right", team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 9, penaltyName: 'AT or Bust', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+            { penaltyId: 10, penaltyName: 'Back to the Future', team1: 0, team2: 0, team3: 0, team4: 0, total: 0 },
+        ],
         totals: { team1: 0, team2: 0, team3: 0, team4: 0, total: 0 }
     });
 
