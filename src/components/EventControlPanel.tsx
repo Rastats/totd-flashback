@@ -93,6 +93,7 @@ export default function EventControlPanel() {
     const [newVersion, setNewVersion] = useState("");
     const [progressUpdate, setProgressUpdate] = useState<Record<number, string>>({});
     const [potCorrection, setPotCorrection] = useState<Record<number, string>>({});
+    const [cooldownInput, setCooldownInput] = useState<Record<number, string>>({});
 
     const fetchData = useCallback(async () => {
         try {
@@ -245,9 +246,29 @@ export default function EventControlPanel() {
         }
     };
 
-    const deactivateShield = async (team_id: number) => {
-        const res = await fetch(`/api/admin/shields?team_id=${team_id}`, { method: "DELETE" });
+    const deactivateShield = async (team_id: number, startCooldown: boolean = true) => {
+        const res = await fetch(`/api/admin/shields?team_id=${team_id}&start_cooldown=${startCooldown}`, { method: "DELETE" });
         if (res.ok) fetchData();
+    };
+
+    // ============= COOLDOWN MANAGEMENT =============
+    const manageCooldown = async (team_id: number, action: 'reset' | 'cancel' | 'set', customMinutes?: number) => {
+        const res = await fetch("/api/admin/shields", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                team_id, 
+                action, 
+                custom_minutes: action === 'set' ? customMinutes : undefined 
+            })
+        });
+        if (res.ok) {
+            setCooldownInput(prev => ({ ...prev, [team_id]: '' }));
+            fetchData();
+        } else {
+            const err = await res.json();
+            alert(err.error || 'Failed to update cooldown');
+        }
     };
 
     // ============= PLAYER SWITCH =============
@@ -515,8 +536,48 @@ export default function EventControlPanel() {
                                         {shield?.cooldown_ms && shield.cooldown_ms > 0 ? (
                                             <div style={{ marginBottom: 8 }}>
                                                 <div style={{ color: "#fbbf24", fontSize: 11 }}>⏳ Cooldown</div>
-                                                <div style={{ fontFamily: "monospace", color: "#fbbf24" }}>
+                                                <div style={{ fontFamily: "monospace", color: "#fbbf24", marginBottom: 4 }}>
                                                     {formatTime(shield.cooldown_ms)}
+                                                </div>
+                                                <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                                                    <button
+                                                        onClick={() => manageCooldown(team.number, 'reset')}
+                                                        style={{ ...buttonStyle, background: "#4a3a1a", color: "#fbbf24", flex: 1, fontSize: 9, padding: "3px 6px" }}
+                                                        title="Reset to full cooldown (1h small / 4h big)"
+                                                    >
+                                                        🔄 Reset
+                                                    </button>
+                                                    <button
+                                                        onClick={() => manageCooldown(team.number, 'cancel')}
+                                                        style={{ ...buttonStyle, background: "#4a2a2a", color: "#f87171", flex: 1, fontSize: 9, padding: "3px 6px" }}
+                                                        title="Cancel cooldown immediately"
+                                                    >
+                                                        ❌ Cancel
+                                                    </button>
+                                                </div>
+                                                <div style={{ display: "flex", gap: 4 }}>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="240"
+                                                        placeholder="min"
+                                                        value={cooldownInput[team.number] || ''}
+                                                        onChange={(e) => setCooldownInput(prev => ({ ...prev, [team.number]: e.target.value }))}
+                                                        style={{ ...inputStyle, width: 50, padding: "3px 6px", fontSize: 10 }}
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            const mins = parseInt(cooldownInput[team.number] || '0');
+                                                            if (!isNaN(mins) && mins >= 0 && mins <= 240) {
+                                                                manageCooldown(team.number, 'set', mins);
+                                                            } else {
+                                                                alert('Enter 0-240 minutes');
+                                                            }
+                                                        }}
+                                                        style={{ ...buttonStyle, background: "#3a3a4a", color: "#94a3b8", fontSize: 9, padding: "3px 6px" }}
+                                                    >
+                                                        Set
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : null}
