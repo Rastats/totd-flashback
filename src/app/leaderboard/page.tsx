@@ -290,9 +290,10 @@ export default function LeaderboardPage() {
                     const teamId = t.id;
                     const mapsCompleted = t.mapsCompleted || 0;
 
-                    // Get current map info from API first, fall back to totds lookup
+                    // Get current map info from API - ONLY if we have real data from plugin
+                    // If currentMapId is NULL or no active player, show "No map data"
                     let mapInfo = null;
-                    if (t.currentMapId && t.currentMapName) {
+                    if (t.currentMapId && t.currentMapName && t.activePlayer) {
                         // Use data from API (synced from plugin)
                         const totdData = getTotdInfo(t.currentMapId);
                         mapInfo = {
@@ -304,12 +305,8 @@ export default function LeaderboardPage() {
                             authorTime: totdData?.authorTime || '',
                             thumbnailUrl: totdData?.thumbnailUrl || ''
                         };
-                    } else if (mapsCompleted > 0) {
-                        // Only show map if team has actually started (mapsCompleted > 0)
-                        const currentMapNumber = TOTAL_MAPS - mapsCompleted;
-                        mapInfo = getTotdInfo(currentMapNumber);
                     }
-                    // If mapsCompleted = 0 and no currentMapId, leave mapInfo as null
+                    // No fallback - if no currentMapId from plugin, show "No map data"
 
                     return {
                         id: teamId,
