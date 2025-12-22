@@ -1,22 +1,22 @@
 // src/lib/timezones.ts
 
-// Ordered west to east
+// Ordered west to east - December (winter) UTC offsets only
 export const COMMON_TIMEZONES = [
-    { value: 'America/Los_Angeles', label: 'America/Los_Angeles (PST/PDT)' },
-    { value: 'America/Denver', label: 'America/Denver (MST/MDT)' },
-    { value: 'America/Chicago', label: 'America/Chicago (CST/CDT)' },
-    { value: 'America/New_York', label: 'America/New_York (EST/EDT)' },
-    { value: 'America/Toronto', label: 'America/Toronto (EST/EDT)' },
-    { value: 'America/Sao_Paulo', label: 'America/Sao_Paulo (BRT)' },
-    { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
-    { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
-    { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK)' },
-    { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
-    { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
-    { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
-    { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT)' },
-    { value: 'Australia/Sydney', label: 'Australia/Sydney (AEST/AEDT)' },
-    { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST/NZDT)' },
+    { value: 'America/Los_Angeles', label: 'America/Los_Angeles (UTC-8)' },
+    { value: 'America/Denver', label: 'America/Denver (UTC-7)' },
+    { value: 'America/Chicago', label: 'America/Chicago (UTC-6)' },
+    { value: 'America/New_York', label: 'America/New_York (UTC-5)' },
+    { value: 'America/Toronto', label: 'America/Toronto (UTC-5)' },
+    { value: 'America/Sao_Paulo', label: 'America/Sao_Paulo (UTC-3)' },
+    { value: 'Europe/London', label: 'Europe/London (UTC+0)' },
+    { value: 'Europe/Paris', label: 'Europe/Paris (UTC+1)' },
+    { value: 'Europe/Moscow', label: 'Europe/Moscow (UTC+3)' },
+    { value: 'Asia/Dubai', label: 'Asia/Dubai (UTC+4)' },
+    { value: 'Asia/Shanghai', label: 'Asia/Shanghai (UTC+8)' },
+    { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+9)' },
+    { value: 'Asia/Singapore', label: 'Asia/Singapore (UTC+8)' },
+    { value: 'Australia/Sydney', label: 'Australia/Sydney (UTC+11)' },
+    { value: 'Pacific/Auckland', label: 'Pacific/Auckland (UTC+13)' },
 ];
 
 export const LANGUAGES = [
