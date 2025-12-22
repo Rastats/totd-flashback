@@ -54,63 +54,6 @@ function getLocalTimeForHourIndex(hourIndex: number, tzOffset: number): { day: n
     return { day: localDay, hour: localHour };
 }
 
-// Convert availability slots (day-based) to hour indices
-function slotsToHourIndices(slots: AvailabilitySlot[]): Set<number> {
-    const indices = new Set<number>();
-    for (const slot of slots) {
-        const day = parseInt(slot.date.split('-')[2]);
-        for (let h = slot.startHour; h < slot.endHour; h++) {
-            // Slots are stored in Paris timezone (CET = UTC+1)
-            const index = getHourIndexForLocal(day, h, 1);
-            if (index >= 0 && index <= 68) {
-                indices.add(index);
-            }
-        }
-    }
-    return indices;
-}
-
-// Convert hour indices back to slots (for saving, always in Paris time)
-function hourIndicesToSlots(indices: Set<number>): AvailabilitySlot[] {
-    const slots: AvailabilitySlot[] = [];
-    const dayHours: Record<number, number[]> = {};
-    
-    for (const index of indices) {
-        const { day, hour } = getLocalTimeForHourIndex(index, 1); // Paris time
-        if (!dayHours[day]) dayHours[day] = [];
-        dayHours[day].push(hour);
-    }
-    
-    for (const [dayStr, hours] of Object.entries(dayHours)) {
-        const day = parseInt(dayStr);
-        const date = `2025-12-${day.toString().padStart(2, '0')}`;
-        const sortedHours = hours.sort((a, b) => a - b);
-        
-        let startHour = sortedHours[0];
-        let endHour = startHour + 1;
-        
-        for (let i = 1; i < sortedHours.length; i++) {
-            if (sortedHours[i] === endHour) {
-                endHour++;
-            } else {
-                slots.push({ date, startHour, endHour, preference: "available" });
-                startHour = sortedHours[i];
-                endHour = startHour + 1;
-            }
-        }
-        slots.push({ date, startHour, endHour, preference: "available" });
-    }
-    
-    return slots;
-}
-
-interface AvailabilitySlot {
-    date: string;
-    startHour: number;
-    endHour: number;
-    preference: string;
-}
-
 interface PlayerInfo {
     id: string;
     name: string;
@@ -141,8 +84,10 @@ export default function MyAvailabilityPage() {
                     const data = await res.json();
                     setPlayer(data.player);
                     
-                    // Convert availability slots to hour indices
-                    const indices = slotsToHourIndices(data.availability || []);
+                    // API returns hourIndex directly for each slot
+                    const indices = new Set<number>(
+                        (data.availability || []).map((s: { hourIndex: number }) => s.hourIndex)
+                    );
                     setSelectedIndices(indices);
                 } else {
                     const data = await res.json();
@@ -191,11 +136,16 @@ export default function MyAvailabilityPage() {
         setSuccess(false);
         
         try {
-            const slots = hourIndicesToSlots(selectedIndices);
+            // Send hour indices directly in the new format
+            const availability = Array.from(selectedIndices).map(hourIndex => ({
+                hourIndex,
+                preference: 'ok'
+            }));
+            
             const res = await fetch("/api/my-availability", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ availability: slots })
+                body: JSON.stringify({ availability })
             });
             
             if (res.ok) {
