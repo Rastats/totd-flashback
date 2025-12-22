@@ -1,18 +1,11 @@
 "use client";
 // src/app/signup/player/page.tsx
 
-import { useState, useMemo, FormEvent, useEffect, useRef } from "react";
+import { useState, FormEvent } from "react";
 import Link from "next/link";
-import { COMMON_TIMEZONES, LANGUAGES, getEventDays, getHoursOptions, EVENT_START_UTC, EVENT_END_UTC } from "@/lib/timezones";
-import type { AvailabilitySlot, PreferenceLevel } from "@/lib/types";
+import { COMMON_TIMEZONES, LANGUAGES } from "@/lib/timezones";
+import AvailabilityGrid from "@/components/AvailabilityGrid";
 
-interface AvailabilityEntry {
-    id: string;
-    date: string;
-    startHour: number;
-    endHour: number;
-    preference: PreferenceLevel;
-}
 
 const inputStyle = {
     width: "100%",
@@ -64,251 +57,19 @@ export default function PlayerSignupPage() {
         consentPublicDisplay: false,
     });
 
-    const [availability, setAvailability] = useState<AvailabilityEntry[]>([]);
+    const [selectedHourIndices, setSelectedHourIndices] = useState<number[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
-
-    const eventDays = useMemo(() => getEventDays(formData.timezone), [formData.timezone]);
-    const hoursOptions = getHoursOptions();
-    const previousTimezone = useRef<string>("");
-
-    // Convert availability slots when timezone changes (with proper day-crossing support)
-    useEffect(() => {
-        const oldTz = previousTimezone.current;
-        const newTz = formData.timezone;
-
-        if (oldTz && newTz && oldTz !== newTz && availability.length > 0) {
-            const newEventDays = getEventDays(newTz);
-
-            // Convert each slot's date+hours from old timezone to new timezone
-            const convertedSlots: AvailabilityEntry[] = [];
-
-            for (const slot of availability) {
-                const [year, month, day] = slot.date.split('-').map(Number);
-
-                // Create a "wall clock" time in the old timezone and find its UTC equivalent
-                // We do this by finding what UTC time displays as the slot's start hour in oldTz
-                // Approach: create a Date, format it in oldTz, and adjust until it matches
-
-                // Step 1: Estimate UTC time for this slot's start hour in old timezone
-                // Create a date at midnight UTC for this day
-                const baseUtc = new Date(Date.UTC(year, month - 1, day, slot.startHour, 0, 0));
-
-                // Get what hour this UTC time shows in the old timezone
-                const oldTzFormatter = new Intl.DateTimeFormat('en-US', {
-                    timeZone: oldTz,
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    hour12: false,
-                });
-
-                // Parse the old timezone display to find the offset
-                const oldParts = oldTzFormatter.formatToParts(baseUtc);
-                const oldDisplayHour = parseInt(oldParts.find(p => p.type === 'hour')?.value || '0');
-                const oldDisplayDay = parseInt(oldParts.find(p => p.type === 'day')?.value || '1');
-
-                // Calculate hours difference: if oldTz shows 12 when we set UTC to slot.startHour,
-                // we need to adjust by (slot.startHour - oldDisplayHour)
-                const hourAdjustment = slot.startHour - oldDisplayHour;
-                const dayAdjustment = day - oldDisplayDay;
-
-                // Create the actual UTC time that corresponds to this slot in the old timezone
-                const startUtc = new Date(baseUtc.getTime() + (hourAdjustment + dayAdjustment * 24) * 60 * 60 * 1000);
-                const endUtc = new Date(startUtc.getTime() + (slot.endHour - slot.startHour) * 60 * 60 * 1000);
-
-                // Now convert this UTC time to the new timezone
-                const newTzFormatter = new Intl.DateTimeFormat('en-US', {
-                    timeZone: newTz,
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    hour12: false,
-                });
-
-                const startParts = newTzFormatter.formatToParts(startUtc);
-                const endParts = newTzFormatter.formatToParts(endUtc);
-
-                const newStartYear = parseInt(startParts.find(p => p.type === 'year')?.value || '2025');
-                const newStartMonth = parseInt(startParts.find(p => p.type === 'month')?.value || '1');
-                const newStartDay = parseInt(startParts.find(p => p.type === 'day')?.value || '1');
-                const newStartHour = parseInt(startParts.find(p => p.type === 'hour')?.value || '0');
-
-                const newEndYear = parseInt(endParts.find(p => p.type === 'year')?.value || '2025');
-                const newEndMonth = parseInt(endParts.find(p => p.type === 'month')?.value || '1');
-                const newEndDay = parseInt(endParts.find(p => p.type === 'day')?.value || '1');
-                const newEndHour = parseInt(endParts.find(p => p.type === 'hour')?.value || '0');
-
-                const newStartDate = `${newStartYear}-${String(newStartMonth).padStart(2, '0')}-${String(newStartDay).padStart(2, '0')}`;
-                const newEndDate = `${newEndYear}-${String(newEndMonth).padStart(2, '0')}-${String(newEndDay).padStart(2, '0')}`;
-
-                // Check if this slot still falls within the event days for the new timezone
-                const startDayInfo = newEventDays.find(d => d.date === newStartDate);
-
-                if (startDayInfo) {
-                    // If end is on a different day than start, we need to split or clamp
-                    if (newStartDate === newEndDate) {
-                        // Same day - simple case
-                        convertedSlots.push({
-                            ...slot,
-                            date: newStartDate,
-                            startHour: Math.max(startDayInfo.startHour, newStartHour),
-                            endHour: Math.min(startDayInfo.endHour, newEndHour === 0 ? 24 : newEndHour),
-                        });
-                    } else {
-                        // Slot crosses midnight in new timezone - clamp to end of start day
-                        convertedSlots.push({
-                            ...slot,
-                            date: newStartDate,
-                            startHour: Math.max(startDayInfo.startHour, newStartHour),
-                            endHour: startDayInfo.endHour, // End at midnight
-                        });
-
-                        // Add continuation on new day if it exists in event days
-                        const endDayInfo = newEventDays.find(d => d.date === newEndDate);
-                        if (endDayInfo && newEndHour > endDayInfo.startHour) {
-                            convertedSlots.push({
-                                id: `${slot.id}-cont`,
-                                date: newEndDate,
-                                startHour: endDayInfo.startHour,
-                                endHour: Math.min(endDayInfo.endHour, newEndHour === 0 ? 24 : newEndHour),
-                                preference: slot.preference,
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Filter out invalid slots (where end <= start)
-            const validSlots = convertedSlots.filter(s => s.endHour > s.startHour);
-
-            setAvailability(validSlots);
-        }
-
-        previousTimezone.current = newTz;
-    }, [formData.timezone]);
-
-    const addAvailabilitySlot = (date: string) => {
-        // Find the day to get valid start/end hours
-        const day = eventDays.find(d => d.date === date);
-        if (!day) return;
-
-        const slotsOnDay = availability.filter(s => s.date === date).sort((a, b) => a.startHour - b.startHour);
-
-        let newStart: number | null = null;
-        let newEnd: number | null = null;
-
-        if (slotsOnDay.length > 0) {
-            // First try: 1h after the end of the latest slot
-            const lastSlot = slotsOnDay[slotsOnDay.length - 1];
-            if (lastSlot.endHour + 1 < day.endHour) {
-                newStart = lastSlot.endHour + 1;
-                newEnd = Math.min(newStart + 1, day.endHour);
-            }
-
-            // If no room after last slot, search for gaps
-            if (newStart === null) {
-                // Check if we can fit before the first slot
-                if (slotsOnDay[0].startHour >= day.startHour + 1) {
-                    newStart = day.startHour;
-                    newEnd = Math.min(newStart + 1, slotsOnDay[0].startHour);
-                }
-            }
-
-            // Check gaps between slots
-            if (newStart === null) {
-                for (let i = 0; i < slotsOnDay.length - 1; i++) {
-                    const gapStart = slotsOnDay[i].endHour;
-                    const gapEnd = slotsOnDay[i + 1].startHour;
-                    if (gapEnd - gapStart >= 1) {
-                        newStart = gapStart;
-                        newEnd = Math.min(gapStart + 1, gapEnd);
-                        break;
-                    }
-                }
-            }
-
-            if (newStart === null || newEnd === null) {
-                setError("No more available time on this day");
-                return;
-            }
-        } else {
-            // No existing slots - add first 1h slot at day start
-            newStart = day.startHour;
-            newEnd = Math.min(newStart + 1, day.endHour);
-        }
-
-        // Final check for overlap
-        const hasOverlap = slotsOnDay.some(s =>
-            (newStart! < s.endHour && newEnd! > s.startHour)
-        );
-
-        if (hasOverlap || newEnd <= newStart) {
-            setError("No more available time on this day");
-            return;
-        }
-
-        setError("");
-        setAvailability([
-            ...availability,
-            {
-                id: `${Date.now()}-${Math.random()}`,
-                date,
-                startHour: newStart,
-                endHour: newEnd,
-                preference: "ok",
-            },
-        ]);
-    };
-
-    const updateSlot = (id: string, field: keyof AvailabilityEntry, value: number | string) => {
-        let updatedSlots = availability.map((s) => (s.id === id ? { ...s, [field]: value } : s));
-
-        // If changing startHour, always adjust endHour to be 1h after (user can then modify if needed)
-        const updatedSlot = updatedSlots.find(s => s.id === id)!;
-        if (field === "startHour") {
-            updatedSlots = updatedSlots.map(s =>
-                s.id === id ? { ...s, endHour: (value as number) + 1 } : s
-            );
-        }
-        // If changing endHour, ensure it's > startHour
-        if (field === "endHour" && (value as number) <= updatedSlot.startHour) {
-            setError("End hour must be after start hour");
-            return;
-        }
-
-        // Check for overlaps after update
-        const finalSlot = updatedSlots.find(s => s.id === id)!;
-        const otherSlotsOnDay = updatedSlots.filter(s => s.date === finalSlot.date && s.id !== id);
-        const hasOverlap = otherSlotsOnDay.some(s =>
-            (finalSlot.startHour < s.endHour && finalSlot.endHour > s.startHour)
-        );
-
-        if (hasOverlap) {
-            setError("This slot overlaps with another slot on the same day");
-            return; // Block the update
-        }
-
-        setError("");
-        setAvailability(updatedSlots);
-    };
-
-    const removeSlot = (id: string) => {
-        setError("");
-        setAvailability(availability.filter((s) => s.id !== id));
-    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
         setError("");
 
-        // Validate availability - must have at least one slot
-        if (availability.length === 0) {
-            setError("Please add at least one availability slot. We need to know when you can play!");
+        // Validate availability - must have at least one hour selected
+        if (selectedHourIndices.length === 0) {
+            setError("Please select at least one availability slot. We need to know when you can play!");
             setSubmitting(false);
             return;
         }
@@ -319,12 +80,8 @@ export default function PlayerSignupPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     formData,
-                    availability: availability.map(({ date, startHour, endHour, preference }) => ({
-                        date,
-                        startHour,
-                        endHour,
-                        preference,
-                    })),
+                    // Send hour_indices directly instead of legacy slots
+                    hour_indices: selectedHourIndices.sort((a, b) => a - b),
                 }),
             });
 
@@ -428,85 +185,25 @@ export default function PlayerSignupPage() {
                         )}
                     </div>
 
-                    {/* AVAILABILITY - Right after timezone */}
+                    {/* AVAILABILITY GRID - Right after timezone */}
                     {formData.timezone && (
                         <div style={{ marginBottom: 16, padding: 16, background: "#0a0a12", borderRadius: 8, border: "1px solid #2a2a3a" }}>
-                            <label style={labelStyle}>Availability (in your timezone: {formData.timezone})</label>
-                            {eventDays.map((day) => (
-                                <div key={day.date} style={{ marginBottom: 16 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                                        <strong style={{ fontSize: 14 }}>{day.label}</strong>
-                                        <button
-                                            type="button"
-                                            onClick={() => addAvailabilitySlot(day.date)}
-                                            style={{
-                                                padding: "4px 10px",
-                                                background: "#2a3a4a",
-                                                border: "1px solid #3a4a5a",
-                                                borderRadius: 4,
-                                                color: "#fff",
-                                                cursor: "pointer",
-                                                fontSize: 12,
-                                            }}
-                                        >
-                                            + Add slot
-                                        </button>
-                                    </div>
-                                    {availability
-                                        .filter((s) => s.date === day.date)
-                                        .sort((a, b) => a.startHour - b.startHour)
-                                        .map((slot) => (
-                                            <div key={slot.id} style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
-                                                <select
-                                                    value={slot.startHour}
-                                                    onChange={(e) => updateSlot(slot.id, "startHour", parseInt(e.target.value))}
-                                                    style={{ ...inputStyle, width: "auto", padding: "6px 8px", fontSize: 13 }}
-                                                >
-                                                    {hoursOptions.filter(h => h.value >= day.startHour && h.value < day.endHour).map((h) => (
-                                                        <option key={h.value} value={h.value}>{h.label}</option>
-                                                    ))}
-                                                </select>
-                                                <span>→</span>
-                                                <select
-                                                    value={slot.endHour}
-                                                    onChange={(e) => updateSlot(slot.id, "endHour", parseInt(e.target.value))}
-                                                    style={{ ...inputStyle, width: "auto", padding: "6px 8px", fontSize: 13 }}
-                                                >
-                                                    {hoursOptions.filter(h => h.value > slot.startHour && h.value <= day.endHour).map((h) => (
-                                                        <option key={h.value} value={h.value}>{h.label}</option>
-                                                    ))}
-                                                </select>
-                                                <select
-                                                    value={slot.preference}
-                                                    onChange={(e) => updateSlot(slot.id, "preference", e.target.value)}
-                                                    style={{ ...inputStyle, width: "auto", padding: "6px 8px", fontSize: 13 }}
-                                                >
-                                                    <option value="ok">OK</option>
-                                                    <option value="preferred">Preferred</option>
-                                                </select>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeSlot(slot.id)}
-                                                    style={{
-                                                        padding: "4px 8px",
-                                                        background: "#4a2a2a",
-                                                        border: "1px solid #6a3a3a",
-                                                        borderRadius: 4,
-                                                        color: "#f87171",
-                                                        cursor: "pointer",
-                                                        fontSize: 12,
-                                                    }}
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    {availability.filter((s) => s.date === day.date).length === 0 && (
-                                        <p style={{ fontSize: 12, opacity: 0.5, marginTop: 4 }}>No slots added</p>
-                                    )}
-                                </div>
-                            ))}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                            <label style={labelStyle}>Availability (click to toggle) - {formData.timezone}</label>
+                            <p style={{ fontSize: 12, opacity: 0.6, marginBottom: 12 }}>
+                                Click on the hours when you&apos;re available. Times are shown in your timezone.
+                            </p>
+                            <AvailabilityGrid
+                                timezone={formData.timezone}
+                                selectedHours={selectedHourIndices}
+                                onToggle={(hourIndex) => {
+                                    setSelectedHourIndices(prev =>
+                                        prev.includes(hourIndex)
+                                            ? prev.filter(h => h !== hourIndex)
+                                            : [...prev, hourIndex]
+                                    );
+                                }}
+                            />
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
                                 <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                                     <input
                                         type="checkbox"
