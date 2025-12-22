@@ -206,7 +206,12 @@ export async function POST(request: NextRequest) {
             totalAmount: 0,
             currency: 'GBP',
             goal: 2000,
-            teamPots: [0, 0, 0, 0],
+            teamPots: [
+                { team_id: 1, pot_amount: 0 },
+                { team_id: 2, pot_amount: 0 },
+                { team_id: 3, pot_amount: 0 },
+                { team_id: 4, pot_amount: 0 }
+            ],
             recentDonations: []
         };
 
