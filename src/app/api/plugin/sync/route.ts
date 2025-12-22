@@ -158,28 +158,30 @@ export async function POST(request: NextRequest) {
         }
 
         // ============================================
-        // 2. Write plugin state to team_plugin_state
+        // 2. Write plugin state to team_plugin_state (skip for lightweight polls)
         // ============================================
-        const { error: upsertError } = await supabase
-            .from('team_plugin_state')
-            .upsert({
-                account_id: syncData.account_id,
-                player_name: syncData.player_name,
-                current_map_id: syncData.current_map_id || null,
-                current_map_index: syncData.current_map_index || null,
-                current_map_name: syncData.current_map_name || null,
-                current_map_author: syncData.current_map_author || null,
-                mode: syncData.mode || 'Normal',
-                session_elapsed_ms: syncData.session_elapsed_ms || 0,
-                plugin_version: syncData.plugin_version || null,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'account_id'
-            });
+        if (!data.lightweight && syncData.player_name) {
+            const { error: upsertError } = await supabase
+                .from('team_plugin_state')
+                .upsert({
+                    account_id: syncData.account_id,
+                    player_name: syncData.player_name,
+                    current_map_id: syncData.current_map_id || null,
+                    current_map_index: syncData.current_map_index || null,
+                    current_map_name: syncData.current_map_name || null,
+                    current_map_author: syncData.current_map_author || null,
+                    mode: syncData.mode || 'Normal',
+                    session_elapsed_ms: syncData.session_elapsed_ms || 0,
+                    plugin_version: syncData.plugin_version || null,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'account_id'
+                });
 
-        if (upsertError) {
-            console.error('[Plugin Sync] Upsert error:', upsertError);
-            return NextResponse.json({ error: 'Database error' }, { status: 500 });
+            if (upsertError) {
+                console.error('[Plugin Sync] Upsert error:', upsertError);
+                return NextResponse.json({ error: 'Database error' }, { status: 500 });
+            }
         }
 
         // ============================================
