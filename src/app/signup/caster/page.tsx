@@ -101,7 +101,7 @@ export default function CasterSignupPage() {
     }
 
     return (
-        <main style={{ maxWidth: 700, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
+        <main style={{ maxWidth: 850, margin: "0 auto", padding: "48px 16px", fontFamily: "system-ui" }}>
             <Link href="/" style={{ opacity: 0.7, marginBottom: 16, display: "inline-block" }}>← Back to Home</Link>
 
             <h1 style={{ fontSize: 32, marginBottom: 8 }}>Sign Up as Caster</h1>
