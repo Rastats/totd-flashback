@@ -20,6 +20,30 @@ interface SyncPayload {
 }
 
 /**
+ * Parse team_assignment which can be:
+ * - Integer: 1, 2, 3, 4
+ * - String: "team1", "team2", "team3", "team4" 
+ * - String: "joker" (returns null, joker must set team_id)
+ */
+function parseTeamId(teamAssignment: any): number | null {
+    if (typeof teamAssignment === 'number') {
+        return teamAssignment >= 1 && teamAssignment <= 4 ? teamAssignment : null;
+    }
+    if (typeof teamAssignment === 'string') {
+        if (teamAssignment === 'joker') return null;
+        const match = teamAssignment.match(/team(\d+)/i);
+        if (match) {
+            const num = parseInt(match[1]);
+            return num >= 1 && num <= 4 ? num : null;
+        }
+        // Try direct number string
+        const num = parseInt(teamAssignment);
+        return !isNaN(num) && num >= 1 && num <= 4 ? num : null;
+    }
+    return null;
+}
+
+/**
  * POST /api/plugin/sync
  * 
  * Plugin sends its state, receives server state + donations
@@ -72,11 +96,11 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const teamId = player.team_assignment;
+        const teamId = parseTeamId(player.team_assignment);
         if (!teamId) {
             return NextResponse.json({
                 success: false,
-                reason: 'no_team_assigned'
+                reason: player.team_assignment === 'joker' ? 'joker_no_team_selected' : 'no_team_assigned'
             });
         }
 

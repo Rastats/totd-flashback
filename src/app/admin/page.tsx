@@ -2,11 +2,31 @@
 // src/app/admin/page.tsx
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { PlayerApplication, CasterApplication, ApplicationStatus, TeamAssignment } from "@/lib/types";
 import { TEAMS } from "@/lib/config";
 import RequireAuth from "@/components/RequireAuth";
-import EventControlPanel from "@/components/EventControlPanel";
+
+// Lazy load heavy EventControlPanel (38KB) - loads only when Event tab is active
+const EventControlPanel = dynamic(() => import("@/components/EventControlPanel"), {
+    loading: () => (
+        <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>
+            <div style={{
+                width: 32,
+                height: 32,
+                margin: "0 auto 12px",
+                border: "3px solid #334155",
+                borderTopColor: "#3b82f6",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+            }} />
+            Loading Event Control Panel...
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    ),
+    ssr: false  // Client-only component
+});
 
 const inputStyle = {
     padding: "8px 12px",

@@ -24,11 +24,12 @@ export const CURRENCY_RATES = {
     GBP_TO_USD: 1.3386,
 } as const;
 
-// Event Dates for Display
+// Event Dates for Display (must match EVENT_START_UTC and EVENT_END_UTC)
 export const EVENT_INFO = {
-    startDate: 'Dec 21, 2025',
-    startTime: '21:00 CET',
-    endDate: 'Dec 24, 2025',
-    endTime: '18:00 CET',
+    startDate: 'Dec 26, 2025',
+    startTime: '20:00 CET',
+    endDate: 'Dec 29, 2025',
+    endTime: '17:00 CET',
     duration: '69 hours',
 } as const;
+

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { convertToParisTime } from '@/lib/timezone-utils';
+import { userSlotToHourIndices } from '@/lib/timezone-utils';
 
 export async function POST(request: NextRequest) {
     try {
@@ -40,38 +40,39 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: playerError.message }, { status: 400 });
         }
 
-        // Insert availability slots - convert to Paris time
+        // Insert availability slots - convert to hour_index
         if (availability && availability.length > 0) {
             const userTimezone = formData.timezone || 'Europe/Paris';
+            const slots: { player_id: string; hour_index: number; preference: string }[] = [];
 
-            const slots = availability.map((slot: {
-                date: string;
-                startHour: number;
-                endHour: number;
-                preference: string;
-            }) => {
-                // Convert start and end hours to Paris time
-                const startInParis = convertToParisTime(slot.date, slot.startHour, userTimezone);
-                const endInParis = convertToParisTime(slot.date, slot.endHour, userTimezone);
+            for (const slot of availability as { date: string; startHour: number; endHour: number; preference: string }[]) {
+                // Convert user's slot range to individual hour indices
+                const hourIndices = userSlotToHourIndices(
+                    slot.date,
+                    slot.startHour,
+                    slot.endHour,
+                    userTimezone
+                );
 
-                // Note: If the slot spans midnight in Paris, this simplified approach
-                // might not handle it perfectly, but for most cases it works
-                return {
-                    player_id: player.id,
-                    date: startInParis.date,
-                    start_hour: startInParis.hour,
-                    end_hour: endInParis.hour === 0 ? 24 : endInParis.hour, // Handle midnight
-                    preference: slot.preference,
-                };
-            });
+                // Create a row for each hour index
+                for (const hourIndex of hourIndices) {
+                    slots.push({
+                        player_id: player.id,
+                        hour_index: hourIndex,
+                        preference: slot.preference,
+                    });
+                }
+            }
 
-            const { error: slotsError } = await supabase
-                .from('availability_slots')
-                .insert(slots);
+            if (slots.length > 0) {
+                const { error: slotsError } = await supabase
+                    .from('availability_slots')
+                    .insert(slots);
 
-            if (slotsError) {
-                console.error('Slots insert error:', slotsError);
-                // Don't fail the whole request, player is already saved
+                if (slotsError) {
+                    console.error('Slots insert error:', slotsError);
+                    // Don't fail the whole request, player is already saved
+                }
             }
         }
 

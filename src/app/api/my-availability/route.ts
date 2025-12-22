@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { hourIndexToDateTime, userSlotToHourIndices } from '@/lib/timezone-utils';
 
 // GET - Fetch current player's availability
 export async function GET() {
@@ -19,6 +20,7 @@ export async function GET() {
                 trackmania_name,
                 discord_username,
                 team_assignment,
+                timezone,
                 availability_slots (*)
             `)
             .ilike('discord_username', session.user.username)
@@ -32,20 +34,24 @@ export async function GET() {
             }, { status: 404 });
         }
 
-        // Transform availability slots
-        const availability = (player.availability_slots || []).map((s: any) => ({
-            date: s.date,
-            startHour: s.start_hour,
-            endHour: s.end_hour,
-            preference: s.preference || 'available'
-        }));
+        // Transform hour_index to date/hour for frontend display
+        const availability = (player.availability_slots || []).map((s: any) => {
+            const { date, hour } = hourIndexToDateTime(s.hour_index);
+            return {
+                hourIndex: s.hour_index,
+                date,
+                hour,
+                preference: s.preference || 'available'
+            };
+        });
 
         return NextResponse.json({
             player: {
                 id: player.id,
                 name: player.trackmania_name || player.discord_username,
                 discordUsername: player.discord_username,
-                teamAssignment: player.team_assignment
+                teamAssignment: player.team_assignment,
+                timezone: player.timezone
             },
             availability
         });
@@ -73,7 +79,7 @@ export async function PUT(request: Request) {
         // Find player by Discord username
         const { data: player, error: playerError } = await supabaseAdmin
             .from('players')
-            .select('id, discord_username')
+            .select('id, discord_username, timezone')
             .ilike('discord_username', session.user.username)
             .eq('status', 'approved')
             .single();
@@ -90,21 +96,45 @@ export async function PUT(request: Request) {
 
         // Insert new availability slots
         if (availability.length > 0) {
-            const slots = availability.map((slot: any) => ({
-                player_id: player.id,
-                date: slot.date,
-                start_hour: slot.startHour,
-                end_hour: slot.endHour,
-                preference: slot.preference || 'available'
-            }));
+            const userTimezone = player.timezone || 'Europe/Paris';
+            const slots: { player_id: string; hour_index: number; preference: string }[] = [];
 
-            const { error: insertError } = await supabaseAdmin
-                .from('availability_slots')
-                .insert(slots);
+            for (const slot of availability) {
+                // Check if slot already has hourIndex (new format)
+                if (typeof slot.hourIndex === 'number') {
+                    slots.push({
+                        player_id: player.id,
+                        hour_index: slot.hourIndex,
+                        preference: slot.preference || 'available'
+                    });
+                } 
+                // Convert from date/startHour/endHour format (legacy)
+                else if (slot.date && typeof slot.startHour === 'number' && typeof slot.endHour === 'number') {
+                    const hourIndices = userSlotToHourIndices(
+                        slot.date,
+                        slot.startHour,
+                        slot.endHour,
+                        userTimezone
+                    );
+                    for (const hourIndex of hourIndices) {
+                        slots.push({
+                            player_id: player.id,
+                            hour_index: hourIndex,
+                            preference: slot.preference || 'available'
+                        });
+                    }
+                }
+            }
 
-            if (insertError) {
-                console.error('[My Availability] Insert error:', insertError);
-                return NextResponse.json({ error: 'Failed to save availability' }, { status: 500 });
+            if (slots.length > 0) {
+                const { error: insertError } = await supabaseAdmin
+                    .from('availability_slots')
+                    .insert(slots);
+
+                if (insertError) {
+                    console.error('[My Availability] Insert error:', insertError);
+                    return NextResponse.json({ error: 'Failed to save availability' }, { status: 500 });
+                }
             }
         }
 

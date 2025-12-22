@@ -39,11 +39,11 @@ export const LANGUAGES = [
     'Other',
 ];
 
-// Event window in UTC
-// Start: Dec 21, 2025 21:00 Paris = Dec 21, 2025 20:00 UTC
-// End: Dec 24, 2025 18:00 Paris = Dec 24, 2025 17:00 UTC
-export const EVENT_START_UTC = new Date('2025-12-26T19:00:00Z');
-export const EVENT_END_UTC = new Date('2025-12-29T16:00:00Z');
+// Event window - import from central config for local use and re-export
+// Start: Dec 26, 2025 20:00 CET = Dec 26, 2025 19:00 UTC
+// End: Dec 29, 2025 17:00 CET = Dec 29, 2025 16:00 UTC
+import { EVENT_START_UTC, EVENT_END_UTC } from '@/lib/config';
+export { EVENT_START_UTC, EVENT_END_UTC };
 
 // Get event days for availability picker, adjusted for user's timezone
 export function getEventDays(timezone: string): { date: string; label: string; startHour: number; endHour: number }[] {

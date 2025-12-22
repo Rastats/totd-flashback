@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { hourIndexToDateTime } from '@/lib/timezone-utils';
 
 export async function GET() {
     try {
@@ -42,12 +43,15 @@ export async function GET() {
             teamAssignment: p.team_assignment,
             submittedAt: p.created_at,
             isCaptain: p.is_captain, // Added missing field mapping
-            availability: (p.availability_slots || []).map((s: { date: string; start_hour: number; end_hour: number; preference: string }) => ({
-                date: s.date,
-                startHour: s.start_hour,
-                endHour: s.end_hour,
-                preference: s.preference,
-            })),
+            availability: (p.availability_slots || []).map((s: { hour_index: number; preference: string }) => {
+                const { date, hour } = hourIndexToDateTime(s.hour_index);
+                return {
+                    hourIndex: s.hour_index,
+                    date,
+                    hour,
+                    preference: s.preference,
+                };
+            }),
         }));
 
         return NextResponse.json(transformed);

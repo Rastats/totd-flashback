@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { EVENT_START_UTC, EVENT_END_UTC } from "@/lib/config";
 
-// Event times in UTC
-const EVENT_START = new Date("2025-12-26T19:00:00Z"); // 20:00 CET = 19:00 UTC
-const EVENT_END = new Date("2025-12-29T16:00:00Z");   // 17:00 CET = 16:00 UTC
+// Use centralized config for event times
+const EVENT_START = EVENT_START_UTC;
+const EVENT_END = EVENT_END_UTC;
 
 interface TimeLeft {
     days: number;

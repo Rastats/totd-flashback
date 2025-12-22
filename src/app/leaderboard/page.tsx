@@ -18,6 +18,7 @@ interface TeamStatus {
         name: string;
         authorName: string;
         mapUid: string;
+        mapIndex: number;
         date: string;
         authorTime: string;
         thumbnailUrl: string;
@@ -84,9 +85,10 @@ const getTotdInfo = (mapNumber: number) => {
         name: totd.name,
         authorName: totd.authorName,
         mapUid: totd.mapUid,
+        mapIndex: totd.id,
         date: totd.date,
-        authorTime: formatAuthorTime(totd.authorTime),
-        thumbnailUrl: getMapThumbnailUrl(totd.mapId)
+        authorTime: '',  // Not available in simplified TOTD data
+        thumbnailUrl: getMapThumbnailUrl(totd.mapId)  // Use mapId for thumbnails (Nadeo API requires UUID)
     };
 };
 
@@ -188,7 +190,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                                     <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
                                         by {team.currentMap.authorName}
                                     </span>
-                                    <span style={{ whiteSpace: "nowrap", fontSize: "1.25em" }}>{team.currentMap.date}</span>
+                                    <span style={{ whiteSpace: "nowrap", fontSize: "1.25em" }}>#{team.currentMap.mapIndex} – {team.currentMap.date}</span>
                                 </div>
                             </div>
                         </div>
@@ -281,6 +283,7 @@ export default function LeaderboardPage() {
                             name: t.currentMapName,
                             authorName: t.currentMapAuthor || totdData?.authorName || 'Unknown',
                             mapUid: totdData?.mapUid || '',
+                            mapIndex: t.currentMapId,
                             date: totdData?.date || '',
                             authorTime: totdData?.authorTime || '',
                             thumbnailUrl: totdData?.thumbnailUrl || ''

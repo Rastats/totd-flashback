@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { convertToParisTime } from '@/lib/timezone-utils';
+import { userSlotToHourIndices } from '@/lib/timezone-utils';
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,34 +30,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: casterError.message }, { status: 400 });
         }
 
-        // Insert availability slots - convert to Paris time
+        // Insert availability slots - convert to hour_index
         if (availability && availability.length > 0) {
             const userTimezone = formData.timezone || 'Europe/Paris';
+            const slots: { caster_id: string; hour_index: number; preference: string }[] = [];
 
-            const slots = availability.map((slot: {
-                date: string;
-                startHour: number;
-                endHour: number;
-                preference: string;
-            }) => {
-                const startInParis = convertToParisTime(slot.date, slot.startHour, userTimezone);
-                const endInParis = convertToParisTime(slot.date, slot.endHour, userTimezone);
+            for (const slot of availability as { date: string; startHour: number; endHour: number; preference: string }[]) {
+                const hourIndices = userSlotToHourIndices(
+                    slot.date,
+                    slot.startHour,
+                    slot.endHour,
+                    userTimezone
+                );
 
-                return {
-                    caster_id: caster.id,
-                    date: startInParis.date,
-                    start_hour: startInParis.hour,
-                    end_hour: endInParis.hour === 0 ? 24 : endInParis.hour,
-                    preference: slot.preference,
-                };
-            });
+                for (const hourIndex of hourIndices) {
+                    slots.push({
+                        caster_id: caster.id,
+                        hour_index: hourIndex,
+                        preference: slot.preference,
+                    });
+                }
+            }
 
-            const { error: slotsError } = await supabase
-                .from('availability_slots')
-                .insert(slots);
+            if (slots.length > 0) {
+                const { error: slotsError } = await supabase
+                    .from('availability_slots')
+                    .insert(slots);
 
-            if (slotsError) {
-                console.error('Slots insert error:', slotsError);
+                if (slotsError) {
+                    console.error('Slots insert error:', slotsError);
+                }
             }
         }
 
