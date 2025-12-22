@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
-// GET: List all penalties from team_status for all teams
+// GET: List all penalties from team_server_state for all teams
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const teamId = searchParams.get('team_id');
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseAdmin();
     
     let query = supabase
-        .from('team_status')
+        .from('team_server_state')
         .select('team_id, penalties_active, penalties_waitlist, shield_active, shield_type, shield_remaining_ms')
         .order('team_id');
     
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ penalties });
 }
 
-// POST: Add penalty to team (writes to team_status.penalties_waitlist)
+// POST: Add penalty to team (writes to team_server_state.penalties_waitlist)
 export async function POST(request: Request) {
     try {
         const { team_id, penalty_name } = await request.json();
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         
         // Get current team status
         const { data: teamData, error: fetchError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('penalties_active, penalties_waitlist, shield_active')
             .eq('team_id', team_id)
             .single();
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         const updatedWaitlist = [...currentWaitlist, newPenalty];
         
         const { error: updateError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .upsert({
                 team_id: team_id,
                 penalties_active: currentActive,
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
     }
 }
 
-// DELETE: Remove penalty from team_status
+// DELETE: Remove penalty from team_server_state
 export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -160,7 +160,7 @@ export async function DELETE(request: Request) {
         
         // Get current team status
         const { data: teamData, error: fetchError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('penalties_active, penalties_waitlist')
             .eq('team_id', teamId)
             .single();
@@ -189,7 +189,7 @@ export async function DELETE(request: Request) {
         }
         
         const { error: updateError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update(updates)
             .eq('team_id', teamId);
         
@@ -236,7 +236,7 @@ export async function PATCH(request: Request) {
         
         // Get current team status
         const { data: teamData, error: fetchError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('penalties_active, penalties_waitlist')
             .eq('team_id', teamId)
             .single();
@@ -276,7 +276,7 @@ export async function PATCH(request: Request) {
         }
         
         const { error: updateError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update({
                 penalties_active: active,
                 penalties_waitlist: waitlist,

@@ -270,7 +270,7 @@ export async function getCampaignData(): Promise<{
     };
 }
 
-// Get team pots from team_status table
+// Get team pots from team_server_state table
 export async function getTeamPots(): Promise<Array<{
     team_id: number;
     pot_amount: number;
@@ -278,7 +278,7 @@ export async function getTeamPots(): Promise<Array<{
     updated_at: string;
 }>> {
     const { data, error } = await supabaseAdmin
-        .from('team_status')
+        .from('team_server_state')
         .select('team_id, pot_amount, pot_currency, updated_at')
         .order('team_id');
 

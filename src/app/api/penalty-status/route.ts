@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 }
 
 // GET /api/penalty-status?team_id=X
-// Get pending penalties for a team from team_status
+// Get pending penalties for a team from team_server_state
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -79,9 +79,9 @@ export async function GET(request: Request) {
             );
         }
 
-        // Get penalties from team_status (JSONB columns)
+        // Get penalties from team_server_state (JSONB columns)
         const { data, error } = await supabaseAdmin
-            .from('team_status')
+            .from('team_server_state')
             .select('penalties_active, penalties_waitlist')
             .eq('team_id', parseInt(teamId))
             .single();

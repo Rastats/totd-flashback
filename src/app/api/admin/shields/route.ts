@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseAdmin();
     
     let query = supabase
-        .from('team_status')
+        .from('team_server_state')
         .select('team_id, shield_active, shield_type, shield_expires_at, shield_cooldown_ms, updated_at');
     
     if (teamId) {
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         
         // Update only shield columns (preserves all other team data)
         const { error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update({
                 shield_active: true,
                 shield_type: type,
@@ -102,7 +102,7 @@ export async function DELETE(request: Request) {
         const supabase = getSupabaseAdmin();
         
         const { error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update({
                 shield_active: false,
                 shield_type: null,

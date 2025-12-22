@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseAdmin();
     
     const { data, error } = await supabase
-        .from('team_status')
+        .from('team_server_state')
         .select('team_id, active_player, waiting_player, updated_at')
         .order('team_id');
     
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         
         // Get current status
         const { data: current } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('active_player, waiting_player')
             .eq('team_id', team_id)
             .single();
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         }
         
         const { error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update(update)
             .eq('team_id', team_id);
         

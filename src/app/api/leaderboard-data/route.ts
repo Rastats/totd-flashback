@@ -19,7 +19,7 @@ export async function GET() {
 
         // Get all team statuses in one query
         const { data: statusData, error: statusError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('*')
             .order('updated_at', { ascending: false });
 

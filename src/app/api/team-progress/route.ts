@@ -4,13 +4,13 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 export const dynamic = 'force-dynamic';
 
 // GET /api/team-progress
-// Returns team progression (maps_completed) for all teams from team_status
+// Returns team progression (maps_completed) for all teams from team_server_state
 export async function GET() {
     try {
         const supabase = getSupabaseAdmin();
         
         const { data, error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('team_id, maps_completed, updated_at')
             .order('team_id');
         

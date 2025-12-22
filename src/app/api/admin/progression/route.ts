@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseAdmin();
     
     const { data, error } = await supabase
-        .from('team_status')
+        .from('team_server_state')
         .select('team_id, maps_completed, updated_at')
         .order('team_id');
     
@@ -36,7 +36,7 @@ export async function PUT(request: Request) {
         
         // Get current value for logging
         const { data: current } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('maps_completed')
             .eq('team_id', team_id)
             .single();
@@ -49,7 +49,7 @@ export async function PUT(request: Request) {
         }
         
         const { error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .upsert({
                 team_id: team_id,
                 maps_completed: maps_completed,
@@ -93,7 +93,7 @@ export async function DELETE(request: Request) {
         const supabase = getSupabaseAdmin();
         
         const { error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .update({
                 maps_completed: 0,
                 updated_at: new Date().toISOString()

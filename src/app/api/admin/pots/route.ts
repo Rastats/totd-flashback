@@ -3,13 +3,13 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
-// GET - Fetch all team pots from team_status
+// GET - Fetch all team pots from team_server_state
 export async function GET() {
     try {
         const supabase = getSupabaseAdmin();
 
         const { data, error } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('team_id, pot_amount, pot_currency, updated_at')
             .order('team_id');
 
@@ -31,7 +31,7 @@ export async function GET() {
     }
 }
 
-// PATCH - Update a team pot in team_status (direct set, no penalties triggered)
+// PATCH - Update a team pot in team_server_state (direct set, no penalties triggered)
 export async function PATCH(request: Request) {
     try {
         const data = await request.json();
@@ -43,9 +43,9 @@ export async function PATCH(request: Request) {
 
         const supabase = getSupabaseAdmin();
 
-        // Get current pot value from team_status
+        // Get current pot value from team_server_state
         const { data: current, error: fetchError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .select('pot_amount')
             .eq('team_id', team_number)
             .single();
@@ -68,9 +68,9 @@ export async function PATCH(request: Request) {
         // Ensure non-negative
         newAmount = Math.max(0, newAmount);
 
-        // Upsert to team_status
+        // Upsert to team_server_state
         const { error: upsertError } = await supabase
-            .from('team_status')
+            .from('team_server_state')
             .upsert({
                 team_id: team_number,
                 pot_amount: newAmount,
