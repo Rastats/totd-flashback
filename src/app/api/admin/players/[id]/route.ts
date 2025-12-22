@@ -41,8 +41,39 @@ export async function PATCH(
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        // Update Availability if provided
-        if (body.availability && Array.isArray(body.availability)) {
+        // Update Availability if provided (supports hourIndices or legacy format)
+        if (body.hourIndices && Array.isArray(body.hourIndices)) {
+            // NEW FORMAT: Direct hour_index array
+            const { error: deleteError } = await supabaseAdmin
+                .from('availability_slots')
+                .delete()
+                .eq('player_id', id);
+
+            if (deleteError) {
+                console.error('Error deleting slots:', deleteError);
+                return NextResponse.json({ error: "Failed to update availability" }, { status: 500 });
+            }
+
+            const slots = body.hourIndices
+                .filter((h: number) => h >= 0 && h < 69)
+                .map((hourIndex: number) => ({
+                    player_id: id,
+                    hour_index: hourIndex,
+                    preference: 'ok'
+                }));
+
+            if (slots.length > 0) {
+                const { error: insertError } = await supabaseAdmin
+                    .from('availability_slots')
+                    .insert(slots);
+
+                if (insertError) {
+                    console.error('Error inserting slots:', insertError);
+                    return NextResponse.json({ error: "Failed to save new slots" }, { status: 500 });
+                }
+            }
+        } else if (body.availability && Array.isArray(body.availability)) {
+            // LEGACY FORMAT: date/startHour/endHour/preference
             // Delete existing slots (Admin client ensures we can delete anyone's slots)
             const { error: deleteError } = await supabaseAdmin
                 .from('availability_slots')
