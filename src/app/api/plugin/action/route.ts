@@ -25,6 +25,7 @@ interface ActionPayload {
  * Parse team_assignment which can be:
  * - Integer: 1, 2, 3, 4
  * - String: "team1", "team2", "team3", "team4" 
+ * - String: "Team Speedrun" (=1), "Team B2" (=2), "Team BITM" (=3), "Team 4" (=4)
  * - String: "joker" (returns null, joker must set team_id)
  */
 function parseTeamId(teamAssignment: any): number | null {
@@ -33,6 +34,18 @@ function parseTeamId(teamAssignment: any): number | null {
     }
     if (typeof teamAssignment === 'string') {
         if (teamAssignment === 'joker') return null;
+        
+        // Map team names to IDs
+        const teamNameMap: Record<string, number> = {
+            'team speedrun': 1,
+            'team b2': 2,
+            'team bitm': 3,
+            'team 4': 4
+        };
+        const lowerName = teamAssignment.toLowerCase();
+        if (teamNameMap[lowerName]) return teamNameMap[lowerName];
+        
+        // Try "teamN" format
         const match = teamAssignment.match(/team(\d+)/i);
         if (match) {
             const num = parseInt(match[1]);
