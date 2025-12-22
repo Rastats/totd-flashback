@@ -567,19 +567,24 @@ export default function AdminPage() {
                                         <div style={{ marginBottom: 16 }}>
                                             <strong>Availability ({player.availability.length} slots):</strong>
                                             <span style={{ marginLeft: 12, fontSize: 11, opacity: 0.6 }}>
-                                                🟢 Preferred • 🔵 OK
+                                                🟢 Available
                                             </span>
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                                {player.availability.map((slot, i) => (
-                                                    <span key={i} style={{
-                                                        padding: "4px 8px",
-                                                        background: slot.preference === "preferred" ? "#22543d" : "#2a3a4a",
-                                                        borderRadius: 4,
-                                                        fontSize: 12,
-                                                    }}>
-                                                        {slot.date.slice(5)} {slot.startHour}:00-{slot.endHour}:00
-                                                    </span>
-                                                ))}
+                                                {player.availability.map((slot: { date?: string; hour?: number; hourIndex?: number; startHour?: number; endHour?: number }, i: number) => {
+                                                    // Handle new format (hour) and legacy format (startHour/endHour)
+                                                    const displayDate = slot.date?.slice(5) || '';
+                                                    const displayHour = slot.hour !== undefined ? slot.hour : slot.startHour;
+                                                    return (
+                                                        <span key={i} style={{
+                                                            padding: "4px 8px",
+                                                            background: "#22543d",
+                                                            borderRadius: 4,
+                                                            fontSize: 12,
+                                                        }}>
+                                                            {displayDate} {displayHour}:00
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
 
