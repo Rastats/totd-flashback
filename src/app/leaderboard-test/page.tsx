@@ -26,13 +26,17 @@ interface TeamStatus {
         type: "small" | "big";
         timeLeft: number;
     } | null;
+    shieldCooldowns: {
+        small: number | null;  // seconds until available, null = available
+        big: number | null;    // seconds until available, null = available
+    };
     activePenalties: {
         name: string;
-        timeLeft: number;
-        mapsRemaining: number;
+        timeLeft: number;           // seconds remaining (for timed penalties)
+        mapsCompleted: number;      // maps done (for multi-map penalties)
+        mapsRequired: number;       // total maps needed (0 = timed penalty)
     }[];
-    penaltyQueue: number;
-    penaltyQueueNames: string[];
+    penaltyWaitlist: string[];      // max 2 penalties waiting
     isOnline: boolean;
     teamPot: number;
 }
@@ -84,6 +88,7 @@ const getTotdInfo = (mapNumber: number) => {
 };
 
 // --- MOCK DATA ---
+// Using real penalty names from penalty-config.ts and event rules (max 2 active, max 2 waitlist)
 const MOCK_TEAMS: TeamStatus[] = [
     {
         id: 1,
@@ -94,9 +99,9 @@ const MOCK_TEAMS: TeamStatus[] = [
         activePlayer: "Rastats",
         currentMap: getTotdInfo(453),
         activeShield: { type: "big", timeLeft: 1845 },
+        shieldCooldowns: { small: null, big: null },
         activePenalties: [],
-        penaltyQueue: 0,
-        penaltyQueueNames: [],
+        penaltyWaitlist: [],
         isOnline: true,
         teamPot: 342.50
     },
@@ -109,12 +114,12 @@ const MOCK_TEAMS: TeamStatus[] = [
         activePlayer: "SaiyaPunk",
         currentMap: getTotdInfo(477),
         activeShield: null,
+        shieldCooldowns: { small: 245, big: 1820 },
         activePenalties: [
-            { name: "Tunnel Vision", timeLeft: 245, mapsRemaining: 0 },
-            { name: "Pedal to the Metal", timeLeft: 520, mapsRemaining: 0 }
+            { name: "Tunnel Vision", timeLeft: 245, mapsCompleted: 0, mapsRequired: 0 },  // 10min timer
+            { name: "Pedal to the Metal", timeLeft: 520, mapsCompleted: 1, mapsRequired: 3 }  // 3 maps + timer
         ],
-        penaltyQueue: 3,
-        penaltyQueueNames: ["Camera Shuffle", "Russian Roulette", "Can't Turn Right"],
+        penaltyWaitlist: ["Camera Shuffle", "Russian Roulette"],
         isOnline: true,
         teamPot: 287.00
     },
@@ -127,11 +132,12 @@ const MOCK_TEAMS: TeamStatus[] = [
         activePlayer: "ElectroFlash",
         currentMap: getTotdInfo(511),
         activeShield: { type: "small", timeLeft: 423 },
+        shieldCooldowns: { small: null, big: 890 },
         activePenalties: [
-            { name: "Redo 5 Maps", timeLeft: 0, mapsRemaining: 3 }
+            { name: "Back to the Future", timeLeft: 0, mapsCompleted: 12, mapsRequired: 50 },  // 50 maps redo
+            { name: "Player Switch", timeLeft: 0, mapsCompleted: 3, mapsRequired: 10 }  // 10 maps
         ],
-        penaltyQueue: 1,
-        penaltyQueueNames: ["Out of Sight"],
+        penaltyWaitlist: ["Can't Turn Right"],
         isOnline: true,
         teamPot: 198.75
     },
@@ -142,11 +148,11 @@ const MOCK_TEAMS: TeamStatus[] = [
         mapsFinished: 1456,
         totalMaps: TOTAL_MAPS,
         activePlayer: null,
-        currentMap: getTotdInfo(544),
+        currentMap: null,
         activeShield: null,
+        shieldCooldowns: { small: 60, big: null },
         activePenalties: [],
-        penaltyQueue: 0,
-        penaltyQueueNames: [],
+        penaltyWaitlist: [],
         isOnline: false,
         teamPot: 156.25
     }
@@ -163,13 +169,18 @@ const MOCK_FEED: FeedEvent[] = [
 
 const MOCK_PENALTY_HISTORY = {
     penalties: [
-        { penaltyId: 1, penaltyName: "Tunnel Vision", team1: 2, team2: 3, team3: 1, team4: 0, total: 6 },
-        { penaltyId: 2, penaltyName: "Pedal to the Metal", team1: 1, team2: 2, team3: 2, team4: 1, total: 6 },
-        { penaltyId: 3, penaltyName: "Camera Shuffle", team1: 0, team2: 1, team3: 3, team4: 2, total: 6 },
-        { penaltyId: 4, penaltyName: "Russian Roulette", team1: 1, team2: 0, team3: 1, team4: 1, total: 3 },
-        { penaltyId: 5, penaltyName: "Redo 5 Maps", team1: 0, team2: 1, team3: 0, team4: 0, total: 1 },
+        { penaltyId: 1, penaltyName: "Russian Roulette", team1: 1, team2: 2, team3: 1, team4: 1, total: 5 },
+        { penaltyId: 2, penaltyName: "Camera Shuffle", team1: 0, team2: 1, team3: 3, team4: 2, total: 6 },
+        { penaltyId: 3, penaltyName: "Cursed Controller", team1: 1, team2: 0, team3: 1, team4: 0, total: 2 },
+        { penaltyId: 4, penaltyName: "Clean Run Only", team1: 2, team2: 1, team3: 0, team4: 1, total: 4 },
+        { penaltyId: 5, penaltyName: "Pedal to the Metal", team1: 1, team2: 2, team3: 2, team4: 1, total: 6 },
+        { penaltyId: 6, penaltyName: "Tunnel Vision", team1: 2, team2: 3, team3: 1, team4: 0, total: 6 },
+        { penaltyId: 7, penaltyName: "Player Switch", team1: 0, team2: 1, team3: 0, team4: 0, total: 1 },
+        { penaltyId: 8, penaltyName: "Can't Turn Right", team1: 1, team2: 0, team3: 1, team4: 1, total: 3 },
+        { penaltyId: 9, penaltyName: "AT or Bust", team1: 0, team2: 1, team3: 0, team4: 0, total: 1 },
+        { penaltyId: 10, penaltyName: "Back to the Future", team1: 0, team2: 0, team3: 1, team4: 0, total: 1 },
     ],
-    totals: { team1: 4, team2: 7, team3: 7, team4: 4, total: 22 }
+    totals: { team1: 8, team2: 11, team3: 10, team4: 6, total: 35 }
 };
 
 // --- Components ---
@@ -304,7 +315,7 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                                     <div key={i} style={{ background: "rgba(248, 113, 113, 0.2)", border: "1px solid #f87171", borderRadius: 4, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                                         <span style={{ color: "#f87171" }}>⚠️ {p.name}</span>
                                         <span style={{ fontFamily: "monospace" }}>
-                                            {p.timeLeft > 0 ? formatTime(p.timeLeft) : p.mapsRemaining > 0 ? `${p.mapsRemaining} maps` : ""}
+                                            {p.timeLeft > 0 ? formatTime(p.timeLeft) : p.mapsRequired > 0 ? `${p.mapsCompleted}/${p.mapsRequired} maps` : ""}
                                         </span>
                                     </div>
                                 ))}
@@ -314,13 +325,25 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                         )}
                     </div>
 
-                    {/* Queue */}
-                    {team.penaltyQueue > 0 && (
+                    {/* Waitlist */}
+                    {team.penaltyWaitlist.length > 0 && (
                         <div
-                            title={team.penaltyQueueNames?.join("\n") || ""}
+                            title={team.penaltyWaitlist.join("\n")}
                             style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center", cursor: "help" }}
                         >
-                            +{team.penaltyQueue} penalties in queue ℹ️
+                            +{team.penaltyWaitlist.length} in waitlist: {team.penaltyWaitlist.join(", ")}
+                        </div>
+                    )}
+
+                    {/* Shield Cooldowns */}
+                    {(team.shieldCooldowns.small !== null || team.shieldCooldowns.big !== null) && (
+                        <div style={{ marginTop: 8, fontSize: 11, opacity: 0.6, display: "flex", gap: 8, justifyContent: "center" }}>
+                            {team.shieldCooldowns.small !== null && (
+                                <span>🛡️ Small: {formatTime(team.shieldCooldowns.small)}</span>
+                            )}
+                            {team.shieldCooldowns.big !== null && (
+                                <span>🛡️ Big: {formatTime(team.shieldCooldowns.big)}</span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -350,20 +373,34 @@ export default function LeaderboardTestPage() {
         return () => clearInterval(timer);
     }, []);
 
-    // Real-time shield countdown (updates every second)
+
+    // Real-time shield countdown (updates every second) - includes cooldowns
     useEffect(() => {
         const timer = setInterval(() => {
             setTeams(prev => prev.map(team => {
+                let updated = { ...team };
+                
+                // Countdown active shield
                 if (team.activeShield && team.activeShield.timeLeft > 0) {
-                    return {
-                        ...team,
-                        activeShield: {
-                            ...team.activeShield,
-                            timeLeft: Math.max(0, team.activeShield.timeLeft - 1)
-                        }
+                    updated.activeShield = {
+                        ...team.activeShield,
+                        timeLeft: Math.max(0, team.activeShield.timeLeft - 1)
                     };
                 }
-                return team;
+                
+                // Countdown shield cooldowns
+                if (team.shieldCooldowns.small !== null || team.shieldCooldowns.big !== null) {
+                    updated.shieldCooldowns = {
+                        small: team.shieldCooldowns.small !== null 
+                            ? (team.shieldCooldowns.small > 0 ? team.shieldCooldowns.small - 1 : null)
+                            : null,
+                        big: team.shieldCooldowns.big !== null
+                            ? (team.shieldCooldowns.big > 0 ? team.shieldCooldowns.big - 1 : null)
+                            : null
+                    };
+                }
+                
+                return updated;
             }));
         }, 1000);
         return () => clearInterval(timer);
