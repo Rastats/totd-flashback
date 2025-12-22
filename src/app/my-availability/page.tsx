@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { TEAMS } from "@/lib/config";
 
-// Same timezones as Captain Dashboard - ordered west to east
+// Same timezones as signup forms - ordered west to east
 const TIMEZONES = [
     { label: "🇺🇸 Los Angeles (UTC-8)", offset: -8 },
     { label: "🇺🇸 Denver (UTC-7)", offset: -7 },
@@ -14,8 +14,11 @@ const TIMEZONES = [
     { label: "🇧🇷 São Paulo (UTC-3)", offset: -3 },
     { label: "🇬🇧 London (UTC+0)", offset: 0 },
     { label: "🇫🇷 Paris (UTC+1)", offset: 1 },
-    { label: "🇷🇺 Moscow (UTC+3)", offset: 3 },
-    { label: "🇨🇳 Beijing (UTC+8)", offset: 8 },
+    { label: "🇬🇷 Athens (UTC+2)", offset: 2 },
+    { label: "🇹🇷 Istanbul (UTC+3)", offset: 3 },
+    { label: "🇦🇪 Dubai (UTC+4)", offset: 4 },
+    { label: "🇮🇩 Jakarta (UTC+7)", offset: 7 },
+    { label: "🇸🇬 Singapore (UTC+8)", offset: 8 },
     { label: "🇯🇵 Tokyo (UTC+9)", offset: 9 },
     { label: "🇦🇺 Sydney (UTC+11)", offset: 11 },
     { label: "🇳🇿 Auckland (UTC+13)", offset: 13 },
