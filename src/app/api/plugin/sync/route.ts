@@ -57,10 +57,42 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
         }
 
-        const data: SyncPayload = await request.json();
+        const data = await request.json();
+
+        // Handle public_only requests (no auth needed, just returns team data)
+        if (data.public_only === true) {
+            const supabase = getSupabaseAdmin();
+            
+            // Get all teams progress for leaderboard
+            const allTeamsProgress = await getAllTeamsProgress(supabase);
+            
+            // Get team pots
+            const { data: teamStates } = await supabase
+                .from('team_server_state')
+                .select('team_id, pot_amount')
+                .order('team_id');
+            
+            const teamPots = teamStates?.map((t: any) => ({
+                team_id: t.team_id,
+                pot_amount: t.pot_amount || 0
+            })) || [];
+            
+            return NextResponse.json({
+                success: true,
+                donations: {
+                    totalAmount: teamPots.reduce((sum: number, t: any) => sum + t.pot_amount, 0),
+                    currency: 'GBP',
+                    teamPots: teamPots
+                },
+                allTeamsProgress
+            });
+        }
+
+        // From here on, require full authentication
+        const syncData: SyncPayload = data;
 
         // Validate required fields
-        if (!data.account_id || !data.player_name) {
+        if (!syncData.account_id || !syncData.player_name) {
             return NextResponse.json({ 
                 error: 'Missing required fields: account_id, player_name' 
             }, { status: 400 });
@@ -68,14 +100,14 @@ export async function POST(request: NextRequest) {
 
         // Rate limiting per account
         const now = Date.now();
-        const lastTime = lastRequestTime.get(data.account_id) || 0;
+        const lastTime = lastRequestTime.get(syncData.account_id) || 0;
         if (now - lastTime < MIN_REQUEST_INTERVAL) {
             return NextResponse.json({ 
                 error: 'Rate limited',
                 retry_after_ms: MIN_REQUEST_INTERVAL - (now - lastTime)
             }, { status: 429 });
         }
-        lastRequestTime.set(data.account_id, now);
+        lastRequestTime.set(syncData.account_id, now);
 
         const supabase = getSupabaseAdmin();
 
@@ -85,7 +117,7 @@ export async function POST(request: NextRequest) {
         const { data: player, error: playerError } = await supabase
             .from('players')
             .select('id, trackmania_name, team_assignment, status')
-            .eq('account_id', data.account_id)
+            .eq('account_id', syncData.account_id)
             .eq('status', 'approved')
             .single();
 
@@ -110,15 +142,15 @@ export async function POST(request: NextRequest) {
         const { error: upsertError } = await supabase
             .from('team_plugin_state')
             .upsert({
-                account_id: data.account_id,
-                player_name: data.player_name,
-                current_map_id: data.current_map_id || null,
-                current_map_index: data.current_map_index || null,
-                current_map_name: data.current_map_name || null,
-                current_map_author: data.current_map_author || null,
-                mode: data.mode || 'Normal',
-                session_elapsed_ms: data.session_elapsed_ms || 0,
-                plugin_version: data.plugin_version || null,
+                account_id: syncData.account_id,
+                player_name: syncData.player_name,
+                current_map_id: syncData.current_map_id || null,
+                current_map_index: syncData.current_map_index || null,
+                current_map_name: syncData.current_map_name || null,
+                current_map_author: syncData.current_map_author || null,
+                mode: syncData.mode || 'Normal',
+                session_elapsed_ms: syncData.session_elapsed_ms || 0,
+                plugin_version: syncData.plugin_version || null,
                 updated_at: new Date().toISOString()
             }, {
                 onConflict: 'account_id'
