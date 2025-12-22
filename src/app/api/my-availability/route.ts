@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { hourIndexToDateTime, userSlotToHourIndices } from '@/lib/timezone-utils';
+import { hourIndexToDateTime } from '@/lib/timezone-utils';
 
 // GET - Fetch current player's availability
 export async function GET() {
@@ -94,37 +94,15 @@ export async function PUT(request: Request) {
             .delete()
             .eq('player_id', player.id);
 
-        // Insert new availability slots
+        // Insert new availability slots (hour_indices format only)
         if (availability.length > 0) {
-            const userTimezone = player.timezone || 'Europe/Paris';
-            const slots: { player_id: string; hour_index: number; preference: string }[] = [];
-
-            for (const slot of availability) {
-                // Check if slot already has hourIndex (new format)
-                if (typeof slot.hourIndex === 'number') {
-                    slots.push({
-                        player_id: player.id,
-                        hour_index: slot.hourIndex,
-                        preference: slot.preference || 'available'
-                    });
-                } 
-                // Convert from date/startHour/endHour format (legacy)
-                else if (slot.date && typeof slot.startHour === 'number' && typeof slot.endHour === 'number') {
-                    const hourIndices = userSlotToHourIndices(
-                        slot.date,
-                        slot.startHour,
-                        slot.endHour,
-                        userTimezone
-                    );
-                    for (const hourIndex of hourIndices) {
-                        slots.push({
-                            player_id: player.id,
-                            hour_index: hourIndex,
-                            preference: slot.preference || 'available'
-                        });
-                    }
-                }
-            }
+            const slots = availability
+                .filter((s: { hourIndex?: number }) => typeof s.hourIndex === 'number' && s.hourIndex >= 0 && s.hourIndex < 69)
+                .map((s: { hourIndex: number; preference?: string }) => ({
+                    player_id: player.id,
+                    hour_index: s.hourIndex,
+                    preference: s.preference || 'ok'
+                }));
 
             if (slots.length > 0) {
                 const { error: insertError } = await supabaseAdmin

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { userSlotToHourIndices } from '@/lib/timezone-utils';
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,53 +29,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: casterError.message }, { status: 400 });
         }
 
-        // Insert availability slots
-        // Support both new format (hour_indices) and legacy format (availability slots)
+        // Insert availability slots (hour_indices format only)
         const hourIndices: number[] = body.hour_indices || [];
-        const legacySlots = body.availability as { date: string; startHour: number; endHour: number; preference: string }[] | undefined;
-        
-        const slots: { caster_id: string; hour_index: number; preference: string }[] = [];
         
         if (hourIndices.length > 0) {
-            // New format: direct hour_indices array
-            for (const hourIndex of hourIndices) {
-                if (hourIndex >= 0 && hourIndex < 69) {
-                    slots.push({
-                        caster_id: caster.id,
-                        hour_index: hourIndex,
-                        preference: 'ok',
-                    });
+            const slots = hourIndices
+                .filter(h => h >= 0 && h < 69)
+                .map(hourIndex => ({
+                    caster_id: caster.id,
+                    hour_index: hourIndex,
+                    preference: 'ok',
+                }));
+
+            if (slots.length > 0) {
+                const { error: slotsError } = await supabase
+                    .from('availability_slots')
+                    .insert(slots);
+
+                if (slotsError) {
+                    console.error('Slots insert error:', slotsError);
                 }
-            }
-        } else if (legacySlots && legacySlots.length > 0) {
-            // Legacy format: convert date+hour slots to hour_indices
-            const userTimezone = formData.timezone || 'Europe/Paris';
-
-            for (const slot of legacySlots) {
-                const indices = userSlotToHourIndices(
-                    slot.date,
-                    slot.startHour,
-                    slot.endHour,
-                    userTimezone
-                );
-
-                for (const hourIndex of indices) {
-                    slots.push({
-                        caster_id: caster.id,
-                        hour_index: hourIndex,
-                        preference: slot.preference,
-                    });
-                }
-            }
-        }
-
-        if (slots.length > 0) {
-            const { error: slotsError } = await supabase
-                .from('availability_slots')
-                .insert(slots);
-
-            if (slotsError) {
-                console.error('Slots insert error:', slotsError);
             }
         }
 
