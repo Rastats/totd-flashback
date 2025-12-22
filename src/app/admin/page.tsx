@@ -47,6 +47,57 @@ const buttonStyle = {
     fontWeight: 500 as const,
 };
 
+// Convert individual hourly slots to compact intervals (DD/MM HHh-HHh)
+// Splits at midnight and displays in Paris timezone (UTC+1)
+interface SlotData { date?: string; hour?: number; hourIndex?: number; }
+function slotsToIntervals(slots: SlotData[]): string[] {
+    if (!slots || slots.length === 0) return [];
+    
+    // Extract and sort by date + hour
+    const sortedSlots = slots
+        .map(s => ({
+            date: s.date || '',
+            hour: s.hour ?? 0
+        }))
+        .filter(s => s.date)
+        .sort((a, b) => {
+            const dateCompare = a.date.localeCompare(b.date);
+            if (dateCompare !== 0) return dateCompare;
+            return a.hour - b.hour;
+        });
+    
+    if (sortedSlots.length === 0) return [];
+    
+    const intervals: string[] = [];
+    let currentDate = sortedSlots[0].date;
+    let startHour = sortedSlots[0].hour;
+    let endHour = sortedSlots[0].hour + 1;
+    
+    for (let i = 1; i < sortedSlots.length; i++) {
+        const slot = sortedSlots[i];
+        
+        // Check if consecutive (same day and hour follows)
+        if (slot.date === currentDate && slot.hour === endHour) {
+            endHour = slot.hour + 1;
+        } else {
+            // Save current interval
+            const [, month, day] = currentDate.split('-');
+            intervals.push(`${day}/${month} ${startHour}h-${endHour === 24 ? '00' : endHour}h`);
+            
+            // Start new interval
+            currentDate = slot.date;
+            startHour = slot.hour;
+            endHour = slot.hour + 1;
+        }
+    }
+    
+    // Save last interval
+    const [, month, day] = currentDate.split('-');
+    intervals.push(`${day}/${month} ${startHour}h-${endHour === 24 ? '00' : endHour}h`);
+    
+    return intervals;
+}
+
 export default function AdminPage() {
     const [players, setPlayers] = useState<PlayerApplication[]>([]);
     const [casters, setCasters] = useState<CasterApplication[]>([]);
@@ -567,24 +618,19 @@ export default function AdminPage() {
                                         <div style={{ marginBottom: 16 }}>
                                             <strong>Availability ({player.availability.length} slots):</strong>
                                             <span style={{ marginLeft: 12, fontSize: 11, opacity: 0.6 }}>
-                                                🟢 Available
+                                                🟢 Available (UTC+1)
                                             </span>
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                                                {player.availability.map((slot: { date?: string; hour?: number; hourIndex?: number; startHour?: number; endHour?: number }, i: number) => {
-                                                    // Handle new format (hour) and legacy format (startHour/endHour)
-                                                    const displayDate = slot.date?.slice(5) || '';
-                                                    const displayHour = slot.hour !== undefined ? slot.hour : slot.startHour;
-                                                    return (
-                                                        <span key={i} style={{
-                                                            padding: "4px 8px",
-                                                            background: "#22543d",
-                                                            borderRadius: 4,
-                                                            fontSize: 12,
-                                                        }}>
-                                                            {displayDate} {displayHour}:00
-                                                        </span>
-                                                    );
-                                                })}
+                                                {slotsToIntervals(player.availability).map((interval, i) => (
+                                                    <span key={i} style={{
+                                                        padding: "4px 8px",
+                                                        background: "#22543d",
+                                                        borderRadius: 4,
+                                                        fontSize: 12,
+                                                    }}>
+                                                        {interval}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
 
