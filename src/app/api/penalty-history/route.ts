@@ -35,11 +35,15 @@ export async function GET() {
 
         // Query all completed penalties grouped by penalty_id and penalty_team
         // Only count donations >= £5 (real penalties, not £4.99 support-only)
+        // START_ID: Skip test donations before the event (adjust as needed)
+        const START_ID = 4; // Start counting from row 4 (skip first 3 test donations)
+        
         const { data, error } = await supabase
             .from('processed_donations')
             .select('penalty_id, penalty_team, amount')
             .eq('penalty_completed', true)
-            .gte('amount', 5);
+            .gte('amount', 5)
+            .gte('id', START_ID);
 
         if (error) {
             console.error('[PenaltyHistory] Error:', error);
