@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
             event_type: `plugin_${data.action}`,
             team_id: teamId,
             player_name: player.trackmania_name,
-            details: { action: data.action, ...data },
+            details: { ...data },
             timestamp: new Date().toISOString()
         });
 
