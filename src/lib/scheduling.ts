@@ -15,7 +15,7 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
             availability_slots (*)
         `)
         .eq('status', 'approved')
-        .in('team_assignment', [teamId, 'joker']);
+        .in('team_id', [parseInt(teamId), 0]);
 
     if (playersError || !players) {
         console.error("Autofill: Failed to fetch players", playersError);

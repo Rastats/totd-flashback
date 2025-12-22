@@ -40,7 +40,7 @@ export async function GET() {
             isFlexible: p.is_flexible,
             maxHoursPerDay: p.max_hours_per_day,
             status: p.status,
-            teamAssignment: p.team_assignment,
+            teamAssignment: p.team_id,
             submittedAt: p.created_at,
             isCaptain: p.is_captain, // Added missing field mapping
             availability: (p.availability_slots || []).map((s: { hour_index: number; preference: string }) => {

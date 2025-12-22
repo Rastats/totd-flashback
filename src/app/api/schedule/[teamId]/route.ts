@@ -13,9 +13,9 @@ export async function GET(
         // 1. Get Players (filtered for this team + jokers)
         const { data: players, error: playersError } = await supabase
             .from('players')
-            .select('id, trackmania_name, discord_username, team_assignment')
+            .select('id, trackmania_name, discord_username, team_id')
             .eq('status', 'approved')
-            .in('team_assignment', [teamId, 'joker'])
+            .in('team_id', [parseInt(teamId), 0])
             .order('trackmania_name');
 
         if (playersError) throw playersError;
@@ -23,7 +23,7 @@ export async function GET(
         const teamPlayers = players.map(p => ({
             id: p.id,
             name: p.trackmania_name || p.discord_username,
-            teamAssignment: p.team_assignment,
+            teamAssignment: p.team_id,
         }));
 
         // 2. Get Planning slots

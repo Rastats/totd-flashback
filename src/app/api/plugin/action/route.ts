@@ -22,7 +22,7 @@ interface ActionPayload {
 }
 
 /**
- * Parse team_assignment which can be:
+ * Parse team_id which can be:
  * - Integer: 1, 2, 3, 4
  * - String: "team1", "team2", "team3", "team4" 
  * - String: "Team Speedrun" (=1), "Team B2" (=2), "Team BITM" (=3), "Team 4" (=4)
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         // Get player's team
         const { data: player, error: playerError } = await supabase
             .from('players')
-            .select('id, trackmania_name, team_assignment, status')
+            .select('id, trackmania_name, team_id, status')
             .eq('account_id', data.account_id)
             .eq('status', 'approved')
             .single();
@@ -98,9 +98,9 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        // Parse team_assignment (can be int, "team1" string, or "joker")
-        let teamId = parseTeamId(player.team_assignment);
-        const isJoker = player.team_assignment === 'joker';
+        // Parse team_id (can be int, "team1" string, or "joker")
+        let teamId = parseTeamId(player.team_id);
+        const isJoker = player.team_id === 'joker';
 
         // Handle joker team change
         if (data.action === 'joker_change_team') {
@@ -347,10 +347,10 @@ export async function POST(request: NextRequest) {
             // JOKER CHANGE TEAM
             // ============================================
             case 'joker_change_team': {
-                // Update player's team_assignment in database
+                // Update player's team_id in database
                 const { error: updatePlayerError } = await supabase
                     .from('players')
-                    .update({ team_assignment: teamId })
+                    .update({ team_id: teamId })
                     .eq('account_id', data.account_id);
                 
                 if (updatePlayerError) {

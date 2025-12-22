@@ -19,7 +19,7 @@ export async function GET() {
                 id,
                 trackmania_name,
                 discord_username,
-                team_assignment,
+                team_id,
                 timezone,
                 availability_slots (*)
             `)
@@ -50,7 +50,7 @@ export async function GET() {
                 id: player.id,
                 name: player.trackmania_name || player.discord_username,
                 discordUsername: player.discord_username,
-                teamAssignment: player.team_assignment,
+                teamAssignment: player.team_id,
                 timezone: player.timezone
             },
             availability

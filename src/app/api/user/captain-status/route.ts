@@ -14,13 +14,13 @@ export async function GET() {
     // Check if user is a captain in the players table
     const { data } = await supabase
         .from("players")
-        .select("team_assignment, is_captain")
+        .select("team_id, is_captain")
         .ilike("discord_username", session.user.username)
         .single();
 
-    if (data && data.is_captain && data.team_assignment) {
+    if (data && data.is_captain && data.team_id) {
         isCaptain = true;
-        teamId = data.team_assignment;
+        teamId = data.team_id;
     }
 
     return NextResponse.json({

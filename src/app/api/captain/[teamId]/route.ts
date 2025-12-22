@@ -17,7 +17,7 @@ export async function GET(
                 availability_slots (*)
             `)
             .eq('status', 'approved')
-            .in('team_assignment', [teamId, 'joker'])
+            .in('team_id', [parseInt(teamId), 0])
             .order('trackmania_name');
 
         if (playersError) throw playersError;
@@ -26,7 +26,7 @@ export async function GET(
         const teamPlayers = players.map(p => ({
             id: p.id,
             name: p.trackmania_name || p.discord_username,
-            teamAssignment: p.team_assignment,
+            teamAssignment: p.team_id,
             availability: (p.availability_slots || []).map((s: any) => ({
                 date: s.date,
                 startHour: s.start_hour,

@@ -20,22 +20,21 @@ export async function PATCH(
         // Get current player state (using Admin client to ensure access)
         const { data: currentPlayer } = await supabaseAdmin
             .from('players')
-            .select('team_assignment')
+            .select('team_id')
             .eq('id', id)
             .single();
 
-        const oldTeam = currentPlayer?.team_assignment;
+        const oldTeam = currentPlayer?.team_id;
 
         const updateData: Record<string, unknown> = {};
         if (body.status) updateData.status = body.status;
         if (body.teamAssignment) {
-            // Convert "team1" -> 1, "team2" -> 2, etc. Store as integer
-            // "joker" stays as "joker" (null for team number)
+            // Convert "team1" -> 1, "team2" -> 2, etc. "joker" -> 0. Store as integer
             if (body.teamAssignment === 'joker') {
-                updateData.team_assignment = 'joker';
+                updateData.team_id = 0;
             } else {
                 const teamNum = parseInt(body.teamAssignment.replace('team', ''));
-                updateData.team_assignment = isNaN(teamNum) ? null : teamNum;
+                updateData.team_id = isNaN(teamNum) ? null : teamNum;
             }
         }
         if (typeof body.isCaptain === 'boolean') updateData.is_captain = body.isCaptain;

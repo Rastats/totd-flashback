@@ -20,7 +20,7 @@ interface SyncPayload {
 }
 
 /**
- * Parse team_assignment which can be:
+ * Parse team_id which can be:
  * - Integer: 1, 2, 3, 4
  * - String: "team1", "team2", "team3", "team4" 
  * - String: "Team Speedrun" (=1), "Team B2" (=2), "Team BITM" (=3), "Team 4" (=4)
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         // ============================================
         const { data: player, error: playerError } = await supabase
             .from('players')
-            .select('id, trackmania_name, team_assignment, status')
+            .select('id, trackmania_name, team_id, status')
             .eq('account_id', syncData.account_id)
             .eq('status', 'approved')
             .single();
@@ -141,11 +141,11 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const teamId = parseTeamId(player.team_assignment);
+        const teamId = parseTeamId(player.team_id);
         if (!teamId) {
             return NextResponse.json({
                 success: false,
-                reason: player.team_assignment === 'joker' ? 'joker_no_team_selected' : 'no_team_assigned'
+                reason: player.team_id === 'joker' ? 'joker_no_team_selected' : 'no_team_assigned'
             });
         }
 

@@ -39,7 +39,7 @@ export async function isCaptainOfTeam(teamId: string): Promise<boolean> {
         .from("players")
         .select("id")
         .ilike("discord_username", session.user.username)
-        .eq("team_assignment", teamId)
+        .eq("team_id", teamId)
         .eq("is_captain", true)
         .single();
 

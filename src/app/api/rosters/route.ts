@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     try {
         const { data: players, error } = await supabase
             .from('players')
-            .select('id, trackmania_name, discord_username, team_assignment, twitch_username, can_stream, status, is_captain')
+            .select('id, trackmania_name, discord_username, team_id, twitch_username, can_stream, status, is_captain')
             .eq('status', 'approved');
 
         if (error) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
             trackmaniaName: p.trackmania_name,
             discordUsername: p.discord_username,
             // Convert 'joker' string to null for plugin compatibility
-            teamAssignment: p.team_assignment === 'joker' ? null : p.team_assignment,
+            teamAssignment: p.team_id === 'joker' ? null : p.team_id,
             twitchUsername: p.twitch_username,
             canStream: p.can_stream,
             isCaptain: p.is_captain,
