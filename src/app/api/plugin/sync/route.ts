@@ -7,6 +7,11 @@ const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 const lastRequestTime: Map<string, number> = new Map();
 const MIN_REQUEST_INTERVAL = 5000; // 5s minimum between requests
 
+// Stale player cleanup - remove active/waiting players after 60s of no sync
+const STALE_TIMEOUT_MS = 60000; // 60 seconds
+let lastCleanupTime = 0;
+const CLEANUP_INTERVAL_MS = 30000; // Only run cleanup every 30s max
+
 interface SyncPayload {
     account_id: string;
     player_name: string;
@@ -54,6 +59,52 @@ function parseTeamId(teamAssignment: any): number | null {
         return !isNaN(num) && num >= 1 && num <= 4 ? num : null;
     }
     return null;
+}
+
+/**
+ * Cleanup stale active/waiting players
+ * Removes players from active_player and waiting_player columns
+ * if their updated_at is older than STALE_TIMEOUT_MS (60s)
+ */
+async function cleanupStalePlayers(supabase: any) {
+    const now = Date.now();
+    
+    // Only run cleanup every 30s to avoid excessive DB calls
+    if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
+        return;
+    }
+    lastCleanupTime = now;
+    
+    const cutoffTime = new Date(Date.now() - STALE_TIMEOUT_MS).toISOString();
+    
+    // Get teams with stale active/waiting players
+    const { data: staleTeams, error } = await supabase
+        .from('team_server_state')
+        .select('team_id, active_player, waiting_player, updated_at')
+        .or(`active_player.neq.,waiting_player.neq.`)
+        .lt('updated_at', cutoffTime);
+    
+    if (error || !staleTeams || staleTeams.length === 0) {
+        return;
+    }
+    
+    // Clear stale players
+    for (const team of staleTeams) {
+        const updates: any = { updated_at: new Date().toISOString() };
+        if (team.active_player) {
+            updates.active_player = null;
+            console.log(`[Cleanup] Removing stale active player from team ${team.team_id}: ${team.active_player}`);
+        }
+        if (team.waiting_player) {
+            updates.waiting_player = null;
+            console.log(`[Cleanup] Removing stale waiting player from team ${team.team_id}: ${team.waiting_player}`);
+        }
+        
+        await supabase
+            .from('team_server_state')
+            .update(updates)
+            .eq('team_id', team.team_id);
+    }
 }
 
 /**
@@ -132,6 +183,9 @@ export async function POST(request: NextRequest) {
 
         const supabase = getSupabaseAdmin();
 
+        // Cleanup stale active/waiting players (runs max once per 30s)
+        await cleanupStalePlayers(supabase);
+
         // ============================================
         // 1. Check if player is in roster
         // ============================================
@@ -199,19 +253,31 @@ export async function POST(request: NextRequest) {
         }
 
         // ============================================
-        // 4. Get donations data
+        // 4. Get donations data from database
         // ============================================
-        // TODO: Add Tiltify donations fetch here
+        // Fetch team pots from team_server_state
+        const { data: allTeamPots } = await supabase
+            .from('team_server_state')
+            .select('team_id, pot_amount')
+            .order('team_id');
+        
+        const teamPots = allTeamPots?.map((t: any) => ({
+            team_id: t.team_id,
+            pot_amount: t.pot_amount || 0
+        })) || [
+            { team_id: 1, pot_amount: 0 },
+            { team_id: 2, pot_amount: 0 },
+            { team_id: 3, pot_amount: 0 },
+            { team_id: 4, pot_amount: 0 }
+        ];
+        
+        const totalAmount = teamPots.reduce((sum: number, t: any) => sum + t.pot_amount, 0);
+        
         const donationsData = {
-            totalAmount: 0,
+            totalAmount: totalAmount,
             currency: 'GBP',
             goal: 2000,
-            teamPots: [
-                { team_id: 1, pot_amount: 0 },
-                { team_id: 2, pot_amount: 0 },
-                { team_id: 3, pot_amount: 0 },
-                { team_id: 4, pot_amount: 0 }
-            ],
+            teamPots: teamPots,
             recentDonations: []
         };
 
