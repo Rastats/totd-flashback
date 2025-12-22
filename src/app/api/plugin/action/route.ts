@@ -98,9 +98,9 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        // Parse team_id (can be int, "team1" string, or "joker")
+        // Parse team_id (can be int or 0 for joker)
         let teamId = parseTeamId(player.team_id);
-        const isJoker = player.team_id === 'joker';
+        const isJoker = player.team_id === 0;
 
         // Handle joker team change
         if (data.action === 'joker_change_team') {

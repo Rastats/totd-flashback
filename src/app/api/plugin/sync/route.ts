@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         if (!teamId) {
             return NextResponse.json({
                 success: false,
-                reason: player.team_id === 'joker' ? 'joker_no_team_selected' : 'no_team_assigned'
+                reason: player.team_id === 0 ? 'joker_no_team_selected' : 'no_team_assigned'
             });
         }
 
@@ -221,7 +221,8 @@ export async function POST(request: NextRequest) {
                 shield_active: serverState?.shield_active || false,
                 shield_type: serverState?.shield_type || null,
                 shield_expires_at: serverState?.shield_expires_at || null,
-                shield_cooldown_expires_at: serverState?.shield_cooldown_expires_at || null,
+                shield_small_cooldown_expires_at: serverState?.shield_small_cooldown_expires_at || null,
+                shield_big_cooldown_expires_at: serverState?.shield_big_cooldown_expires_at || null,
                 pot_amount: serverState?.pot_amount || 0
             },
 

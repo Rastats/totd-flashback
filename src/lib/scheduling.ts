@@ -2,7 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { EVENT_DURATION_HOURS } from '@/lib/timezone-utils';
 
 export async function autofillSchedule(teamId: string, supabase: SupabaseClient) {
-    if (!teamId || teamId === 'joker') return;
+    if (!teamId || teamId === '0') return; // '0' is joker
 
     // 1. Fetch Players with Availability
     const { data: players, error: playersError } = await supabase

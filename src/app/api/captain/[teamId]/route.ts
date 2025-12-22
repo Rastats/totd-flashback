@@ -22,15 +22,13 @@ export async function GET(
 
         if (playersError) throw playersError;
 
-        // Transform players to match UI expectation
+        // Transform players to match UI expectation - use new format with hourIndex
         const teamPlayers = players.map(p => ({
             id: p.id,
             name: p.trackmania_name || p.discord_username,
             teamAssignment: p.team_id,
             availability: (p.availability_slots || []).map((s: any) => ({
-                date: s.date,
-                startHour: s.start_hour,
-                endHour: s.end_hour,
+                hourIndex: s.hour_index,
                 preference: s.preference,
             }))
         }));

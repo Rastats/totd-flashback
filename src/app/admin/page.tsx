@@ -277,46 +277,33 @@ export default function AdminPage() {
     };
 
     // Get player hours as indices (for team suggestion)
+    // Now uses new format: slots have hourIndex directly, or date+hour
     const getPlayerHourIndices = (player: PlayerApplication): number[] => {
         const indices: number[] = [];
         const dates = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"];
         
-        // Helper to add hour index
-        const addHour = (dayIndex: number, h: number) => {
-            let hourIndex: number;
-            if (dayIndex === 0) {
-                hourIndex = h - 21;
-            } else {
-                hourIndex = 3 + ((dayIndex - 1) * 24) + h;
+        player.availability.forEach((slot: any) => {
+            // New format: hourIndex is directly available
+            if (slot.hourIndex !== undefined) {
+                if (!indices.includes(slot.hourIndex)) {
+                    indices.push(slot.hourIndex);
+                }
+                return;
             }
-            if (hourIndex >= 0 && hourIndex < 69 && !indices.includes(hourIndex)) {
-                indices.push(hourIndex);
-            }
-        };
-        
-        player.availability.forEach(slot => {
-            const dayIndex = dates.indexOf(slot.date);
-            if (dayIndex === -1) return;
-
-            // Check if overnight slot (endHour <= startHour means it crosses midnight)
-            const isOvernight = slot.endHour <= slot.startHour;
             
-            if (isOvernight) {
-                // Part 1: From startHour to midnight (24) on current day
-                for (let h = slot.startHour; h < 24; h++) {
-                    addHour(dayIndex, h);
+            // Fallback: calculate from date + hour
+            if (slot.date && slot.hour !== undefined) {
+                const dayIndex = dates.indexOf(slot.date);
+                if (dayIndex === -1) return;
+                
+                let hourIndex: number;
+                if (dayIndex === 0) {
+                    hourIndex = slot.hour - 21; // Dec 26 starts at 21:00 (index 0-2)
+                } else {
+                    hourIndex = 3 + ((dayIndex - 1) * 24) + slot.hour;
                 }
-                // Part 2: From midnight (0) to endHour on next day
-                const nextDayIndex = dayIndex + 1;
-                if (nextDayIndex < dates.length) {
-                    for (let h = 0; h < slot.endHour; h++) {
-                        addHour(nextDayIndex, h);
-                    }
-                }
-            } else {
-                // Normal slot
-                for (let h = slot.startHour; h < slot.endHour; h++) {
-                    addHour(dayIndex, h);
+                if (hourIndex >= 0 && hourIndex < 69 && !indices.includes(hourIndex)) {
+                    indices.push(hourIndex);
                 }
             }
         });
@@ -327,14 +314,15 @@ export default function AdminPage() {
     const getSuggestedTeam = (player: PlayerApplication): { team: TeamAssignment; gapsFilled: number; score: number }[] => {
         const coverage = getCoverage();
         const playerHours = getPlayerHourIndices(player);
-        const teams = ["team1", "team2", "team3", "team4"] as const;
+        // Use numeric team IDs: 1, 2, 3, 4
+        const teamIds = [1, 2, 3, 4] as const;
 
-        const suggestions = teams.map(team => {
+        const suggestions = teamIds.map(teamId => {
             let gapsFilled = 0;
             let valuableHours = 0;
 
             playerHours.forEach(hour => {
-                const currentCoverage = coverage[team][hour].count;
+                const currentCoverage = coverage[teamId]?.[hour]?.count || 0;
                 if (currentCoverage === 0) {
                     gapsFilled++; // Filling a gap = very valuable
                     valuableHours += 3;
@@ -343,7 +331,8 @@ export default function AdminPage() {
                 }
             });
 
-            return { team: team as TeamAssignment, gapsFilled, score: valuableHours };
+            // Return with string format for TeamAssignment compatibility
+            return { team: `team${teamId}` as TeamAssignment, gapsFilled, score: valuableHours };
         });
 
         // Sort by score (descending)
@@ -376,58 +365,50 @@ export default function AdminPage() {
         fetchData();
     };
 
-    // Coverage calculation
+    // Coverage calculation - now uses new format with hourIndex/hour
     const getCoverage = () => {
         const approvedPlayers = players.filter(p => p.status === "approved");
-        const teams = ["team1", "team2", "team3", "team4", "joker"] as const;
+        // Use team_id integers: 1, 2, 3, 4, 0 (joker)
+        const teamIds = [1, 2, 3, 4, 0] as const;
 
-        const coverage: Record<string, { count: number, names: string[] }[]> = {};
-        [...teams].forEach(t => {
+        const coverage: Record<number, { count: number, names: string[] }[]> = {};
+        teamIds.forEach(t => {
             coverage[t] = Array.from({ length: 69 }, () => ({ count: 0, names: [] }));
         });
 
+        const dates = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"];
+
         approvedPlayers.forEach(player => {
             const team = player.teamAssignment;
-            if (!team) return;
+            if (team === null || team === undefined) return;
+            
+            // Convert string team to number if needed
+            const teamNum = typeof team === 'number' ? team :
+                team === 'joker' ? 0 :
+                team.startsWith('team') ? parseInt(team.replace('team', '')) : null;
+            
+            if (teamNum === null || !coverage[teamNum]) return;
 
-            player.availability.forEach(slot => {
-                const dayIndex = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"].indexOf(slot.date);
-                if (dayIndex === -1) return;
-
-                // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
-                const isOvernight = slot.endHour < slot.startHour;
-
-                const processHour = (day: number, h: number) => {
-                    let hourIndex: number;
-                    if (day === 0) {
-                        // Dec 21: only hours 21-23 are valid (indices 0-2)
-                        hourIndex = h - 21;
+            player.availability.forEach((slot: any) => {
+                let hourIndex: number | undefined;
+                
+                // New format: hourIndex directly available
+                if (slot.hourIndex !== undefined) {
+                    hourIndex = slot.hourIndex;
+                } else if (slot.date && slot.hour !== undefined) {
+                    // Calculate from date + hour
+                    const dayIndex = dates.indexOf(slot.date);
+                    if (dayIndex === -1) return;
+                    if (dayIndex === 0) {
+                        hourIndex = slot.hour - 21;
                     } else {
-                        // Dec 22: 3 + h, Dec 23: 27 + h, Dec 24: 51 + h
-                        hourIndex = 3 + ((day - 1) * 24) + h;
+                        hourIndex = 3 + ((dayIndex - 1) * 24) + slot.hour;
                     }
-                    if (hourIndex >= 0 && hourIndex < 69 && coverage[team]) {
-                        coverage[team][hourIndex].count++;
-                        coverage[team][hourIndex].names.push(player.trackmaniaName || player.discordUsername);
-                    }
-                };
-
-                if (isOvernight) {
-                    // Slot crosses midnight: process current day startHour to 24
-                    for (let h = slot.startHour; h < 24; h++) {
-                        processHour(dayIndex, h);
-                    }
-                    // Then process next day 0 to endHour (if next day exists within event)
-                    if (dayIndex < 3) { // Can't go past Dec 24
-                        for (let h = 0; h < slot.endHour; h++) {
-                            processHour(dayIndex + 1, h);
-                        }
-                    }
-                } else {
-                    // Normal slot within same day
-                    for (let h = slot.startHour; h < slot.endHour; h++) {
-                        processHour(dayIndex, h);
-                    }
+                }
+                
+                if (hourIndex !== undefined && hourIndex >= 0 && hourIndex < 69) {
+                    coverage[teamNum][hourIndex].count++;
+                    coverage[teamNum][hourIndex].names.push(player.trackmaniaName || player.discordUsername);
                 }
             });
         });
@@ -435,48 +416,33 @@ export default function AdminPage() {
         return coverage;
     };
 
-    // Caster coverage calculation
+    // Caster coverage calculation - now uses new format with hourIndex/hour
     const getCasterCoverage = () => {
         const approvedCasters = casters.filter(c => c.status === "approved");
         const hours = Array.from({ length: 69 }, () => ({ count: 0, names: [] as string[] }));
+        const dates = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"];
 
         approvedCasters.forEach(caster => {
-            caster.availability.forEach(slot => {
-                const dayIndex = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"].indexOf(slot.date);
-                if (dayIndex === -1) return;
-
-                // Handle overnight slots (e.g., 18:00-1:00 crosses midnight)
-                const isOvernight = slot.endHour < slot.startHour;
-
-                const processHour = (day: number, h: number) => {
-                    let hourIndex: number;
-                    if (day === 0) {
-                        hourIndex = h - 21;
+            caster.availability.forEach((slot: any) => {
+                let hourIndex: number | undefined;
+                
+                // New format: hourIndex directly available
+                if (slot.hourIndex !== undefined) {
+                    hourIndex = slot.hourIndex;
+                } else if (slot.date && slot.hour !== undefined) {
+                    // Calculate from date + hour
+                    const dayIndex = dates.indexOf(slot.date);
+                    if (dayIndex === -1) return;
+                    if (dayIndex === 0) {
+                        hourIndex = slot.hour - 21;
                     } else {
-                        hourIndex = 3 + ((day - 1) * 24) + h;
+                        hourIndex = 3 + ((dayIndex - 1) * 24) + slot.hour;
                     }
-                    if (hourIndex >= 0 && hourIndex < 69) {
-                        hours[hourIndex].count++;
-                        hours[hourIndex].names.push(caster.displayName || caster.discordUsername);
-                    }
-                };
-
-                if (isOvernight) {
-                    // Slot crosses midnight: process current day startHour to 24
-                    for (let h = slot.startHour; h < 24; h++) {
-                        processHour(dayIndex, h);
-                    }
-                    // Then process next day 0 to endHour (if next day exists within event)
-                    if (dayIndex < 3) {
-                        for (let h = 0; h < slot.endHour; h++) {
-                            processHour(dayIndex + 1, h);
-                        }
-                    }
-                } else {
-                    // Normal slot within same day
-                    for (let h = slot.startHour; h < slot.endHour; h++) {
-                        processHour(dayIndex, h);
-                    }
+                }
+                
+                if (hourIndex !== undefined && hourIndex >= 0 && hourIndex < 69) {
+                    hours[hourIndex].count++;
+                    hours[hourIndex].names.push(caster.displayName || caster.discordUsername);
                 }
             });
         });
@@ -881,7 +847,15 @@ export default function AdminPage() {
 
                         {(() => {
                             const coverage = getCoverage();
-                            const teams = ["team1", "team2", "team3", "team4", "joker"] as const;
+                            // Use numeric team IDs matching getCoverage
+                            const teamIds = [1, 2, 3, 4, 0] as const;
+                            const teamLabels: Record<number, string> = {
+                                1: TEAMS[0]?.name || 'Team 1',
+                                2: TEAMS[1]?.name || 'Team 2',
+                                3: TEAMS[2]?.name || 'Team 3',
+                                4: TEAMS[3]?.name || 'Team 4',
+                                0: '🃏 Joker'
+                            };
 
                             return (
                                 <div style={{ overflowX: "auto" }}>
@@ -910,12 +884,12 @@ export default function AdminPage() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {teams.map((team) => (
-                                                <tr key={team}>
+                                            {teamIds.map((teamId) => (
+                                                <tr key={teamId}>
                                                     <td style={{ padding: 8, fontWeight: 500, position: "sticky", left: 0, background: "#0a0a0f" }}>
-                                                        {team === "joker" ? "🃏 Joker" : (TEAMS.find(t => t.id === team)?.name || team)}
+                                                        {teamLabels[teamId]}
                                                     </td>
-                                                    {coverage[team].map((data, i) => {
+                                                    {(coverage[teamId] || []).map((data: { count: number; names: string[] }, i: number) => {
                                                         const count = data.count;
                                                         let bg = "#4a1a1a"; // red - no coverage
                                                         if (count === 1) bg = "#4a3a1a"; // yellow - fragile
@@ -1013,12 +987,12 @@ export default function AdminPage() {
                                 const coverage = getCoverage();
                                 const gaps: string[] = [];
 
-                                ["team1", "team2", "team3", "team4"].forEach(team => {
-                                    coverage[team].forEach((data, hour) => {
+                                [1, 2, 3, 4].forEach(teamId => {
+                                    (coverage[teamId] || []).forEach((data: { count: number }, hour: number) => {
                                         if (data.count === 0) {
                                             const day = Math.floor(hour / 24) + 1;
                                             const h = (21 + hour) % 24;
-                                            gaps.push(`${team.replace("team", "Team ")}: Day ${day}, ${h}:00`);
+                                            gaps.push(`Team ${teamId}: Day ${day}, ${h}:00`);
                                         }
                                     });
                                 });
