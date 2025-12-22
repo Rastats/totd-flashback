@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     
     let query = supabase
         .from('team_server_state')
-        .select('team_id, penalties_active, penalties_waitlist, shield_active, shield_type, shield_remaining_ms')
+        .select('team_id, penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at')
         .order('team_id');
     
     if (teamId) {

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     
     let query = supabase
         .from('team_server_state')
-        .select('team_id, shield_active, shield_type, shield_expires_at, shield_cooldown_ms, updated_at');
+        .select('team_id, shield_active, shield_type, shield_expires_at, updated_at');
     
     if (teamId) {
         query = query.eq('team_id', parseInt(teamId));
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
             type: team.shield_type,
             remaining_ms: remainingMs,
             expires_at: team.shield_expires_at,
-            cooldown_ms: team.shield_cooldown_ms || 0
+            cooldown_ms: 0  // Not used currently
         };
     }) || [];
     
