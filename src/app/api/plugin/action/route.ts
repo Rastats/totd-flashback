@@ -158,6 +158,55 @@ export async function POST(request: NextRequest) {
                     updateData.completed_map_ids = [...completedIds, data.map_index];
                     updateData.maps_completed = updateData.completed_map_ids.length;
                     message = `Map ${data.map_index} completed`;
+                    
+                    // Process penalties - decrement maps_remaining and check timers
+                    const activePenalties: any[] = state.penalties_active || [];
+                    const now = Date.now();
+                    const remainingPenalties: any[] = [];
+                    const completedPenalties: any[] = [];
+                    
+                    for (const penalty of activePenalties) {
+                        let shouldRemove = false;
+                        
+                        // Check timer expiry
+                        if (penalty.timer_expires_at) {
+                            const expiryTime = new Date(penalty.timer_expires_at).getTime();
+                            if (now >= expiryTime) {
+                                shouldRemove = true;
+                            }
+                        }
+                        
+                        // Decrement maps_remaining if applicable
+                        if (!shouldRemove && penalty.maps_remaining !== null && penalty.maps_remaining !== undefined) {
+                            penalty.maps_remaining = Math.max(0, penalty.maps_remaining - 1);
+                            if (penalty.maps_remaining === 0) {
+                                shouldRemove = true;
+                            }
+                        }
+                        
+                        if (shouldRemove) {
+                            completedPenalties.push(penalty);
+                        } else {
+                            remainingPenalties.push(penalty);
+                        }
+                    }
+                    
+                    // Update penalties_active
+                    if (completedPenalties.length > 0 || activePenalties.length !== remainingPenalties.length) {
+                        updateData.penalties_active = remainingPenalties;
+                        
+                        // Log completed penalties
+                        for (const p of completedPenalties) {
+                            await supabase.from('event_log').insert({
+                                event_type: 'penalty_completed',
+                                team_id: teamId,
+                                message: `Penalty "${p.name || p.penalty_name}" completed`,
+                                metadata: { penalty_id: p.id, reason: p.maps_remaining === 0 ? 'maps_done' : 'timer_expired' }
+                            });
+                        }
+                        
+                        message += `, ${completedPenalties.length} penalty(ies) completed`;
+                    }
                 } else {
                     message = `Map ${data.map_index} already completed`;
                 }

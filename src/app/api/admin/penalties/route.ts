@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { PENALTY_CONFIG, getInitialMapsRemaining, calculateTimerExpiry } from '@/lib/penalty-config';
 
 // GET: List all penalties from team_server_state for all teams
 export async function GET(request: Request) {
@@ -100,10 +101,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Team already has 4 penalties (max 2 active + 2 waitlist)' }, { status: 400 });
         }
         
-        // Create new penalty object
+        // Create new penalty object with maps_remaining and timer_expires_at
+        // Find penalty config by name
+        const penaltyConfig = Object.values(PENALTY_CONFIG).find(p => p.name === penalty_name);
+        
         const newPenalty = {
             id: Date.now(), // Use timestamp as unique ID
-            name: penalty_name
+            penalty_id: penaltyConfig?.id || 0,
+            name: penalty_name,
+            maps_remaining: penaltyConfig?.maps ?? null,
+            maps_total: penaltyConfig?.maps ?? null,
+            timer_expires_at: penaltyConfig?.timerMinutes 
+                ? new Date(Date.now() + penaltyConfig.timerMinutes * 60 * 1000).toISOString()
+                : null,
+            timer_minutes: penaltyConfig?.timerMinutes ?? null
         };
         
         // Add to waitlist (not active - plugin manages activation)
@@ -259,9 +270,24 @@ export async function PATCH(request: Request) {
             // Move from waitlist to active
             if (index >= 0 && index < waitlist.length) {
                 penalty = waitlist.splice(index, 1)[0];
-                // Add fields needed for active penalty
-                penalty.maps_remaining = 3; // Default for map-based penalties
-                penalty.timer_remaining_ms = null;
+                
+                // Timer starts NOW (at activation), not when penalty was added
+                // Get config by penalty_id or by name
+                const penaltyId = penalty.penalty_id;
+                const penaltyConfig = penaltyId ? PENALTY_CONFIG[penaltyId] : 
+                    Object.values(PENALTY_CONFIG).find(p => p.name === penalty.name);
+                
+                if (penaltyConfig?.timerMinutes) {
+                    penalty.timer_expires_at = new Date(Date.now() + penaltyConfig.timerMinutes * 60 * 1000).toISOString();
+                }
+                
+                // Ensure maps_remaining is set from config if not already
+                if (penalty.maps_remaining === undefined && penaltyConfig?.maps) {
+                    penalty.maps_remaining = penaltyConfig.maps;
+                    penalty.maps_total = penaltyConfig.maps;
+                }
+                
+                penalty.activated_at = new Date().toISOString();
                 active.push(penalty);
             }
         } else if (currentType === 'active' && !is_active) {
@@ -269,8 +295,8 @@ export async function PATCH(request: Request) {
             if (index >= 0 && index < active.length) {
                 penalty = active.splice(index, 1)[0];
                 // Remove active-only fields
-                delete penalty.maps_remaining;
-                delete penalty.timer_remaining_ms;
+                delete penalty.timer_expires_at;
+                delete penalty.activated_at;
                 waitlist.push(penalty);
             }
         }

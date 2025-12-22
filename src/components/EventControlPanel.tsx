@@ -51,6 +51,19 @@ interface Penalty {
     donor_name: string;
     is_active: boolean;
     created_at: string;
+    maps_remaining?: number | null;
+    maps_total?: number | null;
+    timer_expires_at?: string | null;
+}
+
+// Helper to format remaining timer
+function formatTimerRemaining(expiresAt: string | null | undefined): string | null {
+    if (!expiresAt) return null;
+    const remaining = new Date(expiresAt).getTime() - Date.now();
+    if (remaining <= 0) return "Expired";
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 interface Shield {
@@ -460,14 +473,28 @@ export default function EventControlPanel() {
                                     ) : (
                                         activePenalties.map(p => (
                                             <div key={p.id} style={{ 
-                                                display: "flex", alignItems: "center", gap: 4,
-                                                padding: "2px 4px", background: "#2a1a1a", borderRadius: 3, marginBottom: 2, fontSize: 10
+                                                display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap",
+                                                padding: "4px 6px", background: "#2a1a1a", borderRadius: 3, marginBottom: 3, fontSize: 10
                                             }}>
-                                                <span style={{ flex: 1, color: "#f87171" }}>{p.penalty_name}</span>
-                                                <button onClick={() => togglePenaltyStatus(p.id, true)} 
-                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
-                                                <button onClick={() => removePenalty(p.id)} 
-                                                    style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
+                                                <span style={{ color: "#f87171", fontWeight: "bold" }}>{p.penalty_name}</span>
+                                                {/* Show maps progress if applicable */}
+                                                {p.maps_remaining !== null && p.maps_remaining !== undefined && p.maps_total && p.maps_total > 1 && (
+                                                    <span style={{ color: "#fbbf24", fontSize: 9 }}>
+                                                        ({p.maps_remaining}/{p.maps_total})
+                                                    </span>
+                                                )}
+                                                {/* Show timer if applicable */}
+                                                {p.timer_expires_at && (
+                                                    <span style={{ color: "#38bdf8", fontSize: 9, fontFamily: "monospace" }}>
+                                                        ⏱ {formatTimerRemaining(p.timer_expires_at)}
+                                                    </span>
+                                                )}
+                                                <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
+                                                    <button onClick={() => togglePenaltyStatus(p.id, true)} 
+                                                        style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
+                                                    <button onClick={() => removePenalty(p.id)} 
+                                                        style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
+                                                </div>
                                             </div>
                                         ))
                                     )}
