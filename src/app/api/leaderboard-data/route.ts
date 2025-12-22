@@ -55,12 +55,23 @@ export async function GET() {
             }
 
             // Process penalties (active + waitlist)
-            const activePenalties = (entry?.penalties_active || []).map((p: any) => ({
-                name: p.name || `Penalty ${p.id}`,
-                is_active: true,
-                maps_remaining: p.maps_remaining || 0,
-                timer_remaining_ms: p.timer_remaining_ms || 0
-            }));
+            const activePenalties = (entry?.penalties_active || []).map((p: any) => {
+                // Calculate remaining time from timer_expires_at
+                let timerRemainingMs = 0;
+                if (p.timer_expires_at) {
+                    timerRemainingMs = Math.max(0, new Date(p.timer_expires_at).getTime() - now.getTime());
+                }
+                
+                return {
+                    name: p.name || `Penalty ${p.id}`,
+                    penalty_id: p.penalty_id,
+                    is_active: true,
+                    maps_remaining: p.maps_remaining ?? null,
+                    maps_total: p.maps_total ?? null,
+                    timer_remaining_ms: timerRemainingMs,
+                    timer_expires_at: p.timer_expires_at
+                };
+            });
 
             const waitlistPenalties = (entry?.penalties_waitlist || []).map((p: any) => ({
                 name: p.name || `Penalty ${p.id}`,

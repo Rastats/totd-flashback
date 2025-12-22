@@ -31,6 +31,7 @@ interface TeamStatus {
         name: string;
         timeLeft: number;
         mapsRemaining: number;
+        mapsTotal: number;
     }[];
     penaltyQueue: number;
     penaltyQueueNames: string[];
@@ -221,10 +222,11 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                         {team.activePenalties.length > 0 ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 {team.activePenalties.map((p, i) => (
-                                    <div key={i} style={{ background: "rgba(248, 113, 113, 0.2)", border: "1px solid #f87171", borderRadius: 4, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                                    <div key={i} style={{ background: "rgba(248, 113, 113, 0.2)", border: "1px solid #f87171", borderRadius: 4, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, gap: 8 }}>
                                         <span style={{ color: "#f87171" }}>⚠️ {p.name}</span>
-                                        <span style={{ fontFamily: "monospace" }}>
-                                            {p.timeLeft > 0 ? formatTime(p.timeLeft) : p.mapsRemaining > 0 ? `${p.mapsRemaining} maps` : ""}
+                                        <span style={{ fontFamily: "monospace", display: "flex", gap: 6, alignItems: "center" }}>
+                                            {p.mapsTotal > 1 && <span style={{ color: "#fbbf24" }}>{p.mapsRemaining}/{p.mapsTotal}</span>}
+                                            {p.timeLeft > 0 && <span style={{ color: "#38bdf8" }}>⏱ {formatTime(p.timeLeft)}</span>}
                                         </span>
                                     </div>
                                 ))}
@@ -326,7 +328,8 @@ export default function LeaderboardPage() {
                             .map((p: any) => ({
                                 name: p.name,
                                 timeLeft: p.timer_remaining_ms ? Math.floor(p.timer_remaining_ms / 1000) : 0,
-                                mapsRemaining: p.maps_remaining || 0
+                                mapsRemaining: p.maps_remaining ?? 0,
+                                mapsTotal: p.maps_total ?? 0
                             })),
                         penaltyQueue: (t.penalties?.waitlist || []).length,
                         penaltyQueueNames: (t.penalties?.waitlist || []).map((p: any) => p.name),
