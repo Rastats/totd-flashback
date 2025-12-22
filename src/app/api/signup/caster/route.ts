@@ -30,20 +30,37 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: casterError.message }, { status: 400 });
         }
 
-        // Insert availability slots - convert to hour_index
-        if (availability && availability.length > 0) {
+        // Insert availability slots
+        // Support both new format (hour_indices) and legacy format (availability slots)
+        const hourIndices: number[] = body.hour_indices || [];
+        const legacySlots = body.availability as { date: string; startHour: number; endHour: number; preference: string }[] | undefined;
+        
+        const slots: { caster_id: string; hour_index: number; preference: string }[] = [];
+        
+        if (hourIndices.length > 0) {
+            // New format: direct hour_indices array
+            for (const hourIndex of hourIndices) {
+                if (hourIndex >= 0 && hourIndex < 69) {
+                    slots.push({
+                        caster_id: caster.id,
+                        hour_index: hourIndex,
+                        preference: 'ok',
+                    });
+                }
+            }
+        } else if (legacySlots && legacySlots.length > 0) {
+            // Legacy format: convert date+hour slots to hour_indices
             const userTimezone = formData.timezone || 'Europe/Paris';
-            const slots: { caster_id: string; hour_index: number; preference: string }[] = [];
 
-            for (const slot of availability as { date: string; startHour: number; endHour: number; preference: string }[]) {
-                const hourIndices = userSlotToHourIndices(
+            for (const slot of legacySlots) {
+                const indices = userSlotToHourIndices(
                     slot.date,
                     slot.startHour,
                     slot.endHour,
                     userTimezone
                 );
 
-                for (const hourIndex of hourIndices) {
+                for (const hourIndex of indices) {
                     slots.push({
                         caster_id: caster.id,
                         hour_index: hourIndex,
@@ -51,15 +68,15 @@ export async function POST(request: NextRequest) {
                     });
                 }
             }
+        }
 
-            if (slots.length > 0) {
-                const { error: slotsError } = await supabase
-                    .from('availability_slots')
-                    .insert(slots);
+        if (slots.length > 0) {
+            const { error: slotsError } = await supabase
+                .from('availability_slots')
+                .insert(slots);
 
-                if (slotsError) {
-                    console.error('Slots insert error:', slotsError);
-                }
+            if (slotsError) {
+                console.error('Slots insert error:', slotsError);
             }
         }
 

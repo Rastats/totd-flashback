@@ -163,23 +163,23 @@ export default function AvailabilityGrid({
     }, [days, timezone, selectedHours, isAmerican]);
     
     const cellSize = 28;
+    const cellGap = 1;  // marginRight of each cell
     const labelWidth = 50;
     
     return (
         <div style={{ overflowX: 'auto' }}>
             {/* Hour labels row - positioned at intersections */}
             <div style={{ display: 'flex', marginLeft: labelWidth, marginBottom: 2 }}>
-                {Array.from({ length: 25 }, (_, i) => (
+                {Array.from({ length: 24 }, (_, i) => (
                     <div key={i} style={{
-                        width: i < 24 ? cellSize : 0,
+                        width: cellSize + cellGap,
                         fontSize: 10,
                         color: '#94a3b8',
-                        textAlign: 'left',
-                        marginLeft: i === 0 ? -4 : 0,
+                        textAlign: 'center',
                         position: 'relative',
-                        left: -4,
+                        left: -(cellSize / 2),
                     }}>
-                        {i < 24 ? i : ''}
+                        {i}
                     </div>
                 ))}
             </div>
