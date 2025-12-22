@@ -258,7 +258,10 @@ export default function LeaderboardPage() {
     const [penaltyHistory, setPenaltyHistory] = useState<{
         penalties: { penaltyId: number; penaltyName: string; team1: number; team2: number; team3: number; team4: number; total: number }[];
         totals: { team1: number; team2: number; team3: number; team4: number; total: number };
-    } | null>(null);
+    }>({
+        penalties: [],
+        totals: { team1: 0, team2: 0, team3: 0, team4: 0, total: 0 }
+    });
 
     // Fetch live data
     useEffect(() => {
