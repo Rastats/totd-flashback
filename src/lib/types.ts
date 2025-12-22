@@ -2,7 +2,7 @@
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type PreferenceLevel = 'unavailable' | 'ok' | 'preferred';
-export type TeamAssignment = 'team1' | 'team2' | 'team3' | 'team4' | 'joker' | null;
+export type TeamAssignment = 'team1' | 'team2' | 'team3' | 'team4' | 'joker' | 0 | 1 | 2 | 3 | 4 | null;
 
 export interface AvailabilitySlot {
     date: string; // ISO date string "2025-12-21"

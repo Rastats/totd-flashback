@@ -98,6 +98,16 @@ function slotsToIntervals(slots: SlotData[]): string[] {
     return intervals;
 }
 
+// Format team assignment (integer or string) to display label
+function formatTeamLabel(team: TeamAssignment, short = false): string {
+    if (team === null || team === undefined) return short ? "" : "none";
+    if (team === 0 || team === 'joker') return short ? "J" : "Joker";
+    if (typeof team === 'number') return short ? `T${team}` : `Team ${team}`;
+    if (typeof team === 'string' && team.startsWith('team')) {
+        return short ? team.replace('team', 'T') : team.replace('team', 'Team ');
+    }
+    return String(team);
+}
 export default function AdminPage() {
     const [players, setPlayers] = useState<PlayerApplication[]>([]);
     const [casters, setCasters] = useState<CasterApplication[]>([]);
@@ -639,7 +649,7 @@ export default function AdminPage() {
                                             <div style={{ marginBottom: 16, padding: 12, background: "#1a2a3a", borderRadius: 6 }}>
                                                 <strong>🎯 Select Team:</strong>
                                                 <span style={{ marginLeft: 8, opacity: 0.6, fontSize: 12 }}>
-                                                    (selected: {pendingTeamAssignment[player.id]?.replace("team", "Team ") || "none"})
+                                                    (selected: {formatTeamLabel(pendingTeamAssignment[player.id])})
                                                 </span>
                                                 <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                                                     {getSuggestedTeam(player).map((s, i) => (
@@ -657,7 +667,7 @@ export default function AdminPage() {
                                                                 border: pendingTeamAssignment[player.id] === s.team ? "2px solid #4ade80" : (i === 0 && !pendingTeamAssignment[player.id] ? "1px solid #4ade80" : "1px solid #444"),
                                                             }}
                                                         >
-                                                            {s.team?.replace("team", "T")} ({s.gapsFilled} gaps)
+                                                            {formatTeamLabel(s.team, true)} ({s.gapsFilled} gaps)
                                                         </button>
                                                     ))}
                                                 </div>
@@ -689,7 +699,7 @@ export default function AdminPage() {
                                                             }}
                                                             style={{ ...buttonStyle, marginTop: 12, background: "#22543d", color: "#4ade80", width: "100%" }}
                                                         >
-                                                            ✓ Approve all {matches.length + 1} → {suggestedTeam?.replace("team", "Team ")}
+                                                            ✓ Approve all {matches.length + 1} → {formatTeamLabel(suggestedTeam)}
                                                         </button>
                                                     )}
                                                 </div>
@@ -709,7 +719,7 @@ export default function AdminPage() {
                                                     }}
                                                     style={{ ...buttonStyle, background: "#22543d", color: "#4ade80" }}
                                                 >
-                                                    ✓ Approve{pendingTeamAssignment[player.id] ? ` → ${pendingTeamAssignment[player.id]?.replace("team", "T")}` : ""}
+                                                    ✓ Approve{pendingTeamAssignment[player.id] ? ` → ${formatTeamLabel(pendingTeamAssignment[player.id], true)}` : ""}
                                                 </button>
                                             )}
                                             {player.status !== "rejected" && (
@@ -729,7 +739,11 @@ export default function AdminPage() {
                                             {player.status === "approved" && (
                                                 <div style={{ display: "flex", gap: 8 }}>
                                                     <select
-                                                        value={player.teamAssignment || ""}
+                                                        value={
+                                                            // Convert integer team_id to string format for select
+                                                            player.teamAssignment === 0 ? "joker" :
+                                                            player.teamAssignment ? `team${player.teamAssignment}` : ""
+                                                        }
                                                         onChange={(e) => {
                                                             e.stopPropagation();
                                                             updatePlayerTeam(player.id, (e.target.value || null) as TeamAssignment);
@@ -742,7 +756,7 @@ export default function AdminPage() {
                                                         <option value="joker">Joker</option>
                                                     </select>
 
-                                                    {player.teamAssignment !== "joker" && (
+                                                    {player.teamAssignment !== 0 && player.teamAssignment && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
