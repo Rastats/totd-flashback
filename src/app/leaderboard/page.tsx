@@ -537,19 +537,26 @@ export default function LeaderboardPage() {
 
                     {/* RIGHT COLUMN: Event Feed */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        {/* Timer */}
+                        <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+                            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
+                            <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                                {formatCountdown(timeLeftMs)}
+                            </div>
+                        </div>
+
+                        {/* Live Feed */}
                         <div style={{
                             background: "#1e293b",
                             borderRadius: 12,
                             border: "1px solid #334155",
                             padding: 16,
                             height: "fit-content",
-                            maxHeight: "800px",
-                            position: "sticky",
-                            top: 24
+                            maxHeight: "400px"
                         }}>
                             <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "500px", overflowY: "auto" }}>
-                                {feed.length > 0 ? feed.slice(0, 6).map(event => (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "300px", overflowY: "auto" }}>
+                                {feed.length > 0 ? feed.slice(0, 5).map(event => (
                                     <div key={event.id} style={{
                                         paddingRight: 8,
                                         borderLeft: `3px solid ${event.teamId ? TEAM_COLORS[event.teamId]?.color : "#fff"}`,
@@ -561,14 +568,6 @@ export default function LeaderboardPage() {
                                 )) : (
                                     <div style={{ opacity: 0.5, textAlign: "center", padding: 20 }}>No recent events</div>
                                 )}
-                            </div>
-                        </div>
-
-                        {/* Timer */}
-                        <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
-                            <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
-                                {formatCountdown(timeLeftMs)}
                             </div>
                         </div>
 
