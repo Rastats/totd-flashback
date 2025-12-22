@@ -264,7 +264,7 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: 'Team already has 2 active penalties' }, { status: 400 });
         }
         
-        let penalty;
+        let penalty: any;
         
         if (currentType === 'waitlist' && is_active) {
             // Move from waitlist to active
