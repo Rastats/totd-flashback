@@ -78,7 +78,6 @@ export async function PUT(request: Request) {
                 team_id: team_id,
                 maps_completed: completed_map_ids.length,
                 completed_map_ids: completed_map_ids,
-                maps_total: 2000,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'team_id' });
 
