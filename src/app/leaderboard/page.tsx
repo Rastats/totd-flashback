@@ -340,14 +340,18 @@ export default function LeaderboardPage() {
                             big: t.shield?.big_cooldown_ms ? Math.floor(t.shield.big_cooldown_ms / 1000) : null
                         },
                         activePenalties: (t.penalties?.active || [])
+                            .filter((p: any) => p && p.name) // Filter out invalid penalties
                             .slice(0, 2)
                             .map((p: any) => ({
-                                name: p.name,
+                                name: p.name || `Penalty ${p.penalty_id || 'Unknown'}`,
                                 timeLeft: p.timer_remaining_ms ? Math.floor(p.timer_remaining_ms / 1000) : 0,
                                 mapsRemaining: p.maps_remaining ?? 0,
                                 mapsTotal: p.maps_total ?? 0
                             })),
-                        penaltyWaitlist: (t.penalties?.waitlist || []).slice(0, 2).map((p: any) => p.name),
+                        penaltyWaitlist: (t.penalties?.waitlist || [])
+                            .filter((p: any) => p && p.name)
+                            .slice(0, 2)
+                            .map((p: any) => p.name || 'Unknown'),
                         isOnline: t.isOnline,
                         teamPot: t.potAmount || 0
                     };
