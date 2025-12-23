@@ -564,9 +564,7 @@ export default function AdminPage() {
                                                     </a>
                                                 </div>
                                             )}
-                                            <div>
-                                                <strong>Max hours/day:</strong> {player.maxHoursPerDay}h
-                                            </div>
+
                                         </div>
 
                                         {player.playerNotes && (

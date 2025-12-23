@@ -43,7 +43,7 @@ export interface PlayerApplication {
     // Availability
     availability: AvailabilitySlot[];
     isFlexible: boolean;
-    maxHoursPerDay: number;
+
 
     // Consents
     acceptedRules: boolean;

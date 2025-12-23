@@ -52,7 +52,6 @@ export default function PlayerSignupPage() {
         canRelayTeammate: false,
         teammateWillStream: false,
         isFlexible: false,
-        maxHoursPerDay: 4,
         acceptedRules: false,
         consentPublicDisplay: false,
     });
