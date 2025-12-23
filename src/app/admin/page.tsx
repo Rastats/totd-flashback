@@ -868,7 +868,7 @@ export default function AdminPage() {
 
                                                     const showDay = (i === 0 || i === 4 || i === 28 || i === 52);
                                                     return (
-                                                        <th key={i} style={{ padding: "4px 2px", fontSize: 10, minWidth: 16 }}>
+                                                        <th key={i} style={{ padding: "4px 0", fontSize: 10, minWidth: 16, textAlign: "left", position: "relative", left: "-8px" }}>
                                                             {showDay ? dateLabels[dayIndex] : ""}
                                                             <br />
                                                             {hour}
@@ -935,7 +935,7 @@ export default function AdminPage() {
 
                                                     const showDay = (i === 0 || i === 4 || i === 28 || i === 52);
                                                     return (
-                                                        <th key={i} style={{ padding: "4px 2px", fontSize: 10, minWidth: 16 }}>
+                                                        <th key={i} style={{ padding: "4px 0", fontSize: 10, minWidth: 16, textAlign: "left", position: "relative", left: "-8px" }}>
                                                             {showDay ? dateLabels[dayIndex] : ""}
                                                             <br />
                                                             {hour}
