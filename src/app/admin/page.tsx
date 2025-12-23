@@ -856,15 +856,15 @@ export default function AdminPage() {
                                             <tr>
                                                 <th style={{ padding: 8, textAlign: "left", position: "sticky", left: 0, background: "#0a0a0f" }}>Team</th>
                                                 {Array.from({ length: 69 }, (_, i) => {
-                                                    const hour = (21 + i) % 24;
-                                                    // D1: i=0-2 (21h-23h), D2: i=3-26 (0h-23h), D3: i=27-50, D4: i=51-68
-                                                    const dateLabels = ["21/12", "22/12", "23/12", "24/12"];
+                                                    const hour = (20 + i) % 24;
+                                                    // D1: i=0-3 (20h-23h), D2: i=4-27 (0h-23h), D3: i=28-51, D4: i=52-68
+                                                    const dateLabels = ["26/12", "27/12", "28/12", "29/12"];
                                                     let dayIndex = 0;
-                                                    if (i >= 3 && i < 27) dayIndex = 1;
-                                                    else if (i >= 27 && i < 51) dayIndex = 2;
-                                                    else if (i >= 51) dayIndex = 3;
+                                                    if (i >= 4 && i < 28) dayIndex = 1;
+                                                    else if (i >= 28 && i < 52) dayIndex = 2;
+                                                    else if (i >= 52) dayIndex = 3;
 
-                                                    const showDay = (i === 0 || i === 3 || i === 27 || i === 51);
+                                                    const showDay = (i === 0 || i === 4 || i === 28 || i === 52);
                                                     return (
                                                         <th key={i} style={{ padding: "4px 2px", fontSize: 10, minWidth: 16 }}>
                                                             {showDay ? dateLabels[dayIndex] : ""}
@@ -924,14 +924,14 @@ export default function AdminPage() {
                                             <tr>
                                                 <th style={{ padding: 8, textAlign: "left", position: "sticky", left: 0, background: "#0a0a0f" }}>Role</th>
                                                 {Array.from({ length: 69 }, (_, i) => {
-                                                    const hour = (21 + i) % 24;
-                                                    const dateLabels = ["21/12", "22/12", "23/12", "24/12"];
+                                                    const hour = (20 + i) % 24;
+                                                    const dateLabels = ["26/12", "27/12", "28/12", "29/12"];
                                                     let dayIndex = 0;
-                                                    if (i >= 3 && i < 27) dayIndex = 1;
-                                                    else if (i >= 27 && i < 51) dayIndex = 2;
-                                                    else if (i >= 51) dayIndex = 3;
+                                                    if (i >= 4 && i < 28) dayIndex = 1;
+                                                    else if (i >= 28 && i < 52) dayIndex = 2;
+                                                    else if (i >= 52) dayIndex = 3;
 
-                                                    const showDay = (i === 0 || i === 3 || i === 27 || i === 51);
+                                                    const showDay = (i === 0 || i === 4 || i === 28 || i === 52);
                                                     return (
                                                         <th key={i} style={{ padding: "4px 2px", fontSize: 10, minWidth: 16 }}>
                                                             {showDay ? dateLabels[dayIndex] : ""}
