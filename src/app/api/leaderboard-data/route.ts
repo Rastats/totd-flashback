@@ -108,7 +108,7 @@ export async function GET() {
                 color: teamMeta.color,
                 activePlayer: entry?.active_player || null,
                 waitingPlayer: entry?.waiting_player || null,
-                currentMapId: entry?.current_map_id || null,
+                currentMapId: entry?.current_map_id || entry?.current_map_index || null,
                 currentMapName: entry?.current_map_name || null,
                 currentMapAuthor: entry?.current_map_author || null,
                 mapsCompleted: entry?.maps_completed || 0,

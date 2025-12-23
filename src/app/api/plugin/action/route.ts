@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 
-type ActionType = 
+type ActionType =
     | 'map_completed'
     | 'redo_map_completed'
     | 'penalty_activated'
@@ -34,7 +34,7 @@ function parseTeamId(teamAssignment: any): number | null {
     }
     if (typeof teamAssignment === 'string') {
         if (teamAssignment === 'joker') return null;
-        
+
         // Map team names to IDs
         const teamNameMap: Record<string, number> = {
             'team speedrun': 1,
@@ -44,7 +44,7 @@ function parseTeamId(teamAssignment: any): number | null {
         };
         const lowerName = teamAssignment.toLowerCase();
         if (teamNameMap[lowerName]) return teamNameMap[lowerName];
-        
+
         // Try "teamN" format
         const match = teamAssignment.match(/team(\d+)/i);
         if (match) {
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
 
         // Validate required fields
         if (!data.account_id || !data.action) {
-            return NextResponse.json({ 
-                error: 'Missing required fields: account_id, action' 
+            return NextResponse.json({
+                error: 'Missing required fields: account_id, action'
             }, { status: 400 });
         }
 
@@ -158,16 +158,16 @@ export async function POST(request: NextRequest) {
                     updateData.completed_map_ids = [...completedIds, data.map_index];
                     updateData.maps_completed = updateData.completed_map_ids.length;
                     message = `Map ${data.map_index} completed`;
-                    
+
                     // Process penalties - decrement maps_remaining and check timers
                     const activePenalties: any[] = state.penalties_active || [];
                     const now = Date.now();
                     const remainingPenalties: any[] = [];
                     const completedPenalties: any[] = [];
-                    
+
                     for (const penalty of activePenalties) {
                         let shouldRemove = false;
-                        
+
                         // Check timer expiry
                         if (penalty.timer_expires_at) {
                             const expiryTime = new Date(penalty.timer_expires_at).getTime();
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
                                 shouldRemove = true;
                             }
                         }
-                        
+
                         // Decrement maps_remaining if applicable
                         if (!shouldRemove && penalty.maps_remaining !== null && penalty.maps_remaining !== undefined) {
                             penalty.maps_remaining = Math.max(0, penalty.maps_remaining - 1);
@@ -183,18 +183,18 @@ export async function POST(request: NextRequest) {
                                 shouldRemove = true;
                             }
                         }
-                        
+
                         if (shouldRemove) {
                             completedPenalties.push(penalty);
                         } else {
                             remainingPenalties.push(penalty);
                         }
                     }
-                    
+
                     // Update penalties_active
                     if (completedPenalties.length > 0 || activePenalties.length !== remainingPenalties.length) {
                         updateData.penalties_active = remainingPenalties;
-                        
+
                         // Log completed penalties
                         for (const p of completedPenalties) {
                             await supabase.from('event_log').insert({
@@ -204,8 +204,25 @@ export async function POST(request: NextRequest) {
                                 metadata: { penalty_id: p.id, reason: p.maps_remaining === 0 ? 'maps_done' : 'timer_expired' }
                             });
                         }
-                        
+
                         message += `, ${completedPenalties.length} penalty(ies) completed`;
+                    }
+
+                    // Promote from waitlist if slots available (max 2 active)
+                    const waitlistPenalties = [...(state.penalties_waitlist || [])];
+                    const currentActive = updateData.penalties_active || remainingPenalties;
+
+                    while (currentActive.length < 2 && waitlistPenalties.length > 0) {
+                        const nextPenalty = waitlistPenalties.shift();
+                        if (nextPenalty) {
+                            currentActive.push({ ...nextPenalty, activated_at: new Date().toISOString() });
+                            message += `, promoted ${nextPenalty.name || nextPenalty.penalty_id} to active`;
+                        }
+                    }
+
+                    if (waitlistPenalties.length !== (state.penalties_waitlist || []).length) {
+                        updateData.penalties_waitlist = waitlistPenalties;
+                        updateData.penalties_active = currentActive;
                     }
                 } else {
                     message = `Map ${data.map_index} already completed`;
@@ -249,15 +266,20 @@ export async function POST(request: NextRequest) {
                 }
 
                 const waitlist = state.penalties_waitlist || [];
-                const penaltyIdx = waitlist.findIndex((p: any) => p.id === data.penalty_id);
-                
+                // Check both p.id and p.penalty_id for compatibility
+                const penaltyIdNum = typeof data.penalty_id === 'string' ? parseInt(data.penalty_id) : data.penalty_id;
+                const penaltyIdx = waitlist.findIndex((p: any) =>
+                    p.id === penaltyIdNum || p.id === data.penalty_id ||
+                    p.penalty_id === penaltyIdNum || p.penalty_id === data.penalty_id
+                );
+
                 if (penaltyIdx >= 0) {
                     const penalty = waitlist[penaltyIdx];
                     waitlist.splice(penaltyIdx, 1);
-                    
+
                     const active = state.penalties_active || [];
                     active.push({ ...penalty, activated_at: new Date().toISOString() });
-                    
+
                     updateData.penalties_waitlist = waitlist;
                     updateData.penalties_active = active;
                     message = `Penalty ${penalty.name || data.penalty_id} activated`;
@@ -279,8 +301,13 @@ export async function POST(request: NextRequest) {
                 }
 
                 const activePenalties = state.penalties_active || [];
-                const penIdx = activePenalties.findIndex((p: any) => p.id === data.penalty_id);
-                
+                // Check both p.id and p.penalty_id for compatibility
+                const penIdNum = typeof data.penalty_id === 'string' ? parseInt(data.penalty_id) : data.penalty_id;
+                const penIdx = activePenalties.findIndex((p: any) =>
+                    p.id === penIdNum || p.id === data.penalty_id ||
+                    p.penalty_id === penIdNum || p.penalty_id === data.penalty_id
+                );
+
                 if (penIdx >= 0) {
                     const penalty = activePenalties[penIdx];
                     activePenalties.splice(penIdx, 1);
@@ -305,7 +332,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 updateData.active_player = player.trackmania_name;
-                
+
                 // Remove from waiting if was there
                 if (state.waiting_player === player.trackmania_name) {
                     updateData.waiting_player = null;
@@ -319,7 +346,7 @@ export async function POST(request: NextRequest) {
             // ============================================
             case 'set_waiting': {
                 updateData.waiting_player = player.trackmania_name;
-                
+
                 // Remove from active if was there
                 if (state.active_player === player.trackmania_name) {
                     updateData.active_player = null;
@@ -352,11 +379,11 @@ export async function POST(request: NextRequest) {
                     .from('players')
                     .update({ team_id: teamId })
                     .eq('trackmania_id', data.account_id);
-                
+
                 if (updatePlayerError) {
                     console.error('[Plugin Action] Failed to update joker team:', updatePlayerError);
                 }
-                
+
                 message = `Joker ${player.trackmania_name} joined team ${teamId}`;
                 break;
             }
