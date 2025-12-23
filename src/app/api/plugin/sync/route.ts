@@ -326,8 +326,17 @@ export async function POST(request: NextRequest) {
         };
 
         // ============================================
-        // 5. Return comprehensive response
+        // 5. Process penalties and return response
         // ============================================
+        const now = new Date();
+        const processedActive = (serverState?.penalties_active || []).map((p: any) => {
+            let timer_remaining_ms = 0;
+            if (p.timer_expires_at) {
+                timer_remaining_ms = Math.max(0, new Date(p.timer_expires_at).getTime() - now.getTime());
+            }
+            return { ...p, timer_remaining_ms };
+        });
+
         return NextResponse.json({
             success: true,
             team_id: teamId,
@@ -339,7 +348,7 @@ export async function POST(request: NextRequest) {
                 completed_map_ids: serverState?.completed_map_ids || [],
                 active_player: serverState?.active_player || null,
                 waiting_player: serverState?.waiting_player || null,
-                penalties_active: serverState?.penalties_active || [],
+                penalties_active: processedActive,
                 penalties_waitlist: serverState?.penalties_waitlist || [],
                 redo_remaining: serverState?.redo_remaining || 0,
                 redo_map_ids: serverState?.redo_map_ids || [],
