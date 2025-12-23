@@ -41,8 +41,11 @@ export async function GET() {
                 isOnline = (now.getTime() - updatedAt.getTime()) < 60000;
             }
 
-            // Calculate shield remaining time
-            let shieldData = null;
+
+            // Calculate shield remaining time and cooldowns
+            let shieldData: any = null;
+
+            // Active shield
             if (entry?.shield_active && entry?.shield_expires_at) {
                 const remainingMs = Math.max(0, new Date(entry.shield_expires_at).getTime() - now.getTime());
                 if (remainingMs > 0) {
@@ -51,6 +54,27 @@ export async function GET() {
                         type: entry.shield_type,
                         remaining_ms: remainingMs
                     };
+                }
+            }
+
+            // Cooldowns (even if no active shield)
+            if (!shieldData) {
+                shieldData = { active: false };
+            }
+
+            // Small shield cooldown
+            if (entry?.shield_small_cooldown_expires_at) {
+                const smallCooldownMs = Math.max(0, new Date(entry.shield_small_cooldown_expires_at).getTime() - now.getTime());
+                if (smallCooldownMs > 0) {
+                    shieldData.small_cooldown_ms = smallCooldownMs;
+                }
+            }
+
+            // Big shield cooldown
+            if (entry?.shield_big_cooldown_expires_at) {
+                const bigCooldownMs = Math.max(0, new Date(entry.shield_big_cooldown_expires_at).getTime() - now.getTime());
+                if (bigCooldownMs > 0) {
+                    shieldData.big_cooldown_ms = bigCooldownMs;
                 }
             }
 
