@@ -212,17 +212,6 @@ export default function PlayerSignupPage() {
                                     />
                                     I&apos;m flexible / on-call
                                 </label>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <label style={{ ...labelStyle, fontSize: 13, marginBottom: 0 }}>Max hours/day:</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={12}
-                                        value={formData.maxHoursPerDay}
-                                        onChange={(e) => setFormData({ ...formData, maxHoursPerDay: parseInt(e.target.value) || 1 })}
-                                        style={{ ...inputStyle, width: 60, textAlign: "center" }}
-                                    />
-                                </div>
                             </div>
                         </div>
                     )}
