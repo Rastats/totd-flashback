@@ -35,15 +35,12 @@ export async function GET() {
 
         // Query all completed penalties grouped by penalty_id and penalty_team
         // Only count donations >= £5 (real penalties, not £4.99 support-only)
-        // START_ID: Skip test donations before the event (adjust as needed)
-        const START_ID = 4; // Start counting from row 4 (skip first 3 test donations)
-        
+
         const { data, error } = await supabase
             .from('processed_donations')
             .select('penalty_id, penalty_team, amount')
             .eq('penalty_completed', true)
-            .gte('amount', 5)
-            .gte('id', START_ID);
+            .gte('amount', 5);
 
         if (error) {
             console.error('[PenaltyHistory] Error:', error);
@@ -52,7 +49,7 @@ export async function GET() {
 
         // Count by penalty type and team
         const counts: Record<number, Record<number, number>> = {};
-        
+
         // Initialize all penalty types with 0 counts
         PENALTY_TYPES.forEach(p => {
             counts[p.id] = { 1: 0, 2: 0, 3: 0, 4: 0 };
@@ -75,8 +72,8 @@ export async function GET() {
             team2: counts[p.id][2] || 0,
             team3: counts[p.id][3] || 0,
             team4: counts[p.id][4] || 0,
-            total: (counts[p.id][1] || 0) + (counts[p.id][2] || 0) + 
-                   (counts[p.id][3] || 0) + (counts[p.id][4] || 0)
+            total: (counts[p.id][1] || 0) + (counts[p.id][2] || 0) +
+                (counts[p.id][3] || 0) + (counts[p.id][4] || 0)
         }));
 
         // Calculate team totals
