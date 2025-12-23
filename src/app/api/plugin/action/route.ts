@@ -318,6 +318,23 @@ export async function POST(request: NextRequest) {
                 if (penIdx >= 0) {
                     const penalty = activePenalties[penIdx];
                     activePenalties.splice(penIdx, 1);
+
+                    // PROMOTE FROM WAITLIST: If slot now available, activate first waitlist penalty
+                    const waitlist = state.penalties_waitlist || [];
+                    if (activePenalties.length < 2 && waitlist.length > 0) {
+                        const promoted = waitlist.shift();
+                        if (promoted) {
+                            promoted.activated_at = new Date().toISOString();
+                            // Timer starts at activation
+                            if (promoted.timer_minutes) {
+                                promoted.timer_expires_at = new Date(Date.now() + promoted.timer_minutes * 60 * 1000).toISOString();
+                            }
+                            activePenalties.push(promoted);
+                            console.log(`[Action] Promoted ${promoted.name} from waitlist`);
+                        }
+                        updateData.penalties_waitlist = waitlist;
+                    }
+
                     updateData.penalties_active = activePenalties;
                     message = `Penalty ${penalty.name || data.penalty_id} completed`;
                 } else {

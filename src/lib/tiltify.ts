@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './supabase-admin';
+import { PENALTY_CONFIG, getInitialMapsRemaining, calculateTimerExpiry } from './penalty-config';
 
 const TILTIFY_API_URL = 'https://v5api.tiltify.com';
 const CLIENT_ID = process.env.TILTIFY_CLIENT_ID;
@@ -101,6 +102,133 @@ function parseCents(amount: number): {
     return { potTeam, penaltyTeam, isPotRandom, isPenaltyRandom };
 }
 
+// Immediate-effect penalties (must activate immediately, can override others)
+const IMMEDIATE_PENALTY_IDS = [7, 9, 10]; // Player Switch, AT or Bust, Back to the Future
+
+// Add a penalty to team_server_state with proper slot management
+// - Shield blocking
+// - 2 active slots max
+// - Immediate penalties override lowest ID active penalty if full
+// - Non-immediate go to waitlist if full
+async function addPenaltyToTeam(teamId: number, penaltyId: number, penaltyName: string, donationId: string): Promise<void> {
+    // Get current team state
+    const { data: teamData, error: fetchError } = await supabaseAdmin
+        .from('team_server_state')
+        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at')
+        .eq('team_id', teamId)
+        .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error(`[Tiltify] Failed to fetch team ${teamId} state:`, fetchError);
+        return;
+    }
+
+    // Check if shield is active (blocks ALL penalties)
+    if (teamData?.shield_active) {
+        // Also check if shield hasn't expired
+        if (teamData.shield_expires_at && new Date(teamData.shield_expires_at) > new Date()) {
+            console.log(`[Tiltify] Shield active for Team ${teamId}, blocking penalty: ${penaltyName}`);
+            return;
+        }
+    }
+
+    const currentActive: any[] = teamData?.penalties_active || [];
+    const currentWaitlist: any[] = teamData?.penalties_waitlist || [];
+
+    // Create penalty object
+    const config = PENALTY_CONFIG[penaltyId];
+    const newPenalty = {
+        id: penaltyId,
+        name: penaltyName,
+        donation_id: donationId,
+        maps_remaining: config?.maps ?? null,
+        maps_total: config?.maps ?? null,
+        timer_expires_at: config?.timerMinutes
+            ? new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString()
+            : null,
+        timer_minutes: config?.timerMinutes ?? null,
+        added_at: new Date().toISOString(),
+        activated_at: null as string | null
+    };
+
+    const isImmediate = IMMEDIATE_PENALTY_IDS.includes(penaltyId);
+    let updatedActive = [...currentActive];
+    let updatedWaitlist = [...currentWaitlist];
+    let removedPenalty: any = null;
+
+    if (currentActive.length < 2) {
+        // Slot available - activate immediately
+        newPenalty.activated_at = new Date().toISOString();
+        // Timer starts at activation
+        if (config?.timerMinutes) {
+            newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
+        }
+        updatedActive.push(newPenalty);
+        console.log(`[Tiltify] Team ${teamId}: Activated ${penaltyName}`);
+    } else if (isImmediate) {
+        // IMMEDIATE PENALTY OVERRIDE: Remove lowest ID active penalty
+        let lowestIdx = 0;
+        let lowestId = currentActive[0]?.id ?? 999;
+        for (let i = 1; i < currentActive.length; i++) {
+            if ((currentActive[i]?.id ?? 999) < lowestId) {
+                lowestId = currentActive[i]?.id ?? 999;
+                lowestIdx = i;
+            }
+        }
+
+        // Remove lowest ID penalty
+        removedPenalty = updatedActive[lowestIdx];
+        updatedActive.splice(lowestIdx, 1);
+
+        // Add new immediate penalty as active
+        newPenalty.activated_at = new Date().toISOString();
+        if (config?.timerMinutes) {
+            newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
+        }
+        updatedActive.push(newPenalty);
+
+        console.log(`[Tiltify] Team ${teamId}: ${penaltyName} OVERRIDES ${removedPenalty?.name} (lowest ID)`);
+    } else {
+        // Non-immediate penalty goes to waitlist
+        if (currentWaitlist.length < 2) {
+            updatedWaitlist.push(newPenalty);
+            console.log(`[Tiltify] Team ${teamId}: ${penaltyName} added to waitlist`);
+        } else {
+            // Waitlist full - log but don't add
+            console.log(`[Tiltify] Team ${teamId}: Waitlist full (2/2), ${penaltyName} DROPPED`);
+            return;
+        }
+    }
+
+    // Update team_server_state
+    const { error: updateError } = await supabaseAdmin
+        .from('team_server_state')
+        .upsert({
+            team_id: teamId,
+            penalties_active: updatedActive,
+            penalties_waitlist: updatedWaitlist,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'team_id' });
+
+    if (updateError) {
+        console.error(`[Tiltify] Failed to update team ${teamId} penalties:`, updateError);
+        return;
+    }
+
+    // Log event
+    let message = `Penalty applied: ${penaltyName}`;
+    if (removedPenalty) {
+        message = `${penaltyName} replaced ${removedPenalty.name} (immediate override)`;
+    }
+
+    await supabaseAdmin.from('event_log').insert({
+        event_type: 'penalty_applied',
+        team_id: teamId,
+        message: message,
+        metadata: { penalty_id: penaltyId, penalty_name: penaltyName, donation_id: donationId, removed: removedPenalty?.name }
+    });
+}
+
 // Process a new donation and store it in Supabase
 async function processDonation(donation: {
     id: string;
@@ -198,6 +326,14 @@ async function processDonation(donation: {
                 increment_amount: splitAmount
             });
         }
+    }
+
+    // ==============================================
+    // ADD PENALTY TO TEAM STATE
+    // Server-side slot management: 2 active max, waitlist, immediate override
+    // ==============================================
+    if (penalty) {
+        await addPenaltyToTeam(penaltyTeam, penalty.id, penalty.name, donation.id);
     }
 
     console.log(`[Tiltify] Processed donation ${donation.id}: £${amount} | Pot: Team ${potTeam ?? 'ALL'} | Penalty: Team ${penaltyTeam} (${penalty?.name ?? 'none'})`);
