@@ -61,7 +61,7 @@ export async function GET() {
                 if (p.timer_expires_at) {
                     timerRemainingMs = Math.max(0, new Date(p.timer_expires_at).getTime() - now.getTime());
                 }
-                
+
                 return {
                     name: p.name || `Penalty ${p.id}`,
                     penalty_id: p.penalty_id,
@@ -83,6 +83,7 @@ export async function GET() {
                 name: teamMeta.name,
                 color: teamMeta.color,
                 activePlayer: entry?.active_player || null,
+                waitingPlayer: entry?.waiting_player || null,
                 currentMapId: entry?.current_map_id || null,
                 currentMapName: entry?.current_map_name || null,
                 currentMapAuthor: entry?.current_map_author || null,
