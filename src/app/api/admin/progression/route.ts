@@ -18,8 +18,9 @@ export async function GET(request: Request) {
 }
 
 // PUT: Update maps_completed for team
-// Setting maps_completed = N will mark TOTDs #2000 down to #(2001-N) as completed
-// Example: N=50 → completed_map_ids = [2000, 1999, ..., 1951]
+// Adjusts completed_map_ids based on difference:
+// - Increasing: Add highest uncompleted maps (closest to 2000)
+// - Decreasing: Remove lowest completed maps (furthest from 2000)
 export async function PUT(request: Request) {
     try {
         const { team_id, maps_completed } = await request.json();
@@ -34,25 +35,48 @@ export async function PUT(request: Request) {
 
         const supabase = getSupabaseAdmin();
 
-        // Get current value for logging
+        // Get current state
         const { data: current } = await supabase
             .from('team_server_state')
-            .select('maps_completed')
+            .select('maps_completed, completed_map_ids')
             .eq('team_id', team_id)
             .single();
 
-        // Generate completed_map_ids: maps #2000 down to #(2001-maps_completed)
-        // For N=50: [2000, 1999, 1998, ..., 1951]
-        const completed_map_ids: number[] = [];
-        for (let i = 0; i < maps_completed; i++) {
-            completed_map_ids.push(2000 - i);
+        const currentCount = current?.maps_completed || 0;
+        let completed_map_ids: number[] = [...(current?.completed_map_ids || [])];
+        const diff = maps_completed - currentCount;
+
+        if (diff > 0) {
+            // INCREASING: Add highest uncompleted maps (closest to 2000)
+            // Build set of already completed for quick lookup
+            const completedSet = new Set(completed_map_ids);
+            let added = 0;
+
+            // Start from 2000 and go down, add uncompleted maps
+            for (let mapId = 2000; mapId >= 1 && added < diff; mapId--) {
+                if (!completedSet.has(mapId)) {
+                    completed_map_ids.push(mapId);
+                    completedSet.add(mapId);
+                    added++;
+                }
+            }
+        } else if (diff < 0) {
+            // DECREASING: Remove lowest completed maps (furthest from 2000)
+            const toRemove = Math.abs(diff);
+
+            // Sort to find lowest values
+            completed_map_ids.sort((a, b) => a - b);
+
+            // Remove from the beginning (lowest values)
+            completed_map_ids = completed_map_ids.slice(toRemove);
         }
+        // If diff === 0, no change needed
 
         const { error } = await supabase
             .from('team_server_state')
             .upsert({
                 team_id: team_id,
-                maps_completed: maps_completed,
+                maps_completed: completed_map_ids.length,
                 completed_map_ids: completed_map_ids,
                 maps_total: 2000,
                 updated_at: new Date().toISOString()
@@ -66,10 +90,10 @@ export async function PUT(request: Request) {
         await supabase.from('event_log').insert({
             event_type: 'milestone',
             team_id: team_id,
-            message: `[Admin] Progression updated: ${current?.maps_completed || 0} → ${maps_completed}`,
+            message: `[Admin] Progression updated: ${currentCount} → ${completed_map_ids.length}`,
             metadata: {
-                old_value: current?.maps_completed,
-                new_value: maps_completed,
+                old_value: currentCount,
+                new_value: completed_map_ids.length,
                 admin_action: true
             }
         });
