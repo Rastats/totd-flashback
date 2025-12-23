@@ -200,6 +200,12 @@ export async function POST(request: NextRequest) {
                     while (currentActive.length < 2 && waitlistPenalties.length > 0) {
                         const nextPenalty = waitlistPenalties.shift();
                         if (nextPenalty) {
+                            // Check if same penalty_id is already active (prevent duplicates)
+                            const isDuplicate = currentActive.some((p: any) => p.penalty_id === nextPenalty.penalty_id);
+                            if (isDuplicate) {
+                                console.log(`[Action] Skipping promotion of ${nextPenalty.name} - already active`);
+                                continue; // Skip this penalty, try next one
+                            }
                             currentActive.push({ ...nextPenalty, activated_at: new Date().toISOString() });
                             message += `, promoted ${nextPenalty.name || nextPenalty.penalty_id} to active`;
                         }
