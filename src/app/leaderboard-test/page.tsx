@@ -315,7 +315,9 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                                     <div key={i} style={{ background: "rgba(248, 113, 113, 0.2)", border: "1px solid #f87171", borderRadius: 4, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                                         <span style={{ color: "#f87171" }}>⚠️ {p.name}</span>
                                         <span style={{ fontFamily: "monospace" }}>
-                                            {p.timeLeft > 0 ? formatTime(p.timeLeft) : p.mapsRequired > 0 ? `${p.mapsCompleted}/${p.mapsRequired} maps` : ""}
+                                            {p.mapsRequired > 0 && `${p.mapsCompleted}/${p.mapsRequired} maps`}
+                                            {p.mapsRequired > 0 && p.timeLeft > 0 && " "}
+                                            {p.timeLeft > 0 && formatTime(p.timeLeft)}
                                         </span>
                                     </div>
                                 ))}
@@ -339,10 +341,10 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                     {(team.shieldCooldowns.small !== null || team.shieldCooldowns.big !== null) && (
                         <div style={{ marginTop: 8, fontSize: 11, opacity: 0.6, display: "flex", gap: 8, justifyContent: "center" }}>
                             {team.shieldCooldowns.small !== null && (
-                                <span>🛡️ Small: {formatTime(team.shieldCooldowns.small)}</span>
+                                <span>⏱️ Small: {formatTime(team.shieldCooldowns.small)}</span>
                             )}
                             {team.shieldCooldowns.big !== null && (
-                                <span>🛡️ Big: {formatTime(team.shieldCooldowns.big)}</span>
+                                <span>⏱️ Big: {formatTime(team.shieldCooldowns.big)}</span>
                             )}
                         </div>
                     )}

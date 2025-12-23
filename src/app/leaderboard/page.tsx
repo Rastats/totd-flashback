@@ -27,16 +27,19 @@ interface TeamStatus {
         type: "small" | "big";
         timeLeft: number;
     } | null;
+    shieldCooldowns: {
+        small: number | null;  // seconds until available, null = available
+        big: number | null;    // seconds until available, null = available
+    };
     activePenalties: {
         name: string;
         timeLeft: number;
         mapsRemaining: number;
         mapsTotal: number;
     }[];
-    penaltyQueue: number;
-    penaltyQueueNames: string[];
+    penaltyWaitlist: string[];
     isOnline: boolean;
-    teamPot: number;  // Team donation pot amount
+    teamPot: number;
 }
 
 interface FeedEvent {
@@ -236,13 +239,25 @@ const TeamCard = ({ team }: { team: TeamStatus }) => {
                         )}
                     </div>
 
-                    {/* Queue */}
-                    {team.penaltyQueue > 0 && (
+                    {/* Waitlist */}
+                    {team.penaltyWaitlist.length > 0 && (
                         <div
-                            title={team.penaltyQueueNames?.join("\n") || ""}
+                            title={team.penaltyWaitlist.join("\n")}
                             style={{ marginTop: 8, padding: "4px 8px", background: "#4a1a1a", borderRadius: 4, fontSize: 12, color: "#fca5a5", textAlign: "center", cursor: "help" }}
                         >
-                            +{team.penaltyQueue} penalties in queue ℹ️
+                            +{team.penaltyWaitlist.length} in waitlist: {team.penaltyWaitlist.join(", ")}
+                        </div>
+                    )}
+
+                    {/* Shield Cooldowns */}
+                    {(team.shieldCooldowns.small !== null || team.shieldCooldowns.big !== null) && (
+                        <div style={{ marginTop: 8, fontSize: 11, opacity: 0.6, display: "flex", gap: 8, justifyContent: "center" }}>
+                            {team.shieldCooldowns.small !== null && (
+                                <span>⏱️ Small: {formatTime(team.shieldCooldowns.small)}</span>
+                            )}
+                            {team.shieldCooldowns.big !== null && (
+                                <span>⏱️ Big: {formatTime(team.shieldCooldowns.big)}</span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -320,6 +335,10 @@ export default function LeaderboardPage() {
                             type: t.shield.type as "small" | "big",
                             timeLeft: Math.floor((t.shield.remaining_ms || 0) / 1000)
                         } : null,
+                        shieldCooldowns: {
+                            small: t.shield?.small_cooldown_ms ? Math.floor(t.shield.small_cooldown_ms / 1000) : null,
+                            big: t.shield?.big_cooldown_ms ? Math.floor(t.shield.big_cooldown_ms / 1000) : null
+                        },
                         activePenalties: (t.penalties?.active || [])
                             .slice(0, 2)
                             .map((p: any) => ({
@@ -328,8 +347,7 @@ export default function LeaderboardPage() {
                                 mapsRemaining: p.maps_remaining ?? 0,
                                 mapsTotal: p.maps_total ?? 0
                             })),
-                        penaltyQueue: (t.penalties?.waitlist || []).length,
-                        penaltyQueueNames: (t.penalties?.waitlist || []).map((p: any) => p.name),
+                        penaltyWaitlist: (t.penalties?.waitlist || []).slice(0, 2).map((p: any) => p.name),
                         isOnline: t.isOnline,
                         teamPot: t.potAmount || 0
                     };
