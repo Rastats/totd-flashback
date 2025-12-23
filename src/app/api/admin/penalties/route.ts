@@ -152,9 +152,38 @@ export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const penaltyId = searchParams.get('id'); // Format: teamId_active/waitlist_index
+        const clearAll = searchParams.get('clear_all') === 'true';
+        const teamId = searchParams.get('team_id');
+        
+        const supabase = getSupabaseAdmin();
+        
+        // Clear all penalties for a team
+        if (clearAll && teamId) {
+            const { error: updateError } = await supabase
+                .from('team_server_state')
+                .update({
+                    penalties_active: [],
+                    penalties_waitlist: [],
+                    updated_at: new Date().toISOString()
+                })
+                .eq('team_id', parseInt(teamId));
+            
+            if (updateError) {
+                return NextResponse.json({ error: updateError.message }, { status: 500 });
+            }
+            
+            await supabase.from('event_log').insert({
+                event_type: 'penalty_completed',
+                team_id: parseInt(teamId),
+                message: `[Admin] Cleared all penalties`,
+                metadata: { admin_action: true, clear_all: true }
+            });
+            
+            return NextResponse.json({ success: true, cleared: 'all' });
+        }
         
         if (!penaltyId) {
-            return NextResponse.json({ error: 'id required' }, { status: 400 });
+            return NextResponse.json({ error: 'id or (team_id + clear_all) required' }, { status: 400 });
         }
         
         // Parse penalty ID: format is "teamId_type_index"
@@ -163,17 +192,15 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Invalid penalty id format' }, { status: 400 });
         }
         
-        const teamId = parseInt(parts[0]);
+        const parsedTeamId = parseInt(parts[0]);
         const type = parts[1]; // 'active' or 'waitlist'
         const index = parseInt(parts[2]);
-        
-        const supabase = getSupabaseAdmin();
         
         // Get current team status
         const { data: teamData, error: fetchError } = await supabase
             .from('team_server_state')
             .select('penalties_active, penalties_waitlist')
-            .eq('team_id', teamId)
+            .eq('team_id', parsedTeamId)
             .single();
         
         if (fetchError) {
@@ -202,7 +229,7 @@ export async function DELETE(request: Request) {
         const { error: updateError } = await supabase
             .from('team_server_state')
             .update(updates)
-            .eq('team_id', teamId);
+            .eq('team_id', parsedTeamId);
         
         if (updateError) {
             return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -212,7 +239,7 @@ export async function DELETE(request: Request) {
         if (penaltyName) {
             await supabase.from('event_log').insert({
                 event_type: 'penalty_completed',
-                team_id: teamId,
+                team_id: parsedTeamId,
                 message: `[Admin] Removed penalty: ${penaltyName}`,
                 metadata: { penalty_name: penaltyName, admin_action: true }
             });
