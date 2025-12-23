@@ -446,6 +446,13 @@ export default function LeaderboardTestPage() {
                         <p style={{ opacity: 0.6, marginTop: 4, fontSize: 14 }}>TOTD Flashback Event • <span style={{ color: "#fbbf24" }}>TEST MODE (Mock Data)</span></p>
                     </div>
                     <div></div>
+                    {/* Timer in header */}
+                    <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
+                        <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                            {formatCountdown(timeLeftMs)}
+                        </div>
+                    </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
@@ -521,14 +528,6 @@ export default function LeaderboardTestPage() {
                                 )) : (
                                     <div style={{ opacity: 0.5, textAlign: "center", padding: 20 }}>No recent events</div>
                                 )}
-                            </div>
-                        </div>
-
-                        {/* Timer */}
-                        <div style={{ textAlign: "center", background: "#1e293b", padding: "12px 24px", borderRadius: 12, border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
-                            <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
-                                {formatCountdown(timeLeftMs)}
                             </div>
                         </div>
 
