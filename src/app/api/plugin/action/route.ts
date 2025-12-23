@@ -11,6 +11,7 @@ type ActionType =
     | 'set_active'
     | 'set_waiting'
     | 'set_spectator'
+    | 'pass_turn'
     | 'joker_change_team';
 
 interface ActionPayload {
@@ -358,6 +359,33 @@ export async function POST(request: NextRequest) {
                     updateData.waiting_player = null;
                 }
                 message = `${player.trackmania_name} is now spectator`;
+                break;
+            }
+
+            // ============================================
+            // PASS TURN - Active becomes Spectator, Waiting becomes Active
+            // ============================================
+            case 'pass_turn': {
+                // Must be the active player
+                if (state.active_player !== player.trackmania_name) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Only the active player can pass turn'
+                    }, { status: 403 });
+                }
+
+                // Must have someone waiting
+                if (!state.waiting_player) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'No one is waiting to take over'
+                    }, { status: 400 });
+                }
+
+                // Promote waiting to active, caller becomes spectator
+                updateData.active_player = state.waiting_player;
+                updateData.waiting_player = null;
+                message = `${player.trackmania_name} passed turn to ${state.waiting_player}`;
                 break;
             }
 
