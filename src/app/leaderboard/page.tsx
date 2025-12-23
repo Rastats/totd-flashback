@@ -310,24 +310,25 @@ export default function LeaderboardPage() {
                     const teamId = t.id;
                     const mapsCompleted = t.mapsCompleted || 0;
 
-                    // Get current map info from API - ONLY if we have real data from plugin
-                    // If currentMapId is NULL or no active player, show "No map data"
+                    // Get current map info from totds.ts using just currentMapIndex from API
                     let mapInfo = null;
-                    if (t.currentMapId && t.currentMapName && t.activePlayer) {
-                        // Use currentMapIndex (numeric) for lookup, not currentMapId (mapUid string)
+                    if (t.currentMapIndex && t.activePlayer) {
+                        // Use currentMapIndex (numeric 1-2000) to lookup ALL map data from totds.ts
                         const numericIndex = typeof t.currentMapIndex === 'number' ? t.currentMapIndex : parseInt(t.currentMapIndex) || 0;
                         const totdData = getTotdInfo(numericIndex);
-                        mapInfo = {
-                            name: t.currentMapName,
-                            authorName: t.currentMapAuthor || totdData?.authorName || 'Unknown',
-                            mapUid: t.currentMapId || totdData?.mapUid || '',
-                            mapIndex: numericIndex || totdData?.mapIndex || 0,
-                            date: totdData?.date || '',
-                            authorTime: totdData?.authorTime || '',
-                            thumbnailUrl: totdData?.thumbnailUrl || ''
-                        };
+                        if (totdData) {
+                            mapInfo = {
+                                name: totdData.name,
+                                authorName: totdData.authorName,
+                                mapUid: totdData.mapUid,
+                                mapIndex: numericIndex,
+                                date: totdData.date,
+                                authorTime: totdData.authorTime,
+                                thumbnailUrl: totdData.thumbnailUrl
+                            };
+                        }
                     }
-                    // No fallback - if no currentMapId from plugin, show "No map data"
+                    // No fallback - if no currentMapIndex from plugin, show "No map data"
 
                     return {
                         id: teamId,
