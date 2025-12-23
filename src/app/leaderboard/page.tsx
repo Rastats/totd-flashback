@@ -83,8 +83,13 @@ const formatCountdown = (ms: number) => {
 
 // Get TOTD info by map number (1-based)
 const getTotdInfo = (mapNumber: number) => {
-    if (mapNumber < 1 || mapNumber > totds.length) return null;
+    // Defensive: ensure mapNumber is a valid number
+    if (typeof mapNumber !== 'number' || isNaN(mapNumber) || mapNumber < 1 || mapNumber > totds.length) {
+        return null;
+    }
     const totd = totds[mapNumber - 1];
+    // Defensive: ensure totd exists
+    if (!totd) return null;
     return {
         name: totd.name,
         authorName: totd.authorName,

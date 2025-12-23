@@ -76,25 +76,27 @@ export default function DonationNotifications() {
         if (!recent || recent.length === 0) return;
 
         recent.forEach(d => {
-            if (!processedIds.has(d.id.toString())) {
-                addNotification({
-                    id: d.id.toString(),
-                    donorName: d.donorName,
-                    amount: Number(d.amount),
-                    currency: d.currency,
-                    potTeam: d.potTeam,
-                    penaltyTeam: d.penaltyTeam,
-                    isPotRandom: d.isPotRandom,
-                    isPenaltyRandom: d.isPenaltyRandom,
-                    timestamp: new Date(d.timestamp)
-                });
+            // API returns donation_id, fallback to id for compatibility
+            const donationId = d.donation_id || d.id || '';
+            if (!donationId || processedIds.has(donationId.toString())) return;
 
-                setProcessedIds(prev => {
-                    const next = new Set(prev);
-                    next.add(d.id.toString());
-                    return next;
-                });
-            }
+            addNotification({
+                id: donationId.toString(),
+                donorName: d.donorName || d.donor_name || 'Anonymous',
+                amount: Number(d.amount) || 0,
+                currency: d.currency || 'GBP',
+                potTeam: d.potTeam || d.pot_team,
+                penaltyTeam: d.penaltyTeam || d.penalty_team,
+                isPotRandom: d.isPotRandom || d.is_pot_random,
+                isPenaltyRandom: d.isPenaltyRandom || d.is_penalty_random,
+                timestamp: new Date(d.timestamp || d.created_at || Date.now())
+            });
+
+            setProcessedIds(prev => {
+                const next = new Set(prev);
+                next.add(donationId.toString());
+                return next;
+            });
         });
     };
 
