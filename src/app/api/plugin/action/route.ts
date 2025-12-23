@@ -337,13 +337,12 @@ export async function POST(request: NextRequest) {
             // SET WAITING
             // ============================================
             case 'set_waiting': {
-                // Check if slot is available (unless current player is Active - they can always go to Waiting)
+                // Check if slot is available (no exceptions - Active players should use set_spectator for Pass Turn)
                 if (state.waiting_player &&
-                    state.waiting_player !== player.trackmania_name &&
-                    state.active_player !== player.trackmania_name) {
+                    state.waiting_player !== player.trackmania_name) {
                     return NextResponse.json({
                         success: false,
-                        error: 'Waiting slot occupied by ' + state.waiting_player
+                        error: 'Waiting slot occupied by ' + state.waiting_player + ' - use Pass Turn'
                     }, { status: 409 });
                 }
 

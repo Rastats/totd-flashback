@@ -304,6 +304,28 @@ export async function POST(request: NextRequest) {
         }
 
         // ============================================
+        // 3b. Auto-promote Waiting → Active if Active slot is empty
+        // ============================================
+        let updatedServerState = serverState;
+        if (!serverState?.active_player && serverState?.waiting_player) {
+            console.log(`[Plugin Sync] Auto-promoting ${serverState.waiting_player} from Waiting to Active`);
+            const { data: promoted, error: promoteError } = await supabase
+                .from('team_server_state')
+                .update({
+                    active_player: serverState.waiting_player,
+                    waiting_player: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('team_id', teamId)
+                .select('*')
+                .single();
+
+            if (!promoteError && promoted) {
+                updatedServerState = promoted;
+            }
+        }
+
+        // ============================================
         // 4. Get donations data from database
         // ============================================
         // Fetch team pots from team_server_state
@@ -349,22 +371,22 @@ export async function POST(request: NextRequest) {
             team_id: teamId,
             player: player.trackmania_name,
 
-            // Server state (authoritative)
+            // Server state (authoritative) - use updatedServerState for status after auto-promotion
             serverState: {
-                maps_completed: serverState?.maps_completed || 0,
-                completed_map_ids: serverState?.completed_map_ids || [],
-                active_player: serverState?.active_player || null,
-                waiting_player: serverState?.waiting_player || null,
+                maps_completed: updatedServerState?.maps_completed || 0,
+                completed_map_ids: updatedServerState?.completed_map_ids || [],
+                active_player: updatedServerState?.active_player || null,
+                waiting_player: updatedServerState?.waiting_player || null,
                 penalties_active: processedActive,
-                penalties_waitlist: serverState?.penalties_waitlist || [],
-                redo_remaining: serverState?.redo_remaining || 0,
-                redo_map_ids: serverState?.redo_map_ids || [],
-                shield_active: serverState?.shield_active || false,
-                shield_type: serverState?.shield_type || null,
-                shield_expires_at: serverState?.shield_expires_at || null,
-                shield_small_cooldown_expires_at: serverState?.shield_small_cooldown_expires_at || null,
-                shield_big_cooldown_expires_at: serverState?.shield_big_cooldown_expires_at || null,
-                pot_amount: serverState?.pot_amount || 0
+                penalties_waitlist: updatedServerState?.penalties_waitlist || [],
+                redo_remaining: updatedServerState?.redo_remaining || 0,
+                redo_map_ids: updatedServerState?.redo_map_ids || [],
+                shield_active: updatedServerState?.shield_active || false,
+                shield_type: updatedServerState?.shield_type || null,
+                shield_expires_at: updatedServerState?.shield_expires_at || null,
+                shield_small_cooldown_expires_at: updatedServerState?.shield_small_cooldown_expires_at || null,
+                shield_big_cooldown_expires_at: updatedServerState?.shield_big_cooldown_expires_at || null,
+                pot_amount: updatedServerState?.pot_amount || 0
             },
 
             // Donations
