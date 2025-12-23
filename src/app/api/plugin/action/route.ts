@@ -411,11 +411,20 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Plugin Action] ${data.action}: ${message}`);
 
+        // Get updated state to return to plugin
+        const { data: updatedState } = await supabase
+            .from('team_server_state')
+            .select('active_player, waiting_player')
+            .eq('team_id', teamId)
+            .single();
+
         return NextResponse.json({
             success: true,
             action: data.action,
             message,
-            team_id: teamId
+            team_id: teamId,
+            active_player: updatedState?.active_player || null,
+            waiting_player: updatedState?.waiting_player || null
         });
 
     } catch (error) {
