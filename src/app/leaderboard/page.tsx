@@ -515,14 +515,14 @@ export default function LeaderboardPage() {
                         </h1>
                         <p style={{ opacity: 0.6, marginTop: 4, fontSize: 14 }}>TOTD Flashback Event • Real-time tracking</p>
                     </div>
-                    <div></div>
-                    {/* Timer in header */}
-                    <div style={{ textAlign: "right" }}>
+                    {/* Timer centered in header */}
+                    <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
                         <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
                             {formatCountdown(timeLeftMs)}
                         </div>
                     </div>
+                    <div></div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
