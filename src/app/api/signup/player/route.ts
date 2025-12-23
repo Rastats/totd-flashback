@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
                 can_relay_teammate: formData.canRelayTeammate,
                 teammate_will_stream: formData.teammateWillStream,
                 is_flexible: formData.isFlexible,
-                max_hours_per_day: formData.maxHoursPerDay,
                 status: 'pending',
             })
             .select()
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest) {
 
         // Insert availability slots (hour_indices format only)
         const hourIndices: number[] = body.hour_indices || [];
-        
+
         if (hourIndices.length > 0) {
             const slots = hourIndices
                 .filter(h => h >= 0 && h < 69)

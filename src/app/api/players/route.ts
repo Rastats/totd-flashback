@@ -38,7 +38,6 @@ export async function GET() {
             canRelayTeammate: p.can_relay_teammate,
             teammateWillStream: p.teammate_will_stream,
             isFlexible: p.is_flexible,
-            maxHoursPerDay: p.max_hours_per_day,
             status: p.status,
             teamAssignment: p.team_id,
             submittedAt: p.created_at,
