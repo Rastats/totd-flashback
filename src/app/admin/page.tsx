@@ -52,7 +52,7 @@ const buttonStyle = {
 interface SlotData { date?: string; hour?: number; hourIndex?: number; }
 function slotsToIntervals(slots: SlotData[]): string[] {
     if (!slots || slots.length === 0) return [];
-    
+
     // Extract and sort by date + hour
     const sortedSlots = slots
         .map(s => ({
@@ -65,17 +65,17 @@ function slotsToIntervals(slots: SlotData[]): string[] {
             if (dateCompare !== 0) return dateCompare;
             return a.hour - b.hour;
         });
-    
+
     if (sortedSlots.length === 0) return [];
-    
+
     const intervals: string[] = [];
     let currentDate = sortedSlots[0].date;
     let startHour = sortedSlots[0].hour;
     let endHour = sortedSlots[0].hour + 1;
-    
+
     for (let i = 1; i < sortedSlots.length; i++) {
         const slot = sortedSlots[i];
-        
+
         // Check if consecutive (same day and hour follows)
         if (slot.date === currentDate && slot.hour === endHour) {
             endHour = slot.hour + 1;
@@ -83,18 +83,18 @@ function slotsToIntervals(slots: SlotData[]): string[] {
             // Save current interval
             const [, month, day] = currentDate.split('-');
             intervals.push(`${day}/${month} ${startHour}h-${endHour === 24 ? '00' : endHour}h`);
-            
+
             // Start new interval
             currentDate = slot.date;
             startHour = slot.hour;
             endHour = slot.hour + 1;
         }
     }
-    
+
     // Save last interval
     const [, month, day] = currentDate.split('-');
     intervals.push(`${day}/${month} ${startHour}h-${endHour === 24 ? '00' : endHour}h`);
-    
+
     return intervals;
 }
 
@@ -277,7 +277,7 @@ export default function AdminPage() {
     const getPlayerHourIndices = (player: PlayerApplication): number[] => {
         const indices: number[] = [];
         const dates = ["2025-12-26", "2025-12-27", "2025-12-28", "2025-12-29"];
-        
+
         player.availability.forEach((slot: any) => {
             // New format: hourIndex is directly available
             if (slot.hourIndex !== undefined) {
@@ -286,12 +286,12 @@ export default function AdminPage() {
                 }
                 return;
             }
-            
+
             // Fallback: calculate from date + hour
             if (slot.date && slot.hour !== undefined) {
                 const dayIndex = dates.indexOf(slot.date);
                 if (dayIndex === -1) return;
-                
+
                 let hourIndex: number;
                 if (dayIndex === 0) {
                     hourIndex = slot.hour - 21; // Dec 26 starts at 21:00 (index 0-2)
@@ -376,14 +376,14 @@ export default function AdminPage() {
         approvedPlayers.forEach(player => {
             const team = player.teamAssignment;
             if (team === null || team === undefined) return;
-            
+
             // team_id is now always a number (0-4)
             if (!coverage[team]) return;
             const teamNum = team;
 
             player.availability.forEach((slot: any) => {
                 let hourIndex: number | undefined;
-                
+
                 // New format: hourIndex directly available
                 if (slot.hourIndex !== undefined) {
                     hourIndex = slot.hourIndex;
@@ -397,7 +397,7 @@ export default function AdminPage() {
                         hourIndex = 3 + ((dayIndex - 1) * 24) + slot.hour;
                     }
                 }
-                
+
                 if (hourIndex !== undefined && hourIndex >= 0 && hourIndex < 69) {
                     coverage[teamNum][hourIndex].count++;
                     coverage[teamNum][hourIndex].names.push(player.trackmaniaName || player.discordUsername);
@@ -417,7 +417,7 @@ export default function AdminPage() {
         approvedCasters.forEach(caster => {
             caster.availability.forEach((slot: any) => {
                 let hourIndex: number | undefined;
-                
+
                 // New format: hourIndex directly available
                 if (slot.hourIndex !== undefined) {
                     hourIndex = slot.hourIndex;
@@ -431,7 +431,7 @@ export default function AdminPage() {
                         hourIndex = 3 + ((dayIndex - 1) * 24) + slot.hour;
                     }
                 }
-                
+
                 if (hourIndex !== undefined && hourIndex >= 0 && hourIndex < 69) {
                     hours[hourIndex].count++;
                     hours[hourIndex].names.push(caster.displayName || caster.discordUsername);
@@ -697,21 +697,23 @@ export default function AdminPage() {
                                             {player.status === "approved" && (
                                                 <div style={{ display: "flex", gap: 8 }}>
                                                     <select
-                                                        value={
-                                                            // Convert integer team_id to string format for select
-                                                            player.teamAssignment === 0 ? "joker" :
-                                                            player.teamAssignment ? `team${player.teamAssignment}` : ""
-                                                        }
+                                                        value={player.teamAssignment ?? ""}
                                                         onChange={(e) => {
                                                             e.stopPropagation();
-                                                            updatePlayerTeam(player.id, (e.target.value || null) as TeamAssignment);
+                                                            const val = e.target.value;
+                                                            // Parse to number or null
+                                                            const teamId = val === "" ? null : parseInt(val);
+                                                            updatePlayerTeam(player.id, teamId as TeamAssignment);
                                                         }}
                                                         onClick={(e) => e.stopPropagation()}
                                                         style={inputStyle}
                                                     >
                                                         <option value="">Unassigned</option>
-                                                        {TEAMS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                                        <option value="joker">Joker</option>
+                                                        <option value="1">Team 1</option>
+                                                        <option value="2">Team 2</option>
+                                                        <option value="3">Team 3</option>
+                                                        <option value="4">Team 4</option>
+                                                        <option value="0">Joker</option>
                                                     </select>
 
                                                     {player.teamAssignment !== 0 && player.teamAssignment && (
@@ -1020,7 +1022,7 @@ export default function AdminPage() {
                         <div style={{ background: "#1e293b", padding: 24, borderRadius: 12, width: "95%", maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}>
                             <h2 style={{ marginBottom: 8 }}>Edit Availability: {editAvailPlayer.trackmaniaName}</h2>
                             <p style={{ marginBottom: 16, opacity: 0.7, fontSize: 13 }}>Click cells to toggle: Empty ↔ <span style={{ color: "#22c55e" }}>OK</span></p>
-                            
+
                             <AvailabilityGrid
                                 timezone={editAvailPlayer.timezone || "Europe/Paris"}
                                 selectedHours={selectedHourIndices}

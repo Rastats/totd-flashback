@@ -80,6 +80,86 @@ export async function PUT(request: Request) {
     }
 }
 
+// PATCH: Validate all maps above current map ID (union without duplicates)
+// Used by admin panel to quickly mark maps as completed
+export async function PATCH(request: Request) {
+    try {
+        const { team_id, current_map_id } = await request.json();
+        
+        if (!team_id || current_map_id === undefined) {
+            return NextResponse.json({ error: 'team_id and current_map_id required' }, { status: 400 });
+        }
+        
+        if (current_map_id < 1 || current_map_id > 2000) {
+            return NextResponse.json({ error: 'current_map_id must be between 1 and 2000' }, { status: 400 });
+        }
+        
+        const supabase = getSupabaseAdmin();
+        
+        // Get current completed_map_ids
+        const { data: current } = await supabase
+            .from('team_server_state')
+            .select('completed_map_ids, maps_completed')
+            .eq('team_id', team_id)
+            .single();
+        
+        // Start with existing completed maps (or empty array)
+        const existingIds: number[] = current?.completed_map_ids || [];
+        const existingSet = new Set(existingIds);
+        
+        // Add all maps with ID > current_map_id (maps above current)
+        // These are maps #(current_map_id + 1) up to #2000
+        const mapsToAdd: number[] = [];
+        for (let mapId = current_map_id + 1; mapId <= 2000; mapId++) {
+            if (!existingSet.has(mapId)) {
+                mapsToAdd.push(mapId);
+                existingSet.add(mapId);
+            }
+        }
+        
+        // Merge into completed_map_ids
+        const completed_map_ids = [...existingIds, ...mapsToAdd];
+        const maps_completed = completed_map_ids.length;
+        
+        const { error } = await supabase
+            .from('team_server_state')
+            .upsert({
+                team_id: team_id,
+                maps_completed: maps_completed,
+                completed_map_ids: completed_map_ids,
+                maps_total: 2000,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'team_id' });
+        
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        
+        // Log the change
+        await supabase.from('event_log').insert({
+            event_type: 'milestone',
+            team_id: team_id,
+            message: `[Admin] Validated all maps above #${current_map_id}: ${current?.maps_completed || 0} → ${maps_completed} (added ${mapsToAdd.length} maps)`,
+            metadata: { 
+                old_value: current?.maps_completed,
+                new_value: maps_completed,
+                current_map_id: current_map_id,
+                maps_added: mapsToAdd.length,
+                admin_action: true 
+            }
+        });
+        
+        return NextResponse.json({ 
+            success: true, 
+            maps_completed,
+            maps_added: mapsToAdd.length,
+            completed_map_ids 
+        });
+    } catch (error) {
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
 // DELETE: Reset team progression
 export async function DELETE(request: Request) {
     try {

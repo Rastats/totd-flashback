@@ -28,13 +28,15 @@ export async function PATCH(
 
         const updateData: Record<string, unknown> = {};
         if (body.status) updateData.status = body.status;
-        if (body.teamAssignment) {
-            // Convert "team1" -> 1, "team2" -> 2, etc. "joker" -> 0. Store as integer
-            if (body.teamAssignment === 'joker') {
-                updateData.team_id = 0;
+        if (body.teamAssignment !== undefined) {
+            // teamAssignment is a number: 0=Joker, 1-4=teams, null=unassigned
+            const assignment = body.teamAssignment;
+            if (assignment === null || assignment === '') {
+                updateData.team_id = null;
+            } else if (typeof assignment === 'number' && assignment >= 0 && assignment <= 4) {
+                updateData.team_id = assignment;
             } else {
-                const teamNum = parseInt(body.teamAssignment.replace('team', ''));
-                updateData.team_id = isNaN(teamNum) ? null : teamNum;
+                updateData.team_id = null;
             }
         }
         if (typeof body.isCaptain === 'boolean') updateData.is_captain = body.isCaptain;
