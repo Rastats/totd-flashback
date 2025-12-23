@@ -584,10 +584,10 @@ export default function LeaderboardPage() {
                             border: "1px solid #334155",
                             padding: 16,
                             height: "fit-content",
-                            maxHeight: "400px"
+                            maxHeight: "280px"
                         }}>
                             <h3 style={{ margin: "0 0 16px 0", fontSize: 18, borderBottom: "1px solid #334155", paddingBottom: 12 }}>Live Feed</h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "300px", overflowY: "auto" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "180px", overflowY: "auto" }}>
                                 {feed.length > 0 ? feed.slice(0, 5).map(event => (
                                     <div key={event.id} style={{
                                         paddingRight: 8,
