@@ -192,7 +192,22 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
-                    // Always update penalties_active to persist maps_remaining changes\r\n                    updateData.penalties_active = remainingPenalties;\r\n\r\n                    // Log completed penalties\r\n                    if (completedPenalties.length > 0) {\r\n                        for (const p of completedPenalties) {\r\n                            await supabase.from('event_log').insert({\r\n                                event_type: 'penalty_completed',\r\n                                team_id: teamId,\r\n                                message: `Penalty \"${p.name || p.penalty_name}\" completed`,\r\n                                metadata: { penalty_id: p.id, reason: p.maps_remaining === 0 ? 'maps_done' : 'timer_expired' }\r\n                            });\r\n                        }\r\n\r\n                        message += `, ${completedPenalties.length} penalty(ies) completed`;\r\n                    }
+                    // Always update penalties_active to persist maps_remaining changes
+                    updateData.penalties_active = remainingPenalties;
+
+                    // Log completed penalties
+                    if (completedPenalties.length > 0) {
+                        for (const p of completedPenalties) {
+                            await supabase.from('event_log').insert({
+                                event_type: 'penalty_completed',
+                                team_id: teamId,
+                                message: `Penalty "${p.name || p.penalty_name}" completed`,
+                                metadata: { penalty_id: p.id, reason: p.maps_remaining === 0 ? 'maps_done' : 'timer_expired' }
+                            });
+                        }
+
+                        message += `, ${completedPenalties.length} penalty(ies) completed`;
+                    }
 
                     // Promote from waitlist if slots available (max 2 active)
                     const waitlistPenalties = [...(state.penalties_waitlist || [])];
