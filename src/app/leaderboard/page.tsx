@@ -314,13 +314,14 @@ export default function LeaderboardPage() {
                     // If currentMapId is NULL or no active player, show "No map data"
                     let mapInfo = null;
                     if (t.currentMapId && t.currentMapName && t.activePlayer) {
-                        // Use data from API (synced from plugin)
-                        const totdData = getTotdInfo(t.currentMapId);
+                        // Use currentMapIndex (numeric) for lookup, not currentMapId (mapUid string)
+                        const numericIndex = typeof t.currentMapIndex === 'number' ? t.currentMapIndex : parseInt(t.currentMapIndex) || 0;
+                        const totdData = getTotdInfo(numericIndex);
                         mapInfo = {
                             name: t.currentMapName,
                             authorName: t.currentMapAuthor || totdData?.authorName || 'Unknown',
-                            mapUid: totdData?.mapUid || '',
-                            mapIndex: t.currentMapId,
+                            mapUid: t.currentMapId || totdData?.mapUid || '',
+                            mapIndex: numericIndex || totdData?.mapIndex || 0,
                             date: totdData?.date || '',
                             authorTime: totdData?.authorTime || '',
                             thumbnailUrl: totdData?.thumbnailUrl || ''

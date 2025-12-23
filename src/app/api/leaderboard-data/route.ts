@@ -115,7 +115,8 @@ export async function GET() {
                 color: teamMeta.color,
                 activePlayer: entry?.active_player || null,
                 waitingPlayer: entry?.waiting_player || null,
-                currentMapId: pluginEntry?.current_map_id || pluginEntry?.current_map_index || null,
+                currentMapId: pluginEntry?.current_map_id || null,  // mapUid string
+                currentMapIndex: pluginEntry?.current_map_index || null,  // numeric index for lookups
                 currentMapName: pluginEntry?.current_map_name || null,
                 currentMapAuthor: pluginEntry?.current_map_author || null,
                 mapsCompleted: entry?.maps_completed || 0,
