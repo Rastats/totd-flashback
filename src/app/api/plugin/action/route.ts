@@ -337,6 +337,16 @@ export async function POST(request: NextRequest) {
             // SET WAITING
             // ============================================
             case 'set_waiting': {
+                // Check if slot is available (unless current player is Active - they can always go to Waiting)
+                if (state.waiting_player &&
+                    state.waiting_player !== player.trackmania_name &&
+                    state.active_player !== player.trackmania_name) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Waiting slot occupied by ' + state.waiting_player
+                    }, { status: 409 });
+                }
+
                 updateData.waiting_player = player.trackmania_name;
 
                 // Remove from active if was there
