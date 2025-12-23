@@ -280,6 +280,13 @@ export async function POST(request: NextRequest) {
                 console.error('[Plugin Sync] Upsert error:', upsertError);
                 return NextResponse.json({ error: 'Database error' }, { status: 500 });
             }
+
+            // CRITICAL: Also update team_server_state.updated_at to prevent cleanup from clearing active_player
+            // The cleanup checks team_server_state.updated_at, not team_plugin_state.updated_at
+            await supabase
+                .from('team_server_state')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('team_id', teamId);
         }
 
         // ============================================
