@@ -9,6 +9,10 @@ const STALE_TIMEOUT_MS = 60000; // 60 seconds
 let lastCleanupTime = 0;
 const CLEANUP_INTERVAL_MS = 30000; // Only run cleanup every 30s max
 
+// Stale plugin state cleanup - clear after 15 minutes of inactivity
+const PLUGIN_STATE_STALE_MS = 15 * 60 * 1000; // 15 minutes
+let lastPluginCleanupTime = 0;
+
 interface SyncPayload {
     account_id: string;
     player_name: string;
@@ -34,7 +38,7 @@ function parseTeamId(teamAssignment: any): number | null {
     }
     if (typeof teamAssignment === 'string') {
         if (teamAssignment === 'joker') return null;
-        
+
         // Map team names to IDs
         const teamNameMap: Record<string, number> = {
             'team speedrun': 1,
@@ -44,7 +48,7 @@ function parseTeamId(teamAssignment: any): number | null {
         };
         const lowerName = teamAssignment.toLowerCase();
         if (teamNameMap[lowerName]) return teamNameMap[lowerName];
-        
+
         // Try "teamN" format
         const match = teamAssignment.match(/team(\d+)/i);
         if (match) {
@@ -65,26 +69,26 @@ function parseTeamId(teamAssignment: any): number | null {
  */
 async function cleanupStalePlayers(supabase: any) {
     const now = Date.now();
-    
+
     // Only run cleanup every 30s to avoid excessive DB calls
     if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
         return;
     }
     lastCleanupTime = now;
-    
+
     const cutoffTime = new Date(Date.now() - STALE_TIMEOUT_MS).toISOString();
-    
+
     // Get teams with stale active/waiting players
     const { data: staleTeams, error } = await supabase
         .from('team_server_state')
         .select('team_id, active_player, waiting_player, updated_at')
         .or(`active_player.neq.,waiting_player.neq.`)
         .lt('updated_at', cutoffTime);
-    
+
     if (error || !staleTeams || staleTeams.length === 0) {
         return;
     }
-    
+
     // Clear stale players
     for (const team of staleTeams) {
         const updates: any = { updated_at: new Date().toISOString() };
@@ -96,11 +100,58 @@ async function cleanupStalePlayers(supabase: any) {
             updates.waiting_player = null;
             console.log(`[Cleanup] Removing stale waiting player from team ${team.team_id}: ${team.waiting_player}`);
         }
-        
+
         await supabase
             .from('team_server_state')
             .update(updates)
             .eq('team_id', team.team_id);
+    }
+}
+
+/**
+ * Cleanup stale plugin state for teams inactive > 15 minutes
+ * Clears all columns except team_id and updated_at
+ */
+async function cleanupStalePluginState(supabase: any) {
+    const now = Date.now();
+
+    // Only run cleanup every 30s to avoid excessive DB calls
+    if (now - lastPluginCleanupTime < CLEANUP_INTERVAL_MS) {
+        return;
+    }
+    lastPluginCleanupTime = now;
+
+    const cutoffTime = new Date(now - PLUGIN_STATE_STALE_MS).toISOString();
+
+    // Find stale team_plugin_state entries
+    const { data: staleRows, error } = await supabase
+        .from('team_plugin_state')
+        .select('team_id, updated_at')
+        .lt('updated_at', cutoffTime);
+
+    if (error || !staleRows || staleRows.length === 0) {
+        return;
+    }
+
+    // Clear stale plugin state (keep only team_id and updated_at)
+    for (const row of staleRows) {
+        console.log(`[Cleanup] Clearing stale plugin state for team ${row.team_id} (inactive > 15 min)`);
+
+        await supabase
+            .from('team_plugin_state')
+            .update({
+                account_id: null,
+                player_name: null,
+                current_map_id: null,
+                current_map_index: null,
+                current_map_name: null,
+                current_map_author: null,
+                mode: null,
+                session_elapsed_ms: null,
+                plugin_version: null
+                // Keep: team_id (key), updated_at (stays as-is from query)
+            })
+            .eq('team_id', row.team_id);
     }
 }
 
@@ -123,21 +174,21 @@ export async function POST(request: NextRequest) {
         // Handle public_only requests (no auth needed, just returns team data)
         if (data.public_only === true) {
             const supabase = getSupabaseAdmin();
-            
+
             // Get all teams progress for leaderboard
             const allTeamsProgress = await getAllTeamsProgress(supabase);
-            
+
             // Get team pots
             const { data: teamStates } = await supabase
                 .from('team_server_state')
                 .select('team_id, pot_amount')
                 .order('team_id');
-            
+
             const teamPots = teamStates?.map((t: any) => ({
                 team_id: t.team_id,
                 pot_amount: t.pot_amount || 0
             })) || [];
-            
+
             return NextResponse.json({
                 success: true,
                 donations: {
@@ -155,15 +206,15 @@ export async function POST(request: NextRequest) {
         // Validate required fields
         // Lightweight polls only need account_id, full syncs need player_name too
         if (!syncData.account_id) {
-            return NextResponse.json({ 
-                error: 'Missing required field: account_id' 
+            return NextResponse.json({
+                error: 'Missing required field: account_id'
             }, { status: 400 });
         }
-        
+
         // For non-lightweight requests, player_name is required
         if (!data.lightweight && !syncData.player_name) {
-            return NextResponse.json({ 
-                error: 'Missing required field: player_name' 
+            return NextResponse.json({
+                error: 'Missing required field: player_name'
             }, { status: 400 });
         }
         // NOTE: Rate limiting removed - doesn't work with serverless (each instance has its own Map)
@@ -174,6 +225,9 @@ export async function POST(request: NextRequest) {
 
         // Cleanup stale active/waiting players (runs max once per 30s)
         await cleanupStalePlayers(supabase);
+
+        // Cleanup stale plugin state > 15 min (runs max once per 30s)
+        await cleanupStalePluginState(supabase);
 
         // ============================================
         // 1. Check if player is in roster
@@ -207,6 +261,7 @@ export async function POST(request: NextRequest) {
             const { error: upsertError } = await supabase
                 .from('team_plugin_state')
                 .upsert({
+                    team_id: teamId, // Use team_id as primary key
                     account_id: syncData.account_id,
                     player_name: syncData.player_name,
                     current_map_id: syncData.current_map_id || null,
@@ -218,7 +273,7 @@ export async function POST(request: NextRequest) {
                     plugin_version: syncData.plugin_version || null,
                     updated_at: new Date().toISOString()
                 }, {
-                    onConflict: 'account_id'
+                    onConflict: 'team_id' // Key on team_id, not account_id
                 });
 
             if (upsertError) {
@@ -249,19 +304,19 @@ export async function POST(request: NextRequest) {
             .from('team_server_state')
             .select('team_id, pot_amount')
             .order('team_id');
-        
+
         const teamPots = allTeamPots?.map((t: any) => ({
             team_id: t.team_id,
             pot_amount: t.pot_amount || 0
         })) || [
-            { team_id: 1, pot_amount: 0 },
-            { team_id: 2, pot_amount: 0 },
-            { team_id: 3, pot_amount: 0 },
-            { team_id: 4, pot_amount: 0 }
-        ];
-        
+                { team_id: 1, pot_amount: 0 },
+                { team_id: 2, pot_amount: 0 },
+                { team_id: 3, pot_amount: 0 },
+                { team_id: 4, pot_amount: 0 }
+            ];
+
         const totalAmount = teamPots.reduce((sum: number, t: any) => sum + t.pot_amount, 0);
-        
+
         const donationsData = {
             totalAmount: totalAmount,
             currency: 'GBP',
