@@ -28,11 +28,18 @@ export async function GET() {
             return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
         }
 
+        // Get plugin state for current map info (written by plugin sync)
+        const { data: pluginData } = await supabase
+            .from('team_plugin_state')
+            .select('team_id, current_map_id, current_map_index, current_map_name, current_map_author, updated_at')
+            .order('team_id');
+
         // Process all teams data
         const teams = [];
         for (let teamId = 1; teamId <= 4; teamId++) {
             const teamMeta = TEAM_META[teamId] as { name: string; color: string };
             const entry = statusData?.find(e => e.team_id === teamId);
+            const pluginEntry = pluginData?.find(p => p.team_id === teamId);
 
             // Calculate online status
             let isOnline = false;
@@ -108,9 +115,9 @@ export async function GET() {
                 color: teamMeta.color,
                 activePlayer: entry?.active_player || null,
                 waitingPlayer: entry?.waiting_player || null,
-                currentMapId: entry?.current_map_id || entry?.current_map_index || null,
-                currentMapName: entry?.current_map_name || null,
-                currentMapAuthor: entry?.current_map_author || null,
+                currentMapId: pluginEntry?.current_map_id || pluginEntry?.current_map_index || null,
+                currentMapName: pluginEntry?.current_map_name || null,
+                currentMapAuthor: pluginEntry?.current_map_author || null,
                 mapsCompleted: entry?.maps_completed || 0,
                 potAmount: entry?.pot_amount || 0,
                 potCurrency: entry?.pot_currency || 'GBP',
