@@ -70,7 +70,33 @@ export default function DonationNotifications() {
         return () => clearInterval(interval);
     }, [notifications]);
 
-    const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
+    // Use localStorage to persist seen donation IDs across page reloads
+    const [processedIds, setProcessedIds] = useState<Set<string>>(() => {
+        // SSR-safe initialization
+        if (typeof window === 'undefined') return new Set();
+        try {
+            const stored = localStorage.getItem('seenDonationIds');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Keep only last 100 IDs to avoid infinite growth
+                return new Set(parsed.slice(-100));
+            }
+        } catch (e) {
+            console.error('Failed to parse seenDonationIds', e);
+        }
+        return new Set();
+    });
+
+    // Persist processedIds to localStorage whenever it changes
+    useEffect(() => {
+        if (processedIds.size > 0) {
+            try {
+                localStorage.setItem('seenDonationIds', JSON.stringify([...processedIds]));
+            } catch (e) {
+                console.error('Failed to save seenDonationIds', e);
+            }
+        }
+    }, [processedIds]);
 
     const processNewDonations = (recent: any[]) => {
         if (!recent || recent.length === 0) return;
