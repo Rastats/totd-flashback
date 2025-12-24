@@ -42,6 +42,13 @@ export async function addPenaltyToTeamState(
     penaltyName: string,
     donationId?: string
 ): Promise<AddPenaltyResult> {
+    // Validate penalty ID exists in config
+    const config = PENALTY_CONFIG[penaltyId];
+    if (!config) {
+        console.error(`[PenaltyUtils] Unknown penalty ID: ${penaltyId}`);
+        return { success: false, error: `Unknown penalty ID: ${penaltyId}` };
+    }
+
     // Get current team state
     const { data: teamData, error: fetchError } = await supabaseAdmin
         .from('team_server_state')
@@ -66,8 +73,7 @@ export async function addPenaltyToTeamState(
     let active: any[] = sortPenaltiesDesc(teamData?.penalties_active || []);
     let waitlist: any[] = sortPenaltiesDesc(teamData?.penalties_waitlist || []);
 
-    // Get penalty config
-    const config = PENALTY_CONFIG[penaltyId];
+    // Get penalty config for immediate check (config already validated at start)
     const isImmediate = IMMEDIATE_PENALTY_IDS.includes(penaltyId);
 
     // Check if this penalty is already active (duplicate prevention)

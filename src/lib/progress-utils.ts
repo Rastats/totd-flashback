@@ -80,31 +80,8 @@ export function sortAscending(array: number[]): number[] {
     return [...array].sort((a, b) => a - b);
 }
 
-/**
- * Generate a random map ID that is not in the completed list.
- * Used for Russian Roulette penalty.
- * 
- * @param completedIds - Array of completed map IDs
- * @param maxMapId - Maximum possible map ID (default 2000)
- * @returns Random uncompleted map ID, or 0 if all completed
- */
-export function generateRandomUncompletedMap(completedIds: number[], maxMapId: number = 2000): number {
-    const completedSet = new Set(completedIds);
-    const uncompleted: number[] = [];
-
-    for (let i = 1; i <= maxMapId; i++) {
-        if (!completedSet.has(i)) {
-            uncompleted.push(i);
-        }
-    }
-
-    if (uncompleted.length === 0) {
-        return 0; // All maps completed
-    }
-
-    const randomIndex = Math.floor(Math.random() * uncompleted.length);
-    return uncompleted[randomIndex];
-}
+// NOTE: generateRandomUncompletedMap removed - now calculated by plugin
+// See ProgressManager.as GenerateRandomUncompletedMap()
 
 /**
  * Calculate the next highest unfinished map ID after the current one is completed.
