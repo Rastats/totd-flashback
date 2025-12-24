@@ -111,21 +111,23 @@ export async function POST(request: Request) {
         const cooldownExpiresAt = new Date(now + cooldownMs).toISOString();
 
         // Update shield columns + start cooldown for this type
-        // Also clear ALL penalties when shield is activated
         const updateData: any = {
             shield_active: true,
             shield_type: type,
             shield_expires_at: expiresAt,
-            penalties_active: [],    // Clear active penalties
-            penalties_waitlist: [],  // Clear waitlist penalties
             updated_at: new Date().toISOString()
         };
 
         if (type === 'small') {
+            // Small shield: just blocks new penalties, doesn't clear existing
             updateData.shield_small_cooldown_expires_at = cooldownExpiresAt;
         } else {
+            // Big shield: clears ALL existing penalties
             updateData.shield_big_cooldown_expires_at = cooldownExpiresAt;
+            updateData.penalties_active = [];
+            updateData.penalties_waitlist = [];
         }
+
 
 
         const { error } = await supabase
