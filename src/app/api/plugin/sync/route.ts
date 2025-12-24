@@ -387,7 +387,7 @@ export async function POST(request: NextRequest) {
                 penalties_waitlist: updatedServerState?.penalties_waitlist || [],
                 redo_remaining: updatedServerState?.redo_remaining || 0,
                 redo_map_ids: updatedServerState?.redo_map_ids || [],
-                roulette_map: updatedServerState?.roulette_map || null,
+                // NOTE: roulette_map is now in team_plugin_state, not team_server_state
                 shield_active: updatedServerState?.shield_active || false,
                 shield_type: updatedServerState?.shield_type || null,
                 shield_expires_at: updatedServerState?.shield_expires_at || null,

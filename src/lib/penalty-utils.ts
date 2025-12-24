@@ -45,7 +45,7 @@ export async function addPenaltyToTeamState(
     // Get current team state
     const { data: teamData, error: fetchError } = await supabaseAdmin
         .from('team_server_state')
-        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at, completed_map_ids, roulette_map')
+        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at, completed_map_ids')
         .eq('team_id', teamId)
         .single();
 

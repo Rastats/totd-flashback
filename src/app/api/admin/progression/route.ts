@@ -208,7 +208,6 @@ export async function DELETE(request: Request) {
                 maps_completed: 0,
                 completed_map_ids: [],  // Clear the array too
                 highest_unfinished_id: 2000,  // Reset to max (all unfinished)
-                roulette_map: null,  // Clear roulette_map on reset
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', parseInt(teamId));
