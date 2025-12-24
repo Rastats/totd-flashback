@@ -46,6 +46,7 @@ const sectionStyle = {
 
 interface Penalty {
     id: string;
+    penalty_id?: number;  // For sorting (1-10)
     penalty_team: number;
     penalty_name: string;
     donor_name: string;
@@ -55,6 +56,7 @@ interface Penalty {
     maps_total?: number | null;
     timer_expires_at?: string | null;
 }
+
 
 // Helper to format remaining timer
 function formatTimerRemaining(expiresAt: string | null | undefined): string | null {
@@ -100,7 +102,7 @@ export default function EventControlPanel() {
     const [teamPots, setTeamPots] = useState<{ team_number: number, amount: number }[]>([]);
     const [syncEnabled, setSyncEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
-    
+
     // Form states
     const [newPenalty, setNewPenalty] = useState({ team_id: 1, penalty_id: PENALTY_TYPES[0].id, penalty_name: PENALTY_TYPES[0].name });
     const [newEventMessage, setNewEventMessage] = useState({ message: "", event_type: "milestone", team_id: "" });
@@ -190,7 +192,7 @@ export default function EventControlPanel() {
 
     // ============= PENALTIES =============
     const MAX_PENALTIES_PER_TEAM = 4; // 2 active + 2 waitlist
-    
+
     const addPenalty = async () => {
         // Check if team has an active shield (blocks penalties)
         const teamShield = shields.find(s => s.team_id === newPenalty.team_id);
@@ -198,14 +200,14 @@ export default function EventControlPanel() {
             alert(`Team ${newPenalty.team_id} has an active shield! Penalties are blocked.`);
             return;
         }
-        
+
         // Check if team already has max penalties
         const teamPenalties = penalties.filter(p => p.penalty_team === newPenalty.team_id);
         if (teamPenalties.length >= MAX_PENALTIES_PER_TEAM) {
             alert(`Team ${newPenalty.team_id} already has ${MAX_PENALTIES_PER_TEAM} penalties (max 2 active + 2 waitlist)`);
             return;
         }
-        
+
         const res = await fetch("/api/admin/penalties", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -242,13 +244,13 @@ export default function EventControlPanel() {
             alert(`Team ${team_id} already has a shield active! Deactivate it first.`);
             return;
         }
-        
+
         const res = await fetch("/api/admin/shields", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ team_id, type })
         });
-        
+
         if (res.ok) {
             // If Big Shield, clear all penalties for this team (matches plugin behavior)
             if (type === "big") {
@@ -271,11 +273,11 @@ export default function EventControlPanel() {
         const res = await fetch("/api/admin/shields", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 team_id,
                 shield_type,
-                action, 
-                custom_minutes: action === 'set' ? customMinutes : undefined 
+                action,
+                custom_minutes: action === 'set' ? customMinutes : undefined
             })
         });
         if (res.ok) {
@@ -301,7 +303,7 @@ export default function EventControlPanel() {
     const updateProgression = async (team_id: number) => {
         const value = parseInt(progressUpdate[team_id] || "0");
         if (isNaN(value)) return alert("Invalid number");
-        
+
         const res = await fetch("/api/admin/progression", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -317,7 +319,7 @@ export default function EventControlPanel() {
     const updatePot = async (team_number: number) => {
         const value = parseFloat(potCorrection[team_number] || "0");
         if (isNaN(value)) return alert("Invalid number");
-        
+
         const res = await fetch("/api/admin/pots", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -339,7 +341,7 @@ export default function EventControlPanel() {
         if (!newEventMessage.message) return;
         const res = await fetch("/api/event-log", {
             method: "POST",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
                 "x-api-key": "flashback2025"
             },
@@ -358,12 +360,12 @@ export default function EventControlPanel() {
     // ============= SYNC TOGGLE =============
     const toggleSync = async () => {
         const newState = !syncEnabled;
-        const confirmMsg = newState 
+        const confirmMsg = newState
             ? "⚡ ENABLE plugin sync? All plugins will start sending data."
             : "🛑 DISABLE plugin sync? All plugins will be blocked from sending data.";
-        
+
         if (!confirm(confirmMsg)) return;
-        
+
         const res = await fetch("/api/admin/sync-toggle", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -399,7 +401,7 @@ export default function EventControlPanel() {
                             {syncEnabled ? "🟢 Plugin Sync ENABLED" : "🔴 Plugin Sync DISABLED"}
                         </h3>
                         <p style={{ margin: "8px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                            {syncEnabled 
+                            {syncEnabled
                                 ? "Plugins are sending data to the server. Progress is being tracked."
                                 : "Plugins are blocked from sending data. Enable this when the event starts."}
                         </p>
@@ -422,7 +424,7 @@ export default function EventControlPanel() {
             {/* ============= PENALTIES SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#f87171" }}>⚠️ Penalties Management</h3>
-                
+
                 <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                     <select
                         value={newPenalty.team_id}
@@ -451,18 +453,20 @@ export default function EventControlPanel() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const teamPenalties = penalties.filter(p => p.penalty_team === team.number);
-                        const activePenalties = teamPenalties.filter(p => p.is_active);
-                        const waitlistPenalties = teamPenalties.filter(p => !p.is_active);
+                        // Sort by penalty_id descending: highest ID first, lowest at bottom (will be overridden first)
+                        const activePenalties = teamPenalties.filter(p => p.is_active).sort((a, b) => (b.penalty_id || 0) - (a.penalty_id || 0));
+                        const waitlistPenalties = teamPenalties.filter(p => !p.is_active).sort((a, b) => (b.penalty_id || 0) - (a.penalty_id || 0));
+
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`,
                                 minHeight: 150
                             }}>
                                 <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
-                                
+
                                 {/* Active Section */}
                                 <div style={{ marginBottom: 8 }}>
                                     <div style={{ fontSize: 10, color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>
@@ -472,7 +476,7 @@ export default function EventControlPanel() {
                                         <div style={{ fontSize: 10, opacity: 0.4, fontStyle: "italic" }}>None</div>
                                     ) : (
                                         activePenalties.map(p => (
-                                            <div key={p.id} style={{ 
+                                            <div key={p.id} style={{
                                                 display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap",
                                                 padding: "4px 6px", background: "#2a1a1a", borderRadius: 3, marginBottom: 3, fontSize: 10
                                             }}>
@@ -490,16 +494,16 @@ export default function EventControlPanel() {
                                                     </span>
                                                 )}
                                                 <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-                                                    <button onClick={() => togglePenaltyStatus(p.id, true)} 
+                                                    <button onClick={() => togglePenaltyStatus(p.id, true)}
                                                         style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
-                                                    <button onClick={() => removePenalty(p.id)} 
+                                                    <button onClick={() => removePenalty(p.id)}
                                                         style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
                                                 </div>
                                             </div>
                                         ))
                                     )}
                                 </div>
-                                
+
                                 {/* Waitlist Section */}
                                 <div>
                                     <div style={{ fontSize: 10, color: "#fbbf24", fontWeight: "bold", marginBottom: 4 }}>
@@ -509,15 +513,15 @@ export default function EventControlPanel() {
                                         <div style={{ fontSize: 10, opacity: 0.4, fontStyle: "italic" }}>None</div>
                                     ) : (
                                         waitlistPenalties.map(p => (
-                                            <div key={p.id} style={{ 
+                                            <div key={p.id} style={{
                                                 display: "flex", alignItems: "center", gap: 4,
                                                 padding: "2px 4px", background: "#1a1a1a", borderRadius: 3, marginBottom: 2, fontSize: 10
                                             }}>
                                                 <span style={{ flex: 1, color: "#fbbf24" }}>{p.penalty_name}</span>
-                                                <button onClick={() => togglePenaltyStatus(p.id, false)} 
+                                                <button onClick={() => togglePenaltyStatus(p.id, false)}
                                                     style={{ ...buttonStyle, padding: "1px 4px", background: "#4ade80", color: "#000", fontSize: 8 }}
                                                     disabled={activePenalties.length >= 2}>↑</button>
-                                                <button onClick={() => removePenalty(p.id)} 
+                                                <button onClick={() => removePenalty(p.id)}
                                                     style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
                                             </div>
                                         ))
@@ -532,20 +536,20 @@ export default function EventControlPanel() {
             {/* ============= SHIELDS SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#34d399" }}>🛡️ Shields Management</h3>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const shield = shields.find(s => s.team_id === team.number);
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`,
                                 textAlign: "center"
                             }}>
                                 <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
-                                
+
                                 {shield?.active ? (
                                     <div>
                                         <div style={{ color: "#34d399", marginBottom: 4 }}>
@@ -554,7 +558,7 @@ export default function EventControlPanel() {
                                         <div style={{ fontFamily: "monospace", marginBottom: 8 }}>
                                             {formatTime(shield.remaining_ms)}
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => deactivateShield(team.number)}
                                             style={{ ...buttonStyle, background: "#4a2a2a", color: "#f87171", width: "100%" }}
                                         >
@@ -571,9 +575,9 @@ export default function EventControlPanel() {
                                                     {formatTime(shield.small_cooldown_ms)}
                                                 </div>
                                                 <div style={{ display: "flex", gap: 2, marginBottom: 2 }}>
-                                                    <button onClick={() => manageCooldown(team.number, 'small', 'reset')} 
+                                                    <button onClick={() => manageCooldown(team.number, 'small', 'reset')}
                                                         style={{ ...buttonStyle, background: "#2a3a2a", color: "#4ade80", flex: 1, fontSize: 9, padding: "2px 4px" }}>Reset</button>
-                                                    <button onClick={() => manageCooldown(team.number, 'small', 'cancel')} 
+                                                    <button onClick={() => manageCooldown(team.number, 'small', 'cancel')}
                                                         style={{ ...buttonStyle, background: "#3a2a2a", color: "#f87171", flex: 1, fontSize: 9, padding: "2px 4px" }}>Cancel</button>
                                                 </div>
                                                 <div style={{ display: "flex", gap: 2 }}>
@@ -589,7 +593,7 @@ export default function EventControlPanel() {
                                                 </div>
                                             </div>
                                         ) : null}
-                                        
+
                                         {/* Big Shield Cooldown */}
                                         {shield?.big_cooldown_ms && shield.big_cooldown_ms > 0 ? (
                                             <div style={{ marginBottom: 8, padding: 6, background: "#2a1a2a", borderRadius: 4 }}>
@@ -598,9 +602,9 @@ export default function EventControlPanel() {
                                                     {formatTime(shield.big_cooldown_ms)}
                                                 </div>
                                                 <div style={{ display: "flex", gap: 2, marginBottom: 2 }}>
-                                                    <button onClick={() => manageCooldown(team.number, 'big', 'reset')} 
+                                                    <button onClick={() => manageCooldown(team.number, 'big', 'reset')}
                                                         style={{ ...buttonStyle, background: "#3a2a3a", color: "#c084fc", flex: 1, fontSize: 9, padding: "2px 4px" }}>Reset</button>
-                                                    <button onClick={() => manageCooldown(team.number, 'big', 'cancel')} 
+                                                    <button onClick={() => manageCooldown(team.number, 'big', 'cancel')}
                                                         style={{ ...buttonStyle, background: "#3a2a2a", color: "#f87171", flex: 1, fontSize: 9, padding: "2px 4px" }}>Cancel</button>
                                                 </div>
                                                 <div style={{ display: "flex", gap: 2 }}>
@@ -616,30 +620,30 @@ export default function EventControlPanel() {
                                                 </div>
                                             </div>
                                         ) : null}
-                                        
+
                                         {/* Activate Shield Buttons */}
                                         <div style={{ display: "flex", gap: 4 }}>
-                                            <button 
+                                            <button
                                                 onClick={() => activateShield(team.number, "small")}
-                                                style={{ 
-                                                    ...buttonStyle, 
-                                                    background: shield?.small_cooldown_ms && shield.small_cooldown_ms > 0 ? "#1a1a1a" : "#1a3a2a", 
-                                                    color: shield?.small_cooldown_ms && shield.small_cooldown_ms > 0 ? "#666" : "#4ade80", 
-                                                    flex: 1, 
-                                                    fontSize: 11 
+                                                style={{
+                                                    ...buttonStyle,
+                                                    background: shield?.small_cooldown_ms && shield.small_cooldown_ms > 0 ? "#1a1a1a" : "#1a3a2a",
+                                                    color: shield?.small_cooldown_ms && shield.small_cooldown_ms > 0 ? "#666" : "#4ade80",
+                                                    flex: 1,
+                                                    fontSize: 11
                                                 }}
                                                 disabled={(shield?.small_cooldown_ms ?? 0) > 0}
                                             >
                                                 Small (10m)
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => activateShield(team.number, "big")}
-                                                style={{ 
-                                                    ...buttonStyle, 
-                                                    background: shield?.big_cooldown_ms && shield.big_cooldown_ms > 0 ? "#1a1a1a" : "#22543d", 
-                                                    color: shield?.big_cooldown_ms && shield.big_cooldown_ms > 0 ? "#666" : "#4ade80", 
-                                                    flex: 1, 
-                                                    fontSize: 11 
+                                                style={{
+                                                    ...buttonStyle,
+                                                    background: shield?.big_cooldown_ms && shield.big_cooldown_ms > 0 ? "#1a1a1a" : "#22543d",
+                                                    color: shield?.big_cooldown_ms && shield.big_cooldown_ms > 0 ? "#666" : "#4ade80",
+                                                    flex: 1,
+                                                    fontSize: 11
                                                 }}
                                                 disabled={(shield?.big_cooldown_ms ?? 0) > 0}
                                             >
@@ -657,27 +661,27 @@ export default function EventControlPanel() {
             {/* ============= PLAYER MANAGEMENT SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#60a5fa" }}>🎮 Player Management</h3>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const info = teams.find(t => t.team_id === team.number);
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`
                             }}>
                                 <div style={{ fontWeight: "bold", color: team.color, marginBottom: 8 }}>{team.name}</div>
                                 <div style={{ fontSize: 12, marginBottom: 4 }}>
-                                    <span style={{ opacity: 0.6 }}>Active:</span> 
+                                    <span style={{ opacity: 0.6 }}>Active:</span>
                                     <span style={{ color: "#4ade80", marginLeft: 4 }}>{info?.active_player || "None"}</span>
                                 </div>
                                 <div style={{ fontSize: 12, marginBottom: 8 }}>
                                     <span style={{ opacity: 0.6 }}>Waiting:</span>
                                     <span style={{ color: "#fbbf24", marginLeft: 4 }}>{info?.waiting_player || "None"}</span>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => forceSwitch(team.number)}
                                     style={{ ...buttonStyle, background: "#2a3a4a", color: "#60a5fa", width: "100%", fontSize: 11 }}
                                 >
@@ -692,14 +696,14 @@ export default function EventControlPanel() {
             {/* ============= PROGRESSION SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#a78bfa" }}>📊 Progression Management</h3>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const info = teams.find(t => t.team_id === team.number);
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`
                             }}>
@@ -715,14 +719,14 @@ export default function EventControlPanel() {
                                         onChange={(e) => setProgressUpdate(prev => ({ ...prev, [team.number]: e.target.value }))}
                                         style={{ ...inputStyle, width: 80 }}
                                     />
-                                    <button 
+                                    <button
                                         onClick={() => updateProgression(team.number)}
                                         style={{ ...buttonStyle, background: "#3a3a5a", color: "#a78bfa" }}
                                     >
                                         Set
                                     </button>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => resetProgression(team.number)}
                                     style={{ ...buttonStyle, background: "#4a1a1a", color: "#f87171", width: "100%", fontSize: 11 }}
                                 >
@@ -740,14 +744,14 @@ export default function EventControlPanel() {
                 <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 12 }}>
                     Validate (add) or invalidate (remove) a map ID from a team's completed list.
                 </p>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                     {TEAMS.map(team => {
                         const info = teams.find(t => t.team_id === team.number);
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`
                             }}>
@@ -821,15 +825,15 @@ export default function EventControlPanel() {
             {/* ============= VERSION CONTROL SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#fbbf24" }}>🔐 Version Control</h3>
-                
+
                 <div style={{ marginBottom: 12 }}>
                     <span style={{ opacity: 0.7 }}>Currently allowed versions: </span>
                     {allowedVersions.length > 0 ? (
                         allowedVersions.map(v => (
-                            <span key={v} style={{ 
-                                padding: "2px 8px", 
-                                background: "#2a3a2a", 
-                                borderRadius: 4, 
+                            <span key={v} style={{
+                                padding: "2px 8px",
+                                background: "#2a3a2a",
+                                borderRadius: 4,
                                 marginLeft: 4,
                                 color: "#4ade80"
                             }}>
@@ -840,7 +844,7 @@ export default function EventControlPanel() {
                         <span style={{ color: "#fbbf24" }}>All versions allowed (no restriction)</span>
                     )}
                 </div>
-                
+
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
                         type="text"
@@ -849,7 +853,7 @@ export default function EventControlPanel() {
                         onChange={(e) => setNewVersion(e.target.value)}
                         style={{ ...inputStyle, flex: 1 }}
                     />
-                    <button 
+                    <button
                         onClick={() => {
                             const versions = newVersion.split(",").map(v => v.trim()).filter(v => v);
                             fetch("/api/admin/versions", {
@@ -882,9 +886,9 @@ export default function EventControlPanel() {
                         const pot = teamPots.find(p => p.team_number === team.number);
                         const currentAmount = pot?.amount || 0;
                         return (
-                            <div key={team.number} style={{ 
-                                padding: 12, 
-                                background: "#1a1a2a", 
+                            <div key={team.number} style={{
+                                padding: 12,
+                                background: "#1a1a2a",
                                 borderRadius: 6,
                                 border: `1px solid ${team.color}`
                             }}>
@@ -917,7 +921,7 @@ export default function EventControlPanel() {
             {/* ============= EVENT LOG SECTION ============= */}
             <div style={sectionStyle}>
                 <h3 style={{ marginTop: 0, marginBottom: 16, color: "#f472b6" }}>📢 Event Log</h3>
-                
+
                 <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                     <select
                         value={newEventMessage.event_type}
@@ -954,8 +958,8 @@ export default function EventControlPanel() {
                         <p style={{ opacity: 0.5 }}>No events yet</p>
                     ) : (
                         eventLog.map(e => (
-                            <div key={e.id} style={{ 
-                                padding: "8px 12px", 
+                            <div key={e.id} style={{
+                                padding: "8px 12px",
                                 borderLeft: `3px solid ${e.team_id ? TEAMS.find(t => t.number === e.team_id)?.color : "#666"}`,
                                 marginBottom: 8,
                                 background: "#1a1a2a",

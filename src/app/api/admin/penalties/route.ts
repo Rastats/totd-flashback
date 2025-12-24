@@ -27,12 +27,15 @@ export async function GET(request: Request) {
     // Transform data to a flat list of penalties with team info
     const penalties: Array<{
         id: string;
+        penalty_id: number;
         penalty_team: number;
         penalty_name: string;
         is_active: boolean;
         maps_remaining?: number;
-        timer_remaining_ms?: number;
+        maps_total?: number;
+        timer_expires_at?: string;
     }> = [];
+
 
     for (const team of (data || [])) {
         const active = team.penalties_active || [];
@@ -43,11 +46,13 @@ export async function GET(request: Request) {
             const p = active[i];
             penalties.push({
                 id: `${team.team_id}_active_${i}`,
+                penalty_id: p.penalty_id || 0,
                 penalty_team: team.team_id,
                 penalty_name: p.name || `Penalty ${p.id}`,
                 is_active: true,
                 maps_remaining: p.maps_remaining,
-                timer_remaining_ms: p.timer_remaining_ms
+                maps_total: p.maps_total,
+                timer_expires_at: p.timer_expires_at
             });
         }
 
@@ -56,11 +61,13 @@ export async function GET(request: Request) {
             const p = waitlist[i];
             penalties.push({
                 id: `${team.team_id}_waitlist_${i}`,
+                penalty_id: p.penalty_id || 0,
                 penalty_team: team.team_id,
                 penalty_name: p.name || `Penalty ${p.id}`,
                 is_active: false
             });
         }
+
     }
 
     return NextResponse.json({ penalties });
