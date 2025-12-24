@@ -692,13 +692,17 @@ export default function EventControlPanel() {
                                     <span style={{ opacity: 0.6 }}>Waiting:</span>
                                     <span style={{ color: "#fbbf24", marginLeft: 4 }}>{info?.waiting_player || "None"}</span>
                                 </div>
-                                <button
-                                    onClick={() => forceSwitch(team.number)}
-                                    style={{ ...buttonStyle, background: "#2a3a4a", color: "#60a5fa", width: "100%", fontSize: 11 }}
-                                >
-                                    🔄 Force Switch
-                                </button>
+                                {/* Force Switch: only visible when both active AND waiting exist */}
+                                {info?.active_player && info?.waiting_player && (
+                                    <button
+                                        onClick={() => forceSwitch(team.number)}
+                                        style={{ ...buttonStyle, background: "#2a3a4a", color: "#60a5fa", width: "100%", fontSize: 11 }}
+                                    >
+                                        🔄 Force Switch
+                                    </button>
+                                )}
                             </div>
+
                         );
                     })}
                 </div>
