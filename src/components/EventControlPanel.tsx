@@ -481,12 +481,13 @@ export default function EventControlPanel() {
                                                 padding: "4px 6px", background: "#2a1a1a", borderRadius: 3, marginBottom: 3, fontSize: 10
                                             }}>
                                                 <span style={{ color: "#f87171", fontWeight: "bold" }}>{p.penalty_name}</span>
-                                                {/* Show maps progress if applicable */}
+                                                {/* Show maps progress if applicable: completed/total */}
                                                 {p.maps_remaining !== null && p.maps_remaining !== undefined && p.maps_total && p.maps_total > 1 && (
                                                     <span style={{ color: "#fbbf24", fontSize: 9 }}>
-                                                        ({p.maps_remaining}/{p.maps_total})
+                                                        ({p.maps_total - p.maps_remaining}/{p.maps_total})
                                                     </span>
                                                 )}
+
                                                 {/* Show timer if applicable */}
                                                 {p.timer_expires_at && (
                                                     <span style={{ color: "#38bdf8", fontSize: 9, fontFamily: "monospace" }}>
