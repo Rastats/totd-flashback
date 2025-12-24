@@ -66,7 +66,37 @@ export async function GET() {
             }
         }
 
+        // Cleanup stale team_plugin_state (>5 min) - clear all columns except team_id
+        const PLUGIN_STALE_MS = 5 * 60 * 1000; // 5 minutes
+        const pluginCutoffTime = new Date(Date.now() - PLUGIN_STALE_MS);
+
+        const { data: pluginData } = await supabase
+            .from('team_plugin_state')
+            .select('team_id, updated_at, player_name');
+
+        for (const row of (pluginData || [])) {
+            if (row.updated_at && new Date(row.updated_at) < pluginCutoffTime && row.player_name) {
+                console.log(`[LiveStatus] Clearing stale plugin state for team ${row.team_id}`);
+                await supabase
+                    .from('team_plugin_state')
+                    .update({
+                        account_id: null,
+                        player_name: null,
+                        current_map_id: null,
+                        current_map_index: null,
+                        current_map_name: null,
+                        current_map_author: null,
+                        mode: null,
+                        session_elapsed_ms: null,
+                        plugin_version: null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('team_id', row.team_id);
+            }
+        }
+
         const now = new Date();
+
 
         const teams: TeamLiveStatus[] = [];
 
