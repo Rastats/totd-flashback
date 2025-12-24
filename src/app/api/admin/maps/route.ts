@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { sortDescending, calculateHighestUnfinished } from '@/lib/progress-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     const { data, error } = await supabase
         .from('team_server_state')
         .select('completed_map_ids, maps_completed')
@@ -61,19 +62,21 @@ export async function POST(request: Request) {
 
         // Check if already completed
         if (currentIds.includes(map_id)) {
-            return NextResponse.json({ 
-                error: `Map ${map_id} is already completed for this team` 
+            return NextResponse.json({
+                error: `Map ${map_id} is already completed for this team`
             }, { status: 400 });
         }
 
-        // Add map to completed list
-        const newIds = [...currentIds, map_id].sort((a, b) => a - b);
+        // Add map to completed list and sort descending
+        const newIds = sortDescending([...currentIds, map_id]);
+        const highest_unfinished_id = calculateHighestUnfinished(newIds);
 
         const { error: updateError } = await supabase
             .from('team_server_state')
             .update({
                 completed_map_ids: newIds,
                 maps_completed: newIds.length,
+                highest_unfinished_id: highest_unfinished_id,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', team_id);
@@ -135,19 +138,21 @@ export async function DELETE(request: Request) {
 
         // Check if map is in completed list
         if (!currentIds.includes(mapIdNum)) {
-            return NextResponse.json({ 
-                error: `Map ${mapIdNum} is not in completed list for this team` 
+            return NextResponse.json({
+                error: `Map ${mapIdNum} is not in completed list for this team`
             }, { status: 400 });
         }
 
-        // Remove map from completed list
-        const newIds = currentIds.filter(id => id !== mapIdNum);
+        // Remove map from completed list and keep sorted descending
+        const newIds = sortDescending(currentIds.filter(id => id !== mapIdNum));
+        const highest_unfinished_id = calculateHighestUnfinished(newIds);
 
         const { error: updateError } = await supabase
             .from('team_server_state')
             .update({
                 completed_map_ids: newIds,
                 maps_completed: newIds.length,
+                highest_unfinished_id: highest_unfinished_id,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', teamIdNum);
