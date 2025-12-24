@@ -210,27 +210,38 @@ export async function POST(request: NextRequest) {
                     }
 
                     // Promote from waitlist if slots available (max 2 active)
-                    const waitlistPenalties = [...(state.penalties_waitlist || [])];
+                    // Keep duplicates in waitlist until the active one is completed
+                    const waitlistPenalties: any[] = [...(state.penalties_waitlist || [])];
                     const currentActive = updateData.penalties_active || remainingPenalties;
+                    const promotedIndices: number[] = [];
 
-                    while (currentActive.length < 2 && waitlistPenalties.length > 0) {
-                        const nextPenalty = waitlistPenalties.shift();
-                        if (nextPenalty) {
-                            // Check if same penalty_id is already active (prevent duplicates)
-                            const isDuplicate = currentActive.some((p: any) => p.penalty_id === nextPenalty.penalty_id);
-                            if (isDuplicate) {
-                                console.log(`[Action] Skipping promotion of ${nextPenalty.name} - already active`);
-                                continue; // Skip this penalty, try next one
-                            }
-                            currentActive.push({ ...nextPenalty, activated_at: new Date().toISOString() });
-                            message += `, promoted ${nextPenalty.name || nextPenalty.penalty_id} to active`;
+                    for (let i = 0; i < waitlistPenalties.length && currentActive.length < 2; i++) {
+                        const nextPenalty = waitlistPenalties[i];
+
+                        // Check if same penalty_id is already active (prevent duplicates)
+                        const isDuplicate = currentActive.some((p: any) =>
+                            (p.penalty_id ?? p.id) === (nextPenalty.penalty_id ?? nextPenalty.id)
+                        );
+
+                        if (isDuplicate) {
+                            console.log(`[Action] Keeping ${nextPenalty.name} in waitlist - same penalty already active`);
+                            continue; // Skip but keep in waitlist
                         }
+
+                        // Promote this penalty
+                        currentActive.push({ ...nextPenalty, activated_at: new Date().toISOString() });
+                        promotedIndices.push(i);
+                        message += `, promoted ${nextPenalty.name || nextPenalty.penalty_id} to active`;
                     }
 
-                    if (waitlistPenalties.length !== (state.penalties_waitlist || []).length) {
-                        updateData.penalties_waitlist = waitlistPenalties;
-                        updateData.penalties_active = currentActive;
+                    // Remove only promoted penalties from waitlist (in reverse order to preserve indices)
+                    for (let i = promotedIndices.length - 1; i >= 0; i--) {
+                        waitlistPenalties.splice(promotedIndices[i], 1);
                     }
+
+                    updateData.penalties_waitlist = waitlistPenalties;
+                    updateData.penalties_active = currentActive;
+
                 } else {
                     message = `Map ${data.map_index} already completed`;
                 }
