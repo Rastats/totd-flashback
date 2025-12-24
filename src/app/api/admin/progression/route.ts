@@ -198,6 +198,7 @@ export async function DELETE(request: Request) {
             .from('team_server_state')
             .update({
                 maps_completed: 0,
+                completed_map_ids: [],  // Clear the array too
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', parseInt(teamId));
