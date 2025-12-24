@@ -131,6 +131,8 @@ export async function addPenaltyToTeamState(
     const hadRR = oldActive.some((p: any) => p.penalty_id === 1) || oldWaitlist.some((p: any) => p.penalty_id === 1);
     const hasRR = active.some((p: any) => p.penalty_id === 1) || waitlist.some((p: any) => p.penalty_id === 1);
 
+    console.log(`[PenaltyUtils] Team ${teamId}: penaltyId=${penaltyId}, hadRR=${hadRR}, hasRR=${hasRR}`);
+
     // Determine roulette_map value
     let roulette_map: number | null = teamData?.roulette_map || null;
 
