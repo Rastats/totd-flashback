@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { sortDescending, calculateHighestUnfinished } from '@/lib/progress-utils';
+import { insertSortedDesc, calculateHighestUnfinished } from '@/lib/progress-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
             }, { status: 400 });
         }
 
-        // Add map to completed list and sort descending
-        const newIds = sortDescending([...currentIds, map_id]);
+        // Add map to completed list using sorted insert (O(log n))
+        const newIds = insertSortedDesc(currentIds, map_id);
         const highest_unfinished_id = calculateHighestUnfinished(newIds);
 
         const { error: updateError } = await supabase
@@ -143,8 +143,8 @@ export async function DELETE(request: Request) {
             }, { status: 400 });
         }
 
-        // Remove map from completed list and keep sorted descending
-        const newIds = sortDescending(currentIds.filter(id => id !== mapIdNum));
+        // Remove map from completed list (filter preserves order)
+        const newIds = currentIds.filter(id => id !== mapIdNum);
         const highest_unfinished_id = calculateHighestUnfinished(newIds);
 
         const { error: updateError } = await supabase
