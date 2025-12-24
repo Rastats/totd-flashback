@@ -9,8 +9,9 @@ const STALE_TIMEOUT_MS = 60000; // 60 seconds
 let lastCleanupTime = 0;
 const CLEANUP_INTERVAL_MS = 30000; // Only run cleanup every 30s max
 
-// Stale plugin state cleanup - clear after 15 minutes of inactivity
-const PLUGIN_STATE_STALE_MS = 15 * 60 * 1000; // 15 minutes
+// Stale plugin state cleanup - clear after 5 minutes of inactivity
+const PLUGIN_STATE_STALE_MS = 5 * 60 * 1000; // 5 minutes
+
 let lastPluginCleanupTime = 0;
 
 interface SyncPayload {
