@@ -1,6 +1,9 @@
 /**
  * Shared utility for adding penalties to teams
  * Used by both Tiltify webhook processing and Admin Dashboard
+ * 
+ * Lists are always sorted by penalty_id DESCENDING (highest first, lowest at end)
+ * This means the penalty to override is always the LAST one in the array
  */
 
 import { supabaseAdmin } from './supabase-admin';
@@ -15,6 +18,18 @@ export interface AddPenaltyResult {
     destination?: 'active' | 'waitlist';
     removed?: string; // Name of removed penalty if override occurred
     blocked?: boolean; // True if blocked by shield
+}
+
+/**
+ * Sort penalties by penalty_id DESCENDING (highest first, lowest at end)
+ * This ensures the penalty to remove on override is always the last one
+ */
+function sortPenaltiesDesc(penalties: any[]): any[] {
+    return penalties.sort((a, b) => {
+        const idA = a.penalty_id ?? a.id ?? 0;
+        const idB = b.penalty_id ?? b.id ?? 0;
+        return idB - idA; // Descending: highest first
+    });
 }
 
 /**
@@ -47,8 +62,9 @@ export async function addPenaltyToTeamState(
         }
     }
 
-    let active: any[] = teamData?.penalties_active || [];
-    let waitlist: any[] = teamData?.penalties_waitlist || [];
+    // Get and sort existing lists (highest ID first, lowest at end)
+    let active: any[] = sortPenaltiesDesc(teamData?.penalties_active || []);
+    let waitlist: any[] = sortPenaltiesDesc(teamData?.penalties_waitlist || []);
 
     // Get penalty config
     const config = PENALTY_CONFIG[penaltyId];
@@ -80,19 +96,9 @@ export async function addPenaltyToTeamState(
     let destination: 'active' | 'waitlist';
 
     if (isImmediate) {
-        // IMMEDIATE → ACTIVE (override lowest ID if full)
+        // IMMEDIATE → ACTIVE (remove last element = lowest ID if full)
         if (active.length >= 2) {
-            // Find and remove lowest ID
-            let lowestIdx = 0;
-            let lowestId = active[0]?.penalty_id ?? active[0]?.id ?? 999;
-            for (let i = 1; i < active.length; i++) {
-                const thisId = active[i]?.penalty_id ?? active[i]?.id ?? 999;
-                if (thisId < lowestId) {
-                    lowestId = thisId;
-                    lowestIdx = i;
-                }
-            }
-            removedPenalty = active.splice(lowestIdx, 1)[0];
+            removedPenalty = active.pop(); // Last = lowest ID (list is sorted desc)
         }
 
         // Activate the penalty
@@ -101,31 +107,23 @@ export async function addPenaltyToTeamState(
             newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
         }
         active.push(newPenalty);
+        active = sortPenaltiesDesc(active); // Re-sort after adding
         destination = 'active';
 
         console.log(`[PenaltyUtils] Team ${teamId}: Activated ${penaltyName} (immediate)${removedPenalty ? `, removed ${removedPenalty.name}` : ''}`);
     } else {
-        // NON-IMMEDIATE → WAITLIST (override lowest ID if full)
+        // NON-IMMEDIATE → WAITLIST (remove last element = lowest ID if full)
         if (waitlist.length >= 2) {
-            // Find and remove lowest ID
-            let lowestIdx = 0;
-            let lowestId = waitlist[0]?.penalty_id ?? waitlist[0]?.id ?? 999;
-            for (let i = 1; i < waitlist.length; i++) {
-                const thisId = waitlist[i]?.penalty_id ?? waitlist[i]?.id ?? 999;
-                if (thisId < lowestId) {
-                    lowestId = thisId;
-                    lowestIdx = i;
-                }
-            }
-            removedPenalty = waitlist.splice(lowestIdx, 1)[0];
+            removedPenalty = waitlist.pop(); // Last = lowest ID (list is sorted desc)
         }
         waitlist.push(newPenalty);
+        waitlist = sortPenaltiesDesc(waitlist); // Re-sort after adding
         destination = 'waitlist';
 
         console.log(`[PenaltyUtils] Team ${teamId}: ${penaltyName} added to waitlist${removedPenalty ? `, removed ${removedPenalty.name}` : ''}`);
     }
 
-    // Update team_server_state
+    // Update team_server_state (lists are now sorted)
     const { error: updateError } = await supabaseAdmin
         .from('team_server_state')
         .upsert({
