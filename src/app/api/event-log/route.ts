@@ -37,6 +37,11 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
 
+        // Filter out admin actions (metadata.admin_action = true)
+        const filteredData = data?.filter((event: any) => {
+            return !event.metadata?.admin_action;
+        }) || [];
+
         if (error) {
             // Table might not exist yet, return empty array
             if (error.code === '42P01') {
@@ -48,8 +53,8 @@ export async function GET(request: Request) {
         }
 
         return NextResponse.json({
-            events: data || [],
-            count: data?.length || 0
+            events: filteredData,
+            count: filteredData.length
         });
 
     } catch (error) {
