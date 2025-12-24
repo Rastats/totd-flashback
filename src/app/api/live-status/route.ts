@@ -41,7 +41,33 @@ export async function GET() {
             return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
         }
 
+        // Cleanup stale players (active_player still set but not synced for >60s)
+        const STALE_TIMEOUT_MS = 60000;
+        const cutoffTime = new Date(Date.now() - STALE_TIMEOUT_MS);
+
+        for (const entry of (statusData || [])) {
+            if (entry.updated_at && new Date(entry.updated_at) < cutoffTime) {
+                // Team is stale - clear active_player if set
+                if (entry.active_player || entry.waiting_player) {
+                    await supabase
+                        .from('team_server_state')
+                        .update({
+                            active_player: null,
+                            waiting_player: null,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('team_id', entry.team_id);
+
+                    // Update local data for response
+                    entry.active_player = null;
+                    entry.waiting_player = null;
+                    console.log(`[LiveStatus] Cleared stale player for team ${entry.team_id}`);
+                }
+            }
+        }
+
         const now = new Date();
+
         const teams: TeamLiveStatus[] = [];
 
         // Process each team
