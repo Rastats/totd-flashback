@@ -23,5 +23,20 @@ export const PENALTY_CONFIG: Record<number, PenaltyConfig> = {
     10: { id: 10, name: "Back to the Future", maps: 50, timerMinutes: null, showMaps: true, showTimer: false },
 };
 
-// NOTE: Helper functions (getPenaltyConfig, calculateTimerExpiry, getInitialMapsRemaining) removed
-// Direct access via PENALTY_CONFIG[penaltyId] is sufficient
+// Get penalty config by ID
+export function getPenaltyConfig(penaltyId: number): PenaltyConfig | undefined {
+    return PENALTY_CONFIG[penaltyId];
+}
+
+// Calculate timer_expires_at from now
+export function calculateTimerExpiry(penaltyId: number): string | null {
+    const config = PENALTY_CONFIG[penaltyId];
+    if (!config?.timerMinutes) return null;
+    return new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
+}
+
+// Get initial maps_remaining
+export function getInitialMapsRemaining(penaltyId: number): number | null {
+    const config = PENALTY_CONFIG[penaltyId];
+    return config?.maps ?? null;
+}

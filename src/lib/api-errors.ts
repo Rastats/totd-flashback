@@ -40,7 +40,23 @@ export const ApiErrors = {
     serviceUnavailable: () => apiError('Service temporarily unavailable', 503, 'SERVICE_UNAVAILABLE'),
 };
 
-// NOTE: withErrorHandling removed - not used in codebase
+/**
+ * Wrap an async API handler with standardized error handling
+ */
+export function withErrorHandling<T>(
+    handler: (request: Request) => Promise<NextResponse<T>>
+) {
+    return async (request: Request): Promise<NextResponse<T | ApiErrorResponse>> => {
+        try {
+            return await handler(request);
+        } catch (error) {
+            if (error instanceof Error) {
+                return apiError(error.message);
+            }
+            return apiError('An unexpected error occurred');
+        }
+    };
+}
 
 /**
  * Client-side API error handler
