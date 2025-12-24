@@ -159,6 +159,59 @@ async function cleanupStalePluginState(supabase: any) {
 }
 
 /**
+ * Cleanup expired timer-based penalties
+ * Removes penalties from penalties_active when timer_expires_at has passed
+ */
+let lastExpiredPenaltyCleanupTime = 0;
+
+async function cleanupExpiredPenalties(supabase: any) {
+    const now = Date.now();
+
+    // Only run cleanup every 30s to avoid excessive DB calls
+    if (now - lastExpiredPenaltyCleanupTime < CLEANUP_INTERVAL_MS) {
+        return;
+    }
+    lastExpiredPenaltyCleanupTime = now;
+
+    const nowIso = new Date().toISOString();
+
+    // Get all teams with active penalties
+    const { data: teams, error } = await supabase
+        .from('team_server_state')
+        .select('team_id, penalties_active')
+        .not('penalties_active', 'is', null);
+
+    if (error || !teams) {
+        return;
+    }
+
+    for (const team of teams) {
+        const active = team.penalties_active || [];
+        if (!Array.isArray(active) || active.length === 0) continue;
+
+        // Filter out expired penalties
+        const unexpired = active.filter((p: any) => {
+            if (!p.timer_expires_at) return true; // No timer = keep
+            return new Date(p.timer_expires_at) > new Date(nowIso); // Not expired = keep
+        });
+
+        // If any were removed, update the database
+        if (unexpired.length !== active.length) {
+            const removed = active.length - unexpired.length;
+            console.log(`[Cleanup] Removing ${removed} expired timer penalties from team ${team.team_id}`);
+
+            await supabase
+                .from('team_server_state')
+                .update({
+                    penalties_active: unexpired,
+                    updated_at: nowIso
+                })
+                .eq('team_id', team.team_id);
+        }
+    }
+}
+
+/**
  * POST /api/plugin/sync
  * 
  * Plugin sends its state, receives server state + donations
@@ -231,6 +284,9 @@ export async function POST(request: NextRequest) {
 
         // Cleanup stale plugin state > 15 min (runs max once per 30s)
         await cleanupStalePluginState(supabase);
+
+        // Cleanup expired timer-based penalties (runs max once per 30s)
+        await cleanupExpiredPenalties(supabase);
 
         // ============================================
         // 1. Check if player is in roster
