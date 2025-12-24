@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { sortDescending, calculateHighestUnfinished, calculateNextHighestUnfinished } from '@/lib/progress-utils';
+import { sortDescending, calculateHighestUnfinished } from '@/lib/progress-utils';
 
 // GET: Get all team progression
 export async function GET(request: Request) {
@@ -77,9 +77,6 @@ export async function PUT(request: Request) {
         completed_map_ids = sortDescending(completed_map_ids);
         const highest_unfinished_id = calculateHighestUnfinished(completed_map_ids);
 
-        // Calculate next_map (what comes after current highest_unfinished)
-        const next_map = calculateNextHighestUnfinished(completed_map_ids, highest_unfinished_id);
-
         const { error } = await supabase
             .from('team_server_state')
             .upsert({
@@ -87,7 +84,6 @@ export async function PUT(request: Request) {
                 maps_completed: completed_map_ids.length,
                 completed_map_ids: completed_map_ids,
                 highest_unfinished_id: highest_unfinished_id,
-                next_map: next_map,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'team_id' });
 
@@ -154,7 +150,6 @@ export async function PATCH(request: Request) {
         const completed_map_ids = sortDescending([...existingIds, ...mapsToAdd]);
         const maps_completed = completed_map_ids.length;
         const highest_unfinished_id = calculateHighestUnfinished(completed_map_ids);
-        const next_map = calculateNextHighestUnfinished(completed_map_ids, highest_unfinished_id);
 
         const { error } = await supabase
             .from('team_server_state')
@@ -162,7 +157,6 @@ export async function PATCH(request: Request) {
                 maps_completed: maps_completed,
                 completed_map_ids: completed_map_ids,
                 highest_unfinished_id: highest_unfinished_id,
-                next_map: next_map,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', team_id);
@@ -214,7 +208,7 @@ export async function DELETE(request: Request) {
                 maps_completed: 0,
                 completed_map_ids: [],  // Clear the array too
                 highest_unfinished_id: 2000,  // Reset to max (all unfinished)
-                next_map: 1999,  // After 2000 is done, next is 1999
+                roulette_map: null,  // Clear roulette_map on reset
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', parseInt(teamId));

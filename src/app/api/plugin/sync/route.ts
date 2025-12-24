@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
                 penalties_waitlist: updatedServerState?.penalties_waitlist || [],
                 redo_remaining: updatedServerState?.redo_remaining || 0,
                 redo_map_ids: updatedServerState?.redo_map_ids || [],
-                next_map: updatedServerState?.next_map || 2000,
+                roulette_map: updatedServerState?.roulette_map || null,
                 shield_active: updatedServerState?.shield_active || false,
                 shield_type: updatedServerState?.shield_type || null,
                 shield_expires_at: updatedServerState?.shield_expires_at || null,

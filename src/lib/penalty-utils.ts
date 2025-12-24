@@ -8,7 +8,7 @@
 
 import { supabaseAdmin } from './supabase-admin';
 import { PENALTY_CONFIG } from './penalty-config';
-import { calculateNextMap, generateRandomUncompletedMap } from './progress-utils';
+import { generateRandomUncompletedMap } from './progress-utils';
 
 // Immediate-effect penalties (must activate immediately, can override others)
 const IMMEDIATE_PENALTY_IDS = [7, 9, 10]; // Player Switch, AT or Bust, Back to the Future
@@ -43,10 +43,10 @@ export async function addPenaltyToTeamState(
     penaltyName: string,
     donationId?: string
 ): Promise<AddPenaltyResult> {
-    // Get current team state (include more fields for next_map calculation)
+    // Get current team state
     const { data: teamData, error: fetchError } = await supabaseAdmin
         .from('team_server_state')
-        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at, completed_map_ids, highest_unfinished_id, redo_map_ids, next_map')
+        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at, completed_map_ids, roulette_map')
         .eq('team_id', teamId)
         .single();
 
@@ -124,23 +124,25 @@ export async function addPenaltyToTeamState(
         console.log(`[PenaltyUtils] Team ${teamId}: ${penaltyName} added to waitlist${removedPenalty ? `, removed ${removedPenalty.name}` : ''}`);
     }
 
-    // Calculate next_map based on new waitlist state
-    // Check if RR just entered waitlist (need to generate random)
+    // Calculate roulette_map if RR just entered active or waitlist
+    // Check if RR was in active/waitlist before and after this change
+    const oldActive = teamData?.penalties_active || [];
     const oldWaitlist = teamData?.penalties_waitlist || [];
-    const hadRRWaitlist = oldWaitlist.some((p: any) => p.penalty_id === 1);
-    const hasRRWaitlist = waitlist.some((p: any) => p.penalty_id === 1);
-    const rrJustEnteredWaitlist = !hadRRWaitlist && hasRRWaitlist;
+    const hadRR = oldActive.some((p: any) => p.penalty_id === 1) || oldWaitlist.some((p: any) => p.penalty_id === 1);
+    const hasRR = active.some((p: any) => p.penalty_id === 1) || waitlist.some((p: any) => p.penalty_id === 1);
 
-    // Build state for next_map calculation
-    const stateForNextMap = {
-        completed_map_ids: teamData?.completed_map_ids || [],
-        highest_unfinished_id: teamData?.highest_unfinished_id || 2000,
-        redo_map_ids: teamData?.redo_map_ids || [],
-        penalties_waitlist: waitlist,
-        next_map: teamData?.next_map || 2000
-    };
+    // Determine roulette_map value
+    let roulette_map: number | null = teamData?.roulette_map || null;
 
-    const next_map = calculateNextMap(stateForNextMap, rrJustEnteredWaitlist);
+    if (!hadRR && hasRR) {
+        // RR just became active or entered waitlist → generate random
+        roulette_map = generateRandomUncompletedMap(teamData?.completed_map_ids || []);
+        console.log(`[PenaltyUtils] Team ${teamId}: RR entered, generated roulette_map=${roulette_map}`);
+    } else if (hadRR && !hasRR) {
+        // RR no longer in active or waitlist → clear roulette_map
+        roulette_map = null;
+        console.log(`[PenaltyUtils] Team ${teamId}: RR removed, cleared roulette_map`);
+    }
 
     // Update team_server_state (lists are now sorted)
     const { error: updateError } = await supabaseAdmin
@@ -149,7 +151,7 @@ export async function addPenaltyToTeamState(
             team_id: teamId,
             penalties_active: active,
             penalties_waitlist: waitlist,
-            next_map: next_map,
+            roulette_map: roulette_map,
             updated_at: new Date().toISOString()
         }, { onConflict: 'team_id' });
 
