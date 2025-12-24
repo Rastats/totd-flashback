@@ -8,6 +8,7 @@
 
 import { supabaseAdmin } from './supabase-admin';
 import { PENALTY_CONFIG } from './penalty-config';
+import { calculateNextMap, generateRandomUncompletedMap } from './progress-utils';
 
 // Immediate-effect penalties (must activate immediately, can override others)
 const IMMEDIATE_PENALTY_IDS = [7, 9, 10]; // Player Switch, AT or Bust, Back to the Future
@@ -42,10 +43,10 @@ export async function addPenaltyToTeamState(
     penaltyName: string,
     donationId?: string
 ): Promise<AddPenaltyResult> {
-    // Get current team state
+    // Get current team state (include more fields for next_map calculation)
     const { data: teamData, error: fetchError } = await supabaseAdmin
         .from('team_server_state')
-        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at')
+        .select('penalties_active, penalties_waitlist, shield_active, shield_type, shield_expires_at, completed_map_ids, highest_unfinished_id, redo_map_ids, next_map')
         .eq('team_id', teamId)
         .single();
 
@@ -123,6 +124,24 @@ export async function addPenaltyToTeamState(
         console.log(`[PenaltyUtils] Team ${teamId}: ${penaltyName} added to waitlist${removedPenalty ? `, removed ${removedPenalty.name}` : ''}`);
     }
 
+    // Calculate next_map based on new waitlist state
+    // Check if RR just entered waitlist (need to generate random)
+    const oldWaitlist = teamData?.penalties_waitlist || [];
+    const hadRRWaitlist = oldWaitlist.some((p: any) => p.penalty_id === 1);
+    const hasRRWaitlist = waitlist.some((p: any) => p.penalty_id === 1);
+    const rrJustEnteredWaitlist = !hadRRWaitlist && hasRRWaitlist;
+
+    // Build state for next_map calculation
+    const stateForNextMap = {
+        completed_map_ids: teamData?.completed_map_ids || [],
+        highest_unfinished_id: teamData?.highest_unfinished_id || 2000,
+        redo_map_ids: teamData?.redo_map_ids || [],
+        penalties_waitlist: waitlist,
+        next_map: teamData?.next_map || 2000
+    };
+
+    const next_map = calculateNextMap(stateForNextMap, rrJustEnteredWaitlist);
+
     // Update team_server_state (lists are now sorted)
     const { error: updateError } = await supabaseAdmin
         .from('team_server_state')
@@ -130,6 +149,7 @@ export async function addPenaltyToTeamState(
             team_id: teamId,
             penalties_active: active,
             penalties_waitlist: waitlist,
+            next_map: next_map,
             updated_at: new Date().toISOString()
         }, { onConflict: 'team_id' });
 

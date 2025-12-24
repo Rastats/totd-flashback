@@ -72,3 +72,99 @@ export function calculateHighestUnfinished(sortedDescArray: number[], maxMapId: 
 export function sortDescending(array: number[]): number[] {
     return [...array].sort((a, b) => b - a);
 }
+
+/**
+ * Sort an array in ascending order (for redo_map_ids)
+ */
+export function sortAscending(array: number[]): number[] {
+    return [...array].sort((a, b) => a - b);
+}
+
+/**
+ * Generate a random map ID that is not in the completed list.
+ * Used for Russian Roulette penalty.
+ * 
+ * @param completedIds - Array of completed map IDs
+ * @param maxMapId - Maximum possible map ID (default 2000)
+ * @returns Random uncompleted map ID, or 0 if all completed
+ */
+export function generateRandomUncompletedMap(completedIds: number[], maxMapId: number = 2000): number {
+    const completedSet = new Set(completedIds);
+    const uncompleted: number[] = [];
+
+    for (let i = 1; i <= maxMapId; i++) {
+        if (!completedSet.has(i)) {
+            uncompleted.push(i);
+        }
+    }
+
+    if (uncompleted.length === 0) {
+        return 0; // All maps completed
+    }
+
+    const randomIndex = Math.floor(Math.random() * uncompleted.length);
+    return uncompleted[randomIndex];
+}
+
+/**
+ * Calculate the next highest unfinished map ID after the current one is completed.
+ * Simulates adding currentHighest to the completed list and recalculates.
+ * 
+ * @param completedIds - Current completed map IDs (sorted descending)
+ * @param currentHighest - The current highest unfinished ID that will be completed
+ * @param maxMapId - Maximum possible map ID (default 2000)
+ * @returns The next highest unfinished map ID after completion
+ */
+export function calculateNextHighestUnfinished(
+    completedIds: number[],
+    currentHighest: number,
+    maxMapId: number = 2000
+): number {
+    // Simulate completing the current map
+    const simulatedList = insertSortedDesc(completedIds, currentHighest);
+    return calculateHighestUnfinished(simulatedList, maxMapId);
+}
+
+interface TeamState {
+    completed_map_ids: number[];
+    highest_unfinished_id: number;
+    redo_map_ids?: number[];
+    penalties_waitlist?: Array<{ penalty_id: number }>;
+    next_map?: number;
+}
+
+/**
+ * Calculate the next_map value based on current state.
+ * Priority: 
+ * 1. RR in waitlist → keep current next_map (random was generated when RR entered)
+ * 2. Redo maps → lowest redo_map_id
+ * 3. Default → next highest_unfinished after current completes
+ * 
+ * @param state - Current team state
+ * @param forceRecalculate - If true, recalculate even if RR in waitlist (used when RR enters waitlist)
+ * @returns The next_map value
+ */
+export function calculateNextMap(state: TeamState, forceRecalculate: boolean = false): number {
+    const hasRRWaitlist = state.penalties_waitlist?.some(p => p.penalty_id === 1) ?? false;
+
+    // 1. RR in waitlist and not forcing recalculation → keep stable random
+    if (hasRRWaitlist && !forceRecalculate && state.next_map && state.next_map > 0) {
+        return state.next_map;
+    }
+
+    // If RR in waitlist and forcing recalculation → generate new random
+    if (hasRRWaitlist && forceRecalculate) {
+        return generateRandomUncompletedMap(state.completed_map_ids);
+    }
+
+    // 2. Redo maps active → lowest redo_map_id
+    if (state.redo_map_ids && state.redo_map_ids.length > 0) {
+        return Math.min(...state.redo_map_ids);
+    }
+
+    // 3. Default → next highest_unfinished after current completes
+    return calculateNextHighestUnfinished(
+        state.completed_map_ids,
+        state.highest_unfinished_id
+    );
+}
