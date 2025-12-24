@@ -31,7 +31,7 @@ export async function GET() {
         // Get plugin state for current map info (written by plugin sync)
         const { data: pluginData } = await supabase
             .from('team_plugin_state')
-            .select('team_id, current_map_id, current_map_index, current_map_name, current_map_author, updated_at')
+            .select('team_id, current_map_id, current_map_index, current_map_name, current_map_author, session_elapsed_ms, updated_at')
             .order('team_id');
 
         // Process all teams data
@@ -121,11 +121,11 @@ export async function GET() {
                 currentMapAuthor: pluginEntry?.current_map_author || null,
                 mapsCompleted: entry?.maps_completed || 0,
                 potAmount: entry?.pot_amount || 0,
-                potCurrency: entry?.pot_currency || 'GBP',
+                potCurrency: 'GBP',
                 lastUpdated: entry?.updated_at || null,
                 isOnline,
-                sessionElapsedMs: entry?.session_elapsed_ms || null,
-                sessionRemainingMs: entry?.session_remaining_ms || null,
+                sessionElapsedMs: pluginEntry?.session_elapsed_ms || null,
+                // NOTE: session_remaining_ms removed - calculated by plugin sync only
                 shield: shieldData,
                 penalties: {
                     active: activePenalties,

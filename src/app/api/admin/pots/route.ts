@@ -10,18 +10,18 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from('team_server_state')
-            .select('team_id, pot_amount, pot_currency, updated_at')
+            .select('team_id, pot_amount, updated_at')
             .order('team_id');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        // Transform to consistent format for frontend
+        // Transform to consistent format for frontend (currency is always GBP)
         const pots = (data || []).map(p => ({
             team_number: p.team_id,
             amount: p.pot_amount || 0,
-            currency: p.pot_currency || 'GBP'
+            currency: 'GBP'
         }));
 
         return NextResponse.json(pots);

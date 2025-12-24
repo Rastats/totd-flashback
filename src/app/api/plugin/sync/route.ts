@@ -384,9 +384,41 @@ export async function POST(request: NextRequest) {
                 shield_active: updatedServerState?.shield_active || false,
                 shield_type: updatedServerState?.shield_type || null,
                 shield_expires_at: updatedServerState?.shield_expires_at || null,
+                // Pre-calculated remaining_ms to eliminate plugin-side ISO parsing
+                shield_remaining_ms: updatedServerState?.shield_expires_at
+                    ? Math.max(0, new Date(updatedServerState.shield_expires_at).getTime() - Date.now())
+                    : 0,
                 shield_small_cooldown_expires_at: updatedServerState?.shield_small_cooldown_expires_at || null,
+                shield_small_cooldown_remaining_ms: updatedServerState?.shield_small_cooldown_expires_at
+                    ? Math.max(0, new Date(updatedServerState.shield_small_cooldown_expires_at).getTime() - Date.now())
+                    : 0,
                 shield_big_cooldown_expires_at: updatedServerState?.shield_big_cooldown_expires_at || null,
-                pot_amount: updatedServerState?.pot_amount || 0
+                shield_big_cooldown_remaining_ms: updatedServerState?.shield_big_cooldown_expires_at
+                    ? Math.max(0, new Date(updatedServerState.shield_big_cooldown_expires_at).getTime() - Date.now())
+                    : 0,
+                pot_amount: updatedServerState?.pot_amount || 0,
+                // Server-side session tracking (3h limit)
+                active_since: updatedServerState?.active_since || null,
+                session_remaining_ms: (() => {
+                    if (!updatedServerState?.active_since) return 10800000; // 3h if not active
+                    const activeSince = new Date(updatedServerState.active_since).getTime();
+                    const elapsed = Date.now() - activeSince;
+                    const maxSession = 10800000; // 3 hours in ms
+                    return Math.max(0, maxSession - elapsed);
+                })(),
+                // Server-side player switch cooldown
+                player_switch_cooldown_remaining_ms: await (async () => {
+                    const { data: pd } = await supabase
+                        .from('players')
+                        .select('player_switch_cooldown_until')
+                        .eq('trackmania_id', data.account_id)
+                        .single();
+                    if (pd?.player_switch_cooldown_until) {
+                        const remaining = new Date(pd.player_switch_cooldown_until).getTime() - Date.now();
+                        return Math.max(0, remaining);
+                    }
+                    return 0;
+                })()
             },
 
             // Donations

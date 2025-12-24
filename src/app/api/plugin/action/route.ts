@@ -347,6 +347,27 @@ export async function POST(request: NextRequest) {
             // SET ACTIVE
             // ============================================
             case 'set_active': {
+                // SERVER-SIDE COOLDOWN CHECK
+                // Check if player has a player_switch_cooldown that hasn't expired
+                const { data: playerData } = await supabase
+                    .from('players')
+                    .select('player_switch_cooldown_until')
+                    .eq('trackmania_id', data.account_id)
+                    .single();
+
+                if (playerData?.player_switch_cooldown_until) {
+                    const cooldownUntil = new Date(playerData.player_switch_cooldown_until).getTime();
+                    const now = Date.now();
+                    if (now < cooldownUntil) {
+                        const remainingMs = cooldownUntil - now;
+                        const remainingSec = Math.ceil(remainingMs / 1000);
+                        return NextResponse.json({
+                            success: false,
+                            error: `Player Switch cooldown active (${Math.ceil(remainingSec / 60)} min remaining)`
+                        }, { status: 403 });
+                    }
+                }
+
                 // Check if slot is available
                 if (state.active_player && state.active_player !== player.trackmania_name) {
                     return NextResponse.json({
@@ -356,6 +377,8 @@ export async function POST(request: NextRequest) {
                 }
 
                 updateData.active_player = player.trackmania_name;
+                // Track session start time for 3-hour limit
+                updateData.active_since = new Date().toISOString();
 
                 // Remove from waiting if was there
                 if (state.waiting_player === player.trackmania_name) {

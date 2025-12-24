@@ -156,47 +156,84 @@ async function addPenaltyToTeam(teamId: number, penaltyId: number, penaltyName: 
     let updatedWaitlist = [...currentWaitlist];
     let removedPenalty: any = null;
 
-    if (currentActive.length < 2) {
-        // Slot available - activate immediately
-        newPenalty.activated_at = new Date().toISOString();
-        // Timer starts at activation
-        if (config?.timerMinutes) {
-            newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
-        }
-        updatedActive.push(newPenalty);
-        console.log(`[Tiltify] Team ${teamId}: Activated ${penaltyName}`);
-    } else if (isImmediate) {
-        // IMMEDIATE PENALTY OVERRIDE: Remove lowest ID active penalty
-        let lowestIdx = 0;
-        let lowestId = currentActive[0]?.id ?? 999;
-        for (let i = 1; i < currentActive.length; i++) {
-            if ((currentActive[i]?.id ?? 999) < lowestId) {
-                lowestId = currentActive[i]?.id ?? 999;
-                lowestIdx = i;
+    if (isImmediate) {
+        // IMMEDIATE PENALTIES (7, 9, 10): Go directly to ACTIVE
+        if (currentActive.length < 2) {
+            // Slot available - activate
+            newPenalty.activated_at = new Date().toISOString();
+            if (config?.timerMinutes) {
+                newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
             }
+            updatedActive.push(newPenalty);
+            console.log(`[Tiltify] Team ${teamId}: Activated ${penaltyName} (immediate)`);
+        } else {
+            // 2 active already - override lowest ID
+            let lowestIdx = 0;
+            let lowestId = currentActive[0]?.penalty_id ?? currentActive[0]?.id ?? 999;
+            for (let i = 1; i < currentActive.length; i++) {
+                const thisId = currentActive[i]?.penalty_id ?? currentActive[i]?.id ?? 999;
+                if (thisId < lowestId) {
+                    lowestId = thisId;
+                    lowestIdx = i;
+                }
+            }
+
+            // Remove lowest ID penalty
+            removedPenalty = updatedActive[lowestIdx];
+            updatedActive.splice(lowestIdx, 1);
+
+            // Add new immediate penalty as active
+            newPenalty.activated_at = new Date().toISOString();
+            if (config?.timerMinutes) {
+                newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
+            }
+            updatedActive.push(newPenalty);
+
+            console.log(`[Tiltify] Team ${teamId}: ${penaltyName} OVERRIDES ${removedPenalty?.name} (lowest ID ${lowestId})`);
         }
-
-        // Remove lowest ID penalty
-        removedPenalty = updatedActive[lowestIdx];
-        updatedActive.splice(lowestIdx, 1);
-
-        // Add new immediate penalty as active
-        newPenalty.activated_at = new Date().toISOString();
-        if (config?.timerMinutes) {
-            newPenalty.timer_expires_at = new Date(Date.now() + config.timerMinutes * 60 * 1000).toISOString();
-        }
-        updatedActive.push(newPenalty);
-
-        console.log(`[Tiltify] Team ${teamId}: ${penaltyName} OVERRIDES ${removedPenalty?.name} (lowest ID)`);
     } else {
-        // Non-immediate penalty goes to waitlist
+        // NON-IMMEDIATE PENALTIES (1,2,3,4,5,6,8): ALWAYS go to WAITLIST
+        // Dropped only if waitlist has 2 penalties with HIGHER IDs
         if (currentWaitlist.length < 2) {
+            // Waitlist has room
             updatedWaitlist.push(newPenalty);
             console.log(`[Tiltify] Team ${teamId}: ${penaltyName} added to waitlist`);
         } else {
-            // Waitlist full - log but don't add
-            console.log(`[Tiltify] Team ${teamId}: Waitlist full (2/2), ${penaltyName} DROPPED`);
-            return;
+            // Waitlist full (2 penalties) - check if we should replace lowest ID
+            // Only drop if BOTH waitlist penalties have higher IDs than incoming
+            const waitlistIds = currentWaitlist.map((p: any) => p.penalty_id ?? p.id ?? 0);
+            const incomingId = penaltyId;
+
+            // Count how many waitlist penalties have LOWER or EQUAL ID than incoming
+            const lowerOrEqualCount = waitlistIds.filter((id: number) => id <= incomingId).length;
+
+            if (lowerOrEqualCount > 0) {
+                // At least one waitlist penalty has lower/equal ID - replace the LOWEST
+                let lowestIdx = 0;
+                let lowestId = waitlistIds[0];
+                for (let i = 1; i < waitlistIds.length; i++) {
+                    if (waitlistIds[i] < lowestId) {
+                        lowestId = waitlistIds[i];
+                        lowestIdx = i;
+                    }
+                }
+
+                // Only replace if incoming has higher ID
+                if (incomingId > lowestId) {
+                    const removed = updatedWaitlist.splice(lowestIdx, 1)[0];
+                    updatedWaitlist.push(newPenalty);
+                    console.log(`[Tiltify] Team ${teamId}: ${penaltyName} (ID ${incomingId}) replaces ${removed?.name} (ID ${lowestId}) in waitlist`);
+                } else {
+                    // Incoming has lower or equal ID - add anyway by removing lowest
+                    updatedWaitlist.splice(lowestIdx, 1);
+                    updatedWaitlist.push(newPenalty);
+                    console.log(`[Tiltify] Team ${teamId}: ${penaltyName} added to waitlist, removed lowest ID`);
+                }
+            } else {
+                // Both waitlist penalties have higher IDs than incoming - DROP incoming
+                console.log(`[Tiltify] Team ${teamId}: Waitlist full with higher IDs, ${penaltyName} (ID ${incomingId}) DROPPED`);
+                return;
+            }
         }
     }
 
@@ -415,7 +452,7 @@ export async function getTeamPots(): Promise<Array<{
 }>> {
     const { data, error } = await supabaseAdmin
         .from('team_server_state')
-        .select('team_id, pot_amount, pot_currency, updated_at')
+        .select('team_id, pot_amount, updated_at')
         .order('team_id');
 
     if (error) {
@@ -423,11 +460,11 @@ export async function getTeamPots(): Promise<Array<{
         return [];
     }
 
-    // Transform to expected format
+    // Transform to expected format (currency is always GBP)
     return (data || []).map(row => ({
         team_id: row.team_id,
         pot_amount: row.pot_amount || 0,
-        currency: row.pot_currency || 'GBP',
+        currency: 'GBP',
         updated_at: row.updated_at
     }));
 }
