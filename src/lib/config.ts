@@ -4,6 +4,7 @@
 // Event Dates (UTC)
 export const EVENT_START_UTC = new Date('2025-12-26T19:00:00Z'); // Dec 26, 2025 20:00 CET
 export const EVENT_END_UTC = new Date('2025-12-29T16:00:00Z');   // Dec 29, 2025 17:00 CET
+export const EVENT_DURATION_HOURS = 69; // Total event duration in hours
 
 // Teams Configuration
 export const TEAMS = [

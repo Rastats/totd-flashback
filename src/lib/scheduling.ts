@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { EVENT_DURATION_HOURS } from '@/lib/timezone-utils';
+import { EVENT_DURATION_HOURS } from '@/lib/config';
 
 export async function autofillSchedule(teamId: string, supabase: SupabaseClient) {
     if (!teamId || teamId === '0') return; // '0' is joker
@@ -54,7 +54,7 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
 
     // 4. Build availability lookup: Map<PlayerId, Set<HourIndex>>
     const availabilityMap = new Map<string, Set<number>>();
-    
+
     players.forEach(p => {
         const hourSet = new Set<number>();
         (p.availability_slots || []).forEach((slot: any) => {
@@ -144,7 +144,7 @@ export async function autofillSchedule(teamId: string, supabase: SupabaseClient)
  */
 export function checkPlayerAvailability(player: any, hourIndex: number): boolean {
     if (!player.availability_slots || player.availability_slots.length === 0) return false;
-    
+
     return player.availability_slots.some((slot: any) => slot.hour_index === hourIndex);
 }
 
