@@ -21,9 +21,13 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20', 10);
         const teamId = searchParams.get('team_id');
 
+        // Only show these event types in public live feed
+        const allowedTypes = ['donation', 'penalty_applied', 'shield_activated', 'milestone', 'month_finished', 'player_switch'];
+
         let query = supabaseAdmin
             .from('event_log')
             .select('*')
+            .in('event_type', allowedTypes)
             .order('created_at', { ascending: false })
             .limit(Math.min(limit, 100));
 
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
         }
 
         const validTypes = [
-            'donation', 'penalty_applied', 'penalty_completed', 
+            'donation', 'penalty_applied', 'penalty_completed',
             'shield_activated', 'shield_expired', 'milestone', 'month_finished',
             'penalty_active', 'shield_active', 'player_switch'  // Plugin event types
         ];
