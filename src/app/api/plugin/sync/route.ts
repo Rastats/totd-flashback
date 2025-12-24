@@ -25,6 +25,7 @@ interface SyncPayload {
     mode?: string;
     session_elapsed_ms?: number;
     plugin_version?: string;
+    roulette_map?: number; // Plugin sends this when RR detected in waitlist
 }
 
 /**
@@ -273,6 +274,7 @@ export async function POST(request: NextRequest) {
                     mode: syncData.mode || 'Normal',
                     session_elapsed_ms: syncData.session_elapsed_ms || 0,
                     plugin_version: syncData.plugin_version || null,
+                    roulette_map: syncData.roulette_map || null, // Plugin sends this when RR detected
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'team_id' // Key on team_id, not account_id

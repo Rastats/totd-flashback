@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { insertSortedDesc, calculateHighestUnfinished, sortDescending, generateRandomUncompletedMap } from '@/lib/progress-utils';
+import { insertSortedDesc, calculateHighestUnfinished, sortDescending } from '@/lib/progress-utils';
 
 const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 
@@ -495,26 +495,8 @@ export async function POST(request: NextRequest) {
                 }, { status: 400 });
         }
 
-        // Calculate roulette_map if RR state changed
-        // Check if RR was in active/waitlist before and after
-        const oldActive = state.penalties_active || [];
-        const oldWaitlist = state.penalties_waitlist || [];
-        const newActive = updateData.penalties_active || oldActive;
-        const newWaitlist = updateData.penalties_waitlist || oldWaitlist;
-
-        const hadRR = oldActive.some((p: any) => p.penalty_id === 1) || oldWaitlist.some((p: any) => p.penalty_id === 1);
-        const hasRR = newActive.some((p: any) => p.penalty_id === 1) || newWaitlist.some((p: any) => p.penalty_id === 1);
-
-        if (!hadRR && hasRR) {
-            // RR just became active or entered waitlist → generate random
-            const completedIds = updateData.completed_map_ids || state.completed_map_ids || [];
-            updateData.roulette_map = generateRandomUncompletedMap(completedIds);
-            console.log(`[Action] RR entered, generated roulette_map=${updateData.roulette_map}`);
-        } else if (hadRR && !hasRR) {
-            // RR no longer in active or waitlist → clear roulette_map
-            updateData.roulette_map = null;
-            console.log(`[Action] RR removed, cleared roulette_map`);
-        }
+        // NOTE: roulette_map is now calculated by the plugin and sent via sync
+        // Server no longer generates random - plugin detects RR in waitlist and calculates locally
 
         // Apply update
         const { error: updateError } = await supabase
