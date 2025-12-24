@@ -495,11 +495,15 @@ export default function EventControlPanel() {
                                                     </span>
                                                 )}
                                                 <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-                                                    <button onClick={() => togglePenaltyStatus(p.id, true)}
-                                                        style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
+                                                    {/* Hide move-to-waitlist for immediate penalties (7, 9, 10) */}
+                                                    {![7, 9, 10].includes(p.penalty_id || 0) && (
+                                                        <button onClick={() => togglePenaltyStatus(p.id, true)}
+                                                            style={{ ...buttonStyle, padding: "1px 4px", background: "#fbbf24", color: "#000", fontSize: 8 }}>↓</button>
+                                                    )}
                                                     <button onClick={() => removePenalty(p.id)}
                                                         style={{ ...buttonStyle, padding: "1px 4px", background: "#4a1a1a", color: "#f87171", fontSize: 8 }}>✕</button>
                                                 </div>
+
                                             </div>
                                         ))
                                     )}
