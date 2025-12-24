@@ -73,31 +73,6 @@ export function sortDescending(array: number[]): number[] {
     return [...array].sort((a, b) => b - a);
 }
 
-/**
- * Sort an array in ascending order (for redo_map_ids)
- */
-export function sortAscending(array: number[]): number[] {
-    return [...array].sort((a, b) => a - b);
-}
-
+// NOTE: sortAscending removed - not used
 // NOTE: generateRandomUncompletedMap removed - now calculated by plugin
-// See ProgressManager.as GenerateRandomUncompletedMap()
-
-/**
- * Calculate the next highest unfinished map ID after the current one is completed.
- * Simulates adding currentHighest to the completed list and recalculates.
- * 
- * @param completedIds - Current completed map IDs (sorted descending)
- * @param currentHighest - The current highest unfinished ID that will be completed
- * @param maxMapId - Maximum possible map ID (default 2000)
- * @returns The next highest unfinished map ID after completion
- */
-export function calculateNextHighestUnfinished(
-    completedIds: number[],
-    currentHighest: number,
-    maxMapId: number = 2000
-): number {
-    // Simulate completing the current map
-    const simulatedList = insertSortedDesc(completedIds, currentHighest);
-    return calculateHighestUnfinished(simulatedList, maxMapId);
-}
+// NOTE: calculateNextHighestUnfinished removed - not used
