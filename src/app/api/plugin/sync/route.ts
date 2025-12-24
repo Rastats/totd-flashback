@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { calculateHighestUnfinished } from '@/lib/progress-utils';
 
 const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 
@@ -376,6 +377,8 @@ export async function POST(request: NextRequest) {
             serverState: {
                 maps_completed: updatedServerState?.maps_completed || 0,
                 completed_map_ids: updatedServerState?.completed_map_ids || [],
+                highest_unfinished_id: updatedServerState?.highest_unfinished_id
+                    || calculateHighestUnfinished(updatedServerState?.completed_map_ids || []),
                 active_player: updatedServerState?.active_player || null,
                 waiting_player: updatedServerState?.waiting_player || null,
                 penalties_active: processedActive,

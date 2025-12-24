@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { sortDescending, calculateHighestUnfinished } from '@/lib/progress-utils';
 
 // GET: Get all team progression
 export async function GET(request: Request) {
@@ -72,12 +73,17 @@ export async function PUT(request: Request) {
         }
         // If diff === 0, no change needed
 
+        // Sort descending and calculate highest_unfinished_id
+        completed_map_ids = sortDescending(completed_map_ids);
+        const highest_unfinished_id = calculateHighestUnfinished(completed_map_ids);
+
         const { error } = await supabase
             .from('team_server_state')
             .upsert({
                 team_id: team_id,
                 maps_completed: completed_map_ids.length,
                 completed_map_ids: completed_map_ids,
+                highest_unfinished_id: highest_unfinished_id,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'team_id' });
 
@@ -140,15 +146,17 @@ export async function PATCH(request: Request) {
             }
         }
 
-        // Merge into completed_map_ids
-        const completed_map_ids = [...existingIds, ...mapsToAdd];
+        // Merge and sort descending
+        const completed_map_ids = sortDescending([...existingIds, ...mapsToAdd]);
         const maps_completed = completed_map_ids.length;
+        const highest_unfinished_id = calculateHighestUnfinished(completed_map_ids);
 
         const { error } = await supabase
             .from('team_server_state')
             .update({
                 maps_completed: maps_completed,
                 completed_map_ids: completed_map_ids,
+                highest_unfinished_id: highest_unfinished_id,
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', team_id);
@@ -199,6 +207,7 @@ export async function DELETE(request: Request) {
             .update({
                 maps_completed: 0,
                 completed_map_ids: [],  // Clear the array too
+                highest_unfinished_id: 2000,  // Reset to max (all unfinished)
                 updated_at: new Date().toISOString()
             })
             .eq('team_id', parseInt(teamId));

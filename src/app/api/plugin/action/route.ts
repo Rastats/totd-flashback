@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { insertSortedDesc, calculateHighestUnfinished, sortDescending } from '@/lib/progress-utils';
 
 const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 
@@ -154,11 +155,16 @@ export async function POST(request: NextRequest) {
                     }, { status: 400 });
                 }
 
-                const completedIds = state.completed_map_ids || [];
+                const completedIds: number[] = state.completed_map_ids || [];
                 if (!completedIds.includes(data.map_index)) {
-                    updateData.completed_map_ids = [...completedIds, data.map_index];
+                    // Ensure list is sorted desc, then insert at correct position
+                    const sortedIds = completedIds.length > 0 && completedIds[0] < completedIds[completedIds.length - 1]
+                        ? sortDescending(completedIds)
+                        : completedIds;
+                    updateData.completed_map_ids = insertSortedDesc(sortedIds, data.map_index);
                     updateData.maps_completed = updateData.completed_map_ids.length;
-                    message = `Map ${data.map_index} completed`;
+                    updateData.highest_unfinished_id = calculateHighestUnfinished(updateData.completed_map_ids);
+                    message = `Map ${data.map_index} completed (highest unfinished: ${updateData.highest_unfinished_id})`;
 
                     // Process penalties - decrement maps_remaining and check timers
                     const activePenalties: any[] = state.penalties_active || [];
