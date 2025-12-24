@@ -213,8 +213,14 @@ export default function EventControlPanel() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(newPenalty)
         });
-        if (res.ok) fetchData();
+        if (res.ok) {
+            fetchData();
+        } else {
+            const err = await res.json();
+            alert(err.error || "Failed to add penalty");
+        }
     };
+
 
     const removePenalty = async (id: string) => {
         const res = await fetch(`/api/admin/penalties?id=${id}`, { method: "DELETE" });
