@@ -122,10 +122,19 @@ export async function POST(request: Request) {
         const IMMEDIATE_IDS = [7, 9, 10];
         const isImmediate = IMMEDIATE_IDS.includes(penaltyId);
 
+        // Check if this penalty is already active (duplicate prevention)
+        const alreadyActive = active.some((p: any) => p.penalty_id === penaltyId);
+        if (isImmediate && alreadyActive) {
+            return NextResponse.json({
+                error: `${penalty_name} is already active for this team`
+            }, { status: 400 });
+        }
+
         let removedPenalty: any = null;
         let destination = '';
 
         if (isImmediate) {
+
             // IMMEDIATE → ACTIVE (override lowest ID if full)
             if (active.length >= 2) {
                 // Find and remove lowest ID
@@ -343,7 +352,18 @@ export async function PATCH(request: Request) {
         if (currentType === 'waitlist' && is_active) {
             // Move from waitlist to active
             if (index >= 0 && index < waitlist.length) {
+                const penaltyToMove = waitlist[index];
+
+                // Check if this penalty is already active (duplicate prevention)
+                const alreadyActive = active.some((p: any) => p.penalty_id === penaltyToMove.penalty_id);
+                if (alreadyActive) {
+                    return NextResponse.json({
+                        error: `${penaltyToMove.name} is already active for this team`
+                    }, { status: 400 });
+                }
+
                 penalty = waitlist.splice(index, 1)[0];
+
 
                 // If active is full, remove lowest ID
                 if (active.length >= 2) {
