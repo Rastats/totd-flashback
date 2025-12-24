@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { PENALTY_CONFIG, getInitialMapsRemaining, calculateTimerExpiry } from '@/lib/penalty-config';
+import { addPenaltyToTeamState } from '@/lib/penalty-utils';
+
 
 // GET: List all penalties from team_server_state for all teams
 export async function GET(request: Request) {
@@ -73,7 +75,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ penalties });
 }
 
-// POST: Add penalty to team (uses same logic as tiltify: immediate→active, others→waitlist)
+// POST: Add penalty to team (uses shared utility)
 export async function POST(request: Request) {
     try {
         const { team_id, penalty_name } = await request.json();
@@ -82,125 +84,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'team_id and penalty_name required' }, { status: 400 });
         }
 
-        const supabase = getSupabaseAdmin();
-
-        // Get current team status
-        const { data: teamData, error: fetchError } = await supabase
-            .from('team_server_state')
-            .select('penalties_active, penalties_waitlist, shield_active')
-            .eq('team_id', team_id)
-            .single();
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-            return NextResponse.json({ error: fetchError.message }, { status: 500 });
-        }
-
-        // Check if shield is active (blocks penalties)
-        if (teamData?.shield_active) {
-            return NextResponse.json({ error: 'Team has active shield - penalties blocked' }, { status: 400 });
-        }
-
-        let active = teamData?.penalties_active || [];
-        let waitlist = teamData?.penalties_waitlist || [];
-
         // Find penalty config by name
         const penaltyConfig = Object.values(PENALTY_CONFIG).find(p => p.name === penalty_name);
         const penaltyId = penaltyConfig?.id || 0;
 
-        // Create new penalty object
-        const newPenalty: any = {
-            id: Date.now(),
-            penalty_id: penaltyId,
-            name: penalty_name,
-            maps_remaining: penaltyConfig?.maps ?? null,
-            maps_total: penaltyConfig?.maps ?? null,
-            timer_minutes: penaltyConfig?.timerMinutes ?? null,
-            added_at: new Date().toISOString()
-        };
+        // Use shared utility for penalty addition
+        const result = await addPenaltyToTeamState(team_id, penaltyId, penalty_name);
 
-        // Immediate penalties (7=Freeze, 9=Inverse Mouse, 10=Disco) go to ACTIVE
-        const IMMEDIATE_IDS = [7, 9, 10];
-        const isImmediate = IMMEDIATE_IDS.includes(penaltyId);
-
-        // Check if this penalty is already active (duplicate prevention)
-        const alreadyActive = active.some((p: any) => p.penalty_id === penaltyId);
-        if (isImmediate && alreadyActive) {
-            return NextResponse.json({
-                error: `${penalty_name} is already active for this team`
-            }, { status: 400 });
+        if (!result.success) {
+            return NextResponse.json({ error: result.error || 'Failed to add penalty' }, { status: 400 });
         }
 
-        let removedPenalty: any = null;
-        let destination = '';
-
-        if (isImmediate) {
-
-            // IMMEDIATE → ACTIVE (override lowest ID if full)
-            if (active.length >= 2) {
-                // Find and remove lowest ID
-                let lowestIdx = 0;
-                let lowestId = active[0]?.penalty_id ?? 999;
-                for (let i = 1; i < active.length; i++) {
-                    const thisId = active[i]?.penalty_id ?? 999;
-                    if (thisId < lowestId) {
-                        lowestId = thisId;
-                        lowestIdx = i;
-                    }
-                }
-                removedPenalty = active.splice(lowestIdx, 1)[0];
-            }
-            // Activate the penalty
-            newPenalty.activated_at = new Date().toISOString();
-            if (penaltyConfig?.timerMinutes) {
-                newPenalty.timer_expires_at = new Date(Date.now() + penaltyConfig.timerMinutes * 60 * 1000).toISOString();
-            }
-            active.push(newPenalty);
-            destination = 'active';
-        } else {
-            // NON-IMMEDIATE → WAITLIST (override lowest ID if full)
-            if (waitlist.length >= 2) {
-                // Find and remove lowest ID
-                let lowestIdx = 0;
-                let lowestId = waitlist[0]?.penalty_id ?? 999;
-                for (let i = 1; i < waitlist.length; i++) {
-                    const thisId = waitlist[i]?.penalty_id ?? 999;
-                    if (thisId < lowestId) {
-                        lowestId = thisId;
-                        lowestIdx = i;
-                    }
-                }
-                removedPenalty = waitlist.splice(lowestIdx, 1)[0];
-            }
-            waitlist.push(newPenalty);
-            destination = 'waitlist';
-        }
-
-        const { error: updateError } = await supabase
-            .from('team_server_state')
-            .upsert({
-                team_id: team_id,
-                penalties_active: active,
-                penalties_waitlist: waitlist,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'team_id' });
-
-        if (updateError) {
-            return NextResponse.json({ error: updateError.message }, { status: 500 });
-        }
-
-        // Log to event_log
-        let message = `[Admin] Added ${penalty_name} to ${destination}`;
-        if (removedPenalty) {
-            message += ` (removed ${removedPenalty.name})`;
-        }
-        await supabase.from('event_log').insert({
-            event_type: 'penalty_applied',
-            team_id: team_id,
-            message,
-            metadata: { penalty_name, destination, removed: removedPenalty?.name, admin_action: true }
+        return NextResponse.json({
+            success: true,
+            destination: result.destination,
+            removed: result.removed
         });
-
-        return NextResponse.json({ success: true, penalty: newPenalty, destination, removed: removedPenalty?.name });
     } catch (error) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
