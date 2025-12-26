@@ -234,8 +234,16 @@ export async function POST(request: NextRequest) {
                             continue; // Skip but keep in waitlist
                         }
 
-                        // Promote this penalty
-                        currentActive.push({ ...nextPenalty, activated_at: new Date().toISOString() });
+                        // Promote this penalty - calculate timer if applicable
+                        const promotedPenalty = {
+                            ...nextPenalty,
+                            activated_at: new Date().toISOString(),
+                            // Calculate timer_expires_at based on timer_minutes (if penalty has timer)
+                            timer_expires_at: nextPenalty.timer_minutes
+                                ? new Date(Date.now() + nextPenalty.timer_minutes * 60 * 1000).toISOString()
+                                : null
+                        };
+                        currentActive.push(promotedPenalty);
                         promotedIndices.push(i);
                         message += `, promoted ${nextPenalty.name || nextPenalty.penalty_id} to active`;
                     }
