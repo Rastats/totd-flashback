@@ -172,9 +172,25 @@ export async function DELETE(request: Request) {
         if (type === 'active') {
             const active = teamData?.penalties_active || [];
             if (index >= 0 && index < active.length) {
-                penaltyName = active[index]?.name || 'Unknown';
+                const removedPenalty = active[index];
+                penaltyName = removedPenalty?.name || 'Unknown';
+                const penaltyId = removedPenalty?.penalty_id;
                 active.splice(index, 1);
                 updates.penalties_active = active;
+
+                // If removing a redo penalty (PS=7, BtF=10), clear redo data
+                if (penaltyId === 7 || penaltyId === 10) {
+                    // Check if any OTHER redo penalty is still active
+                    const hasOtherRedoPenalty = active.some((p: any) =>
+                        (p.penalty_id === 7 || p.penalty_id === 10) && p.penalty_id !== penaltyId
+                    );
+
+                    if (!hasOtherRedoPenalty) {
+                        // No more redo penalties - clear redo data
+                        updates.redo_remaining = 0;
+                        updates.redo_map_ids = [];
+                    }
+                }
             }
         } else if (type === 'waitlist') {
             const waitlist = teamData?.penalties_waitlist || [];
