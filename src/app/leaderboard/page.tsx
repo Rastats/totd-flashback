@@ -513,7 +513,7 @@ export default function LeaderboardPage() {
         <div style={{ background: "#0f172a", minHeight: "100vh", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
             <main style={{ padding: "24px", maxWidth: 1600, margin: "0 auto" }}>
                 {/* Dashboard Header */}
-                <div style={{
+                <div className="header-grid" style={{
                     display: "grid",
                     gridTemplateColumns: "1fr auto 1fr",
                     alignItems: "center",
@@ -529,21 +529,74 @@ export default function LeaderboardPage() {
                     {/* Timer centered in header */}
                     <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, opacity: 0.7, marginBottom: 2 }}>Time Remaining</div>
-                        <div style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
+                        <div className="timer-display" style={{ fontSize: 32, fontFamily: "monospace", fontWeight: "bold", color: "#fff", lineHeight: 1 }}>
                             {formatCountdown(timeLeftMs)}
                         </div>
                     </div>
                     <div></div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
+                <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
                     {/* LEFT COLUMN: Teams Grid */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                        <div className="team-cards-grid">
                             {sortedTeams.map((team, index) => (
                                 <TeamCard key={team.id} team={{ ...team, id: index + 1 }} />
                             ))}
                         </div>
+                        <style jsx>{`
+                            .team-cards-grid {
+                                display: grid;
+                                gap: 16px;
+                                grid-template-columns: repeat(1, 1fr);
+                            }
+                            @media (min-width: 640px) {
+                                .team-cards-grid {
+                                    grid-template-columns: repeat(2, 1fr);
+                                }
+                            }
+                            @media (min-width: 1024px) {
+                                .team-cards-grid {
+                                    grid-template-columns: repeat(4, 1fr);
+                                }
+                            }
+                        `}</style>
+                        <style jsx global>{`
+                            .main-grid {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                gap: 24px !important;
+                            }
+                            .header-grid {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                gap: 12px !important;
+                                text-align: center !important;
+                            }
+                            .header-grid h1 {
+                                font-size: 24px !important;
+                            }
+                            .header-grid .timer-display {
+                                font-size: 24px !important;
+                            }
+                            @media (min-width: 1024px) {
+                                .main-grid {
+                                    display: grid !important;
+                                    grid-template-columns: 1fr 300px !important;
+                                }
+                                .header-grid {
+                                    display: grid !important;
+                                    grid-template-columns: 1fr auto 1fr !important;
+                                    text-align: left !important;
+                                }
+                                .header-grid h1 {
+                                    font-size: 36px !important;
+                                }
+                                .header-grid .timer-display {
+                                    font-size: 32px !important;
+                                }
+                            }
+                        `}</style>
 
                         {/* Progress Timeline */}
                         <div style={{ background: "#1e293b", padding: "16px 16px 40px 16px", borderRadius: 12, border: "1px solid #334155" }}>
