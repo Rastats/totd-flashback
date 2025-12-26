@@ -49,13 +49,13 @@ const getPlayerColor = (name: string): string => {
 };
 
 // =============== TIME UTILITIES ===============
-// Event: Dec 26 21:00 CET to Dec 29 18:00 CET (69 hours, indices 0-68)
+// Event: Dec 26 20:00 CET to Dec 29 17:00 CET (69 hours, indices 0-68)
 // CET = UTC+1
 
 // Convert hourIndex (0-68) to local day and hour
 const getLocalTimeForHourIndex = (hourIndex: number, tzOffset: number): { day: number; hour: number } => {
-    // hourIndex 0 = Dec 26 21:00 CET
-    const cetTotalHours = 26 * 24 + 21 + hourIndex; // Day 26, hour 21 + index
+    // hourIndex 0 = Dec 26 20:00 CET
+    const cetTotalHours = 26 * 24 + 20 + hourIndex; // Day 26, hour 20 + index
     const cetDay = Math.floor(cetTotalHours / 24);
     const cetHour = cetTotalHours % 24;
 
@@ -76,7 +76,7 @@ const getHourIndexForLocal = (localDay: number, localHour: number, tzOffset: num
     const totalCetHours = totalLocalHours - offsetDiff;
 
     // Calculate hourIndex
-    const startTotalHours = 26 * 24 + 21; // Dec 26, 21:00 CET
+    const startTotalHours = 26 * 24 + 20; // Dec 26, 20:00 CET
     return totalCetHours - startTotalHours;
 };
 
@@ -93,11 +93,11 @@ const getColumnDays = (tzOffset: number): number[] => {
 const isPlayerAvailable = (player: PlayerSummary, hourIndex: number): boolean => {
     let dateStr = "";
     let hour = 0;
-    if (hourIndex < 3) {
+    if (hourIndex < 4) {
         dateStr = "2025-12-26";
-        hour = 21 + hourIndex;
+        hour = 20 + hourIndex;
     } else {
-        const offsetIndex = hourIndex - 3;
+        const offsetIndex = hourIndex - 4;
         const dayOffset = Math.floor(offsetIndex / 24);
         hour = offsetIndex % 24;
         dateStr = ["2025-12-27", "2025-12-28", "2025-12-29"][dayOffset] || "2025-12-29";
