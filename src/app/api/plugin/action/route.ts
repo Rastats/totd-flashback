@@ -151,6 +151,14 @@ export async function POST(request: NextRequest) {
             // MAP COMPLETED
             // ============================================
             case 'map_completed': {
+                // Only active player can submit map completions
+                if (state.active_player !== player.trackmania_name) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Only the active player can submit map completions'
+                    }, { status: 403 });
+                }
+
                 if (!data.map_index || data.map_index < 1 || data.map_index > 2000) {
                     return NextResponse.json({
                         success: false,
@@ -269,6 +277,14 @@ export async function POST(request: NextRequest) {
             // REDO MAP COMPLETED
             // ============================================
             case 'redo_map_completed': {
+                // Only active player can submit redo map completions
+                if (state.active_player !== player.trackmania_name) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Only the active player can submit redo map completions'
+                    }, { status: 403 });
+                }
+
                 if (!data.map_index || data.map_index < 1 || data.map_index > 2000) {
                     return NextResponse.json({
                         success: false,
