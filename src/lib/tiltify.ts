@@ -152,13 +152,17 @@ async function processDonation(donation: {
         pot_incremented: false // Always start false, let lock query set to true
     };
 
-    const { error: insertError } = await supabaseAdmin
-        .from('processed_donations')
-        .upsert(donationRecord, { onConflict: 'donation_id' });
+    // Only insert if this is a NEW donation (avoid overwriting pot_incremented)
+    if (isNewDonation) {
+        const { error: insertError } = await supabaseAdmin
+            .from('processed_donations')
+            .insert(donationRecord);
 
-    if (insertError) {
-        console.error('Error inserting donation:', insertError);
-        return;
+        if (insertError) {
+            console.error('Error inserting donation:', insertError);
+            return;
+        }
+        console.log(`[Tiltify] New donation recorded: ${donation.id}`);
     }
 
     // Track if we should skip pot increment
