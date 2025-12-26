@@ -9,7 +9,7 @@ export const EVENT_END_UTC = new Date('2025-12-29T16:00:00Z');   // Dec 29, 2025
 export const TEAMS = [
     { id: 'team1', number: 1, name: 'Team Speedrun', color: '#f87171' },
     { id: 'team2', number: 2, name: 'Team B2', color: '#60a5fa' },
-    { id: 'team3', number: 3, name: 'Team BITM', color: '#4ade80' },
+    { id: 'team3', number: 3, name: 'Team 3', color: '#4ade80' },
     { id: 'team4', number: 4, name: 'Team 4', color: '#facc15' },
 ] as const;
 

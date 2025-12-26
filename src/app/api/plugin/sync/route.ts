@@ -32,7 +32,7 @@ interface SyncPayload {
  * Parse team_id which can be:
  * - Integer: 1, 2, 3, 4
  * - String: "team1", "team2", "team3", "team4" 
- * - String: "Team Speedrun" (=1), "Team B2" (=2), "Team BITM" (=3), "Team 4" (=4)
+ * - String: "Team Speedrun" (=1), "Team B2" (=2), "Team 3" (=3), "Team 4" (=4)
  * - String: "joker" (returns null, joker must set team_id)
  */
 function parseTeamId(teamAssignment: any): number | null {
@@ -46,7 +46,7 @@ function parseTeamId(teamAssignment: any): number | null {
         const teamNameMap: Record<string, number> = {
             'team speedrun': 1,
             'team b2': 2,
-            'team bitm': 3,
+            'team 3': 3,
             'team 4': 4
         };
         const lowerName = teamAssignment.toLowerCase();
