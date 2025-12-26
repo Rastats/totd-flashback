@@ -149,7 +149,7 @@ async function processDonation(donation: {
         is_pot_random: isPotRandom,
         is_penalty_random: isPenaltyRandom,
         processed_at: donation.completed_at,
-        pot_incremented: shouldIncrementPot // Set to true only if we're about to increment
+        pot_incremented: false // Always start false, let lock query set to true
     };
 
     const { error: insertError } = await supabaseAdmin
