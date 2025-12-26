@@ -85,7 +85,7 @@ export default function OverlayProgressPage() {
                     }}>
                         {/* Team Label */}
                         <div style={{
-                            width: 50,
+                            width: 90,
                             fontSize: 11,
                             fontWeight: "bold",
                             color: team.color,
