@@ -161,6 +161,9 @@ async function processDonation(donation: {
         return;
     }
 
+    // Track if we should skip pot increment
+    let shouldSkipPot = false;
+
     // Skip pot increment if already done or donation too old
     if (!shouldIncrementPot) {
         if (isOldDonation) {
@@ -168,52 +171,66 @@ async function processDonation(donation: {
         } else if (potAlreadyIncremented) {
             console.log(`[Tiltify] Pot already incremented for ${donation.id}`);
         }
-        return;
+        shouldSkipPot = true;
     }
 
-    // RACE CONDITION FIX: Use atomic check-and-increment
-    // Re-check pot_incremented in a single query with update
-    const { data: lockCheck, error: lockError } = await supabaseAdmin
-        .from('processed_donations')
-        .update({ pot_incremented: true })
-        .eq('donation_id', donation.id)
-        .eq('pot_incremented', false)  // Only update if still false
-        .select('donation_id')
-        .single();
+    // Only try to increment pot if not skipping
+    if (!shouldSkipPot) {
+        // RACE CONDITION FIX: Use atomic check-and-increment
+        const { data: lockCheck, error: lockError } = await supabaseAdmin
+            .from('processed_donations')
+            .update({ pot_incremented: true })
+            .eq('donation_id', donation.id)
+            .eq('pot_incremented', false)
+            .select('donation_id')
+            .single();
 
-    if (lockError || !lockCheck) {
-        // Another process already incremented pot
-        console.log(`[Tiltify] Pot increment skipped (concurrent update) for ${donation.id}`);
-        return;
-    }
-
-    // Update team pots
-    if (potTeam !== null) {
-        // Specific team gets the full amount
-        await supabaseAdmin.rpc('increment_team_pot', {
-            target_team_id: potTeam,
-            increment_amount: amount
-        });
-    } else {
-        // Split equally among all teams
-        const splitAmount = amount / TEAM_COUNT;
-        for (let teamId = 1; teamId <= TEAM_COUNT; teamId++) {
-            await supabaseAdmin.rpc('increment_team_pot', {
-                target_team_id: teamId,
-                increment_amount: splitAmount
-            });
+        if (lockError || !lockCheck) {
+            console.log(`[Tiltify] Pot increment skipped (concurrent update) for ${donation.id}`);
+            shouldSkipPot = true;
+        } else {
+            // Update team pots with error handling
+            try {
+                if (potTeam !== null) {
+                    const { error: rpcError } = await supabaseAdmin.rpc('increment_team_pot', {
+                        target_team_id: potTeam,
+                        increment_amount: amount
+                    });
+                    if (rpcError) {
+                        console.error(`[Tiltify] RPC Error for team ${potTeam}:`, rpcError);
+                    } else {
+                        console.log(`[Tiltify] Pot incremented: Team ${potTeam} +£${amount}`);
+                    }
+                } else {
+                    // Split equally among all teams
+                    const splitAmount = amount / TEAM_COUNT;
+                    for (let teamId = 1; teamId <= TEAM_COUNT; teamId++) {
+                        const { error: rpcError } = await supabaseAdmin.rpc('increment_team_pot', {
+                            target_team_id: teamId,
+                            increment_amount: splitAmount
+                        });
+                        if (rpcError) {
+                            console.error(`[Tiltify] RPC Error for team ${teamId}:`, rpcError);
+                        }
+                    }
+                    console.log(`[Tiltify] Pot split: All teams +£${splitAmount.toFixed(2)} each`);
+                }
+            } catch (err) {
+                console.error('[Tiltify] Exception during pot increment:', err);
+            }
         }
     }
 
     // ==============================================
     // ADD PENALTY TO TEAM STATE (using shared utility)
+    // ALWAYS apply penalty for NEW donations, even if pot was skipped
     // ==============================================
-    if (penalty) {
+    if (penalty && isNewDonation) {
         await addPenaltyToTeamState(penaltyTeam, penalty.id, penalty.name, donation.id);
+        console.log(`[Tiltify] Penalty applied: ${penalty.name} to Team ${penaltyTeam}`);
     }
 
-
-    console.log(`[Tiltify] Processed donation ${donation.id}: £${amount} | Pot: Team ${potTeam ?? 'ALL'} | Penalty: Team ${penaltyTeam} (${penalty?.name ?? 'none'})`);
+    console.log(`[Tiltify] Processed donation ${donation.id}: £${amount} | Pot: Team ${potTeam ?? 'ALL'}${shouldSkipPot ? ' (skipped)' : ''} | Penalty: Team ${penaltyTeam} (${penalty?.name ?? 'none'})`);
 }
 
 // Fetch and process new donations from Tiltify
