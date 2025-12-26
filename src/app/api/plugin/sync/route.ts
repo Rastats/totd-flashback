@@ -8,7 +8,7 @@ const API_KEY = process.env.FLASHBACK_API_KEY || 'FLASHBACK_2024_TF_X7K9M2';
 // Stale player cleanup - remove active/waiting players after 60s of no sync
 const STALE_TIMEOUT_MS = 60000; // 60 seconds
 let lastCleanupTime = 0;
-const CLEANUP_INTERVAL_MS = 30000; // Only run cleanup every 30s max
+const CLEANUP_INTERVAL_MS = 5000; // Run cleanup every 5s
 
 // Stale plugin state cleanup - clear after 5 minutes of inactivity
 const PLUGIN_STATE_STALE_MS = 5 * 60 * 1000; // 5 minutes
