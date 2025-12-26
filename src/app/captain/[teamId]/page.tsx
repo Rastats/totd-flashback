@@ -49,13 +49,13 @@ const getPlayerColor = (name: string): string => {
 };
 
 // =============== TIME UTILITIES ===============
-// Event: Dec 21 21:00 CET to Dec 24 18:00 CET (69 hours, indices 0-68)
+// Event: Dec 26 21:00 CET to Dec 29 18:00 CET (69 hours, indices 0-68)
 // CET = UTC+1
 
 // Convert hourIndex (0-68) to local day and hour
 const getLocalTimeForHourIndex = (hourIndex: number, tzOffset: number): { day: number; hour: number } => {
-    // hourIndex 0 = Dec 21 21:00 CET
-    const cetTotalHours = 21 * 24 + 21 + hourIndex; // Day 21, hour 21 + index
+    // hourIndex 0 = Dec 26 21:00 CET
+    const cetTotalHours = 26 * 24 + 21 + hourIndex; // Day 26, hour 21 + index
     const cetDay = Math.floor(cetTotalHours / 24);
     const cetHour = cetTotalHours % 24;
 
@@ -74,9 +74,9 @@ const getHourIndexForLocal = (localDay: number, localHour: number, tzOffset: num
     const offsetDiff = tzOffset - 1;
     const totalLocalHours = localDay * 24 + localHour;
     const totalCetHours = totalLocalHours - offsetDiff;
-    
+
     // Calculate hourIndex
-    const startTotalHours = 21 * 24 + 21; // Dec 21, 21:00 CET
+    const startTotalHours = 26 * 24 + 21; // Dec 26, 21:00 CET
     return totalCetHours - startTotalHours;
 };
 
@@ -218,7 +218,7 @@ export default function CaptainPage() {
     const [tzOffset, setTzOffset] = useState(1);
 
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalDay, setModalDay] = useState(21);
+    const [modalDay, setModalDay] = useState(26);
     const [modalStartHour, setModalStartHour] = useState(0);
     const [editingSlot, setEditingSlot] = useState<CalendarSlot | null>(null);
     const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
@@ -309,7 +309,7 @@ export default function CaptainPage() {
             if (checkRes.ok) {
                 const serverData = await checkRes.json();
                 const serverSlots = serverData.planning?.slots || {};
-                
+
                 // Find conflicting slots (different mainPlayerId for same hourIndex)
                 const conflicts: number[] = [];
                 for (const slot of slots) {
@@ -318,7 +318,7 @@ export default function CaptainPage() {
                         conflicts.push(slot.hourIndex);
                     }
                 }
-                
+
                 if (conflicts.length > 0) {
                     const proceed = confirm(
                         `⚠️ Conflict detected!\n\n` +
@@ -333,7 +333,7 @@ export default function CaptainPage() {
                     }
                 }
             }
-            
+
             const slotsObj: Record<number, TeamSlotAssignment> = {};
             for (const slot of slots) {
                 slotsObj[slot.hourIndex] = { mainPlayerId: slot.mainPlayerId, subPlayerId: slot.subPlayerId };
@@ -438,10 +438,10 @@ export default function CaptainPage() {
                                     >
                                         {/* Empty slot but players available indicator */}
                                         {showEmptyWarning && (
-                                            <div style={{ 
-                                                position: "absolute", 
-                                                top: "50%", 
-                                                left: "50%", 
+                                            <div style={{
+                                                position: "absolute",
+                                                top: "50%",
+                                                left: "50%",
                                                 transform: "translate(-50%, -50%)",
                                                 fontSize: 16,
                                                 opacity: 0.6
