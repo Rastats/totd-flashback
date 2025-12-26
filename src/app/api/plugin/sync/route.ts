@@ -23,7 +23,7 @@ interface SyncPayload {
     current_map_name?: string;
     current_map_author?: string;
     mode?: string;
-    session_elapsed_ms?: number;
+    // session_elapsed_ms removed - no session time limit
     plugin_version?: string;
     roulette_map?: number; // Plugin sends this when RR detected in waitlist
 }
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
                     current_map_name: syncData.current_map_name || null,
                     current_map_author: syncData.current_map_author || null,
                     mode: syncData.mode || 'Normal',
-                    session_elapsed_ms: syncData.session_elapsed_ms || 0,
+                    // session_elapsed_ms removed - no session time limit
                     plugin_version: syncData.plugin_version || null,
                     roulette_map: syncData.roulette_map || null, // Plugin sends this when RR detected
                     updated_at: new Date().toISOString()
