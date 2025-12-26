@@ -13,7 +13,8 @@ type ActionType =
     | 'set_waiting'
     | 'set_spectator'
     | 'pass_turn'
-    | 'joker_change_team';
+    | 'joker_change_team'
+    | 'update_redo_maps';
 
 interface ActionPayload {
     account_id: string;
@@ -21,6 +22,8 @@ interface ActionPayload {
     map_index?: number;
     penalty_id?: number | string;
     team_id?: number;
+    redo_map_ids?: number[];
+    redo_remaining?: number;
 }
 
 /**
@@ -493,6 +496,37 @@ export async function POST(request: NextRequest) {
                 }
 
                 message = `Joker ${player.trackmania_name} joined team ${teamId}`;
+                break;
+            }
+
+            // ============================================
+            // UPDATE REDO MAPS - Plugin sends redo list after BtF/PS
+            // ============================================
+            case 'update_redo_maps': {
+                const redoMapIds = data.redo_map_ids || [];
+                const redoRemaining = data.redo_remaining || redoMapIds.length;
+
+                updateData.redo_map_ids = redoMapIds;
+                updateData.redo_remaining = redoRemaining;
+
+                // Also update redo_remaining in active penalties
+                const activePenalties = state.penalties_active || [];
+                for (const penalty of activePenalties) {
+                    if (penalty.penalty_id === 7 || penalty.penalty_id === 10) {
+                        penalty.redo_remaining = redoRemaining;
+                    }
+                }
+                updateData.penalties_active = activePenalties;
+
+                message = `Updated redo maps: ${redoMapIds.length} maps to redo`;
+
+                // Log the redo update
+                await supabase.from('event_log').insert({
+                    event_type: 'redo_maps_updated',
+                    team_id: teamId,
+                    message: message,
+                    metadata: { redo_map_ids: redoMapIds, redo_remaining: redoRemaining }
+                });
                 break;
             }
 
