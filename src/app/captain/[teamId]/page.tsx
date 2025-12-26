@@ -90,19 +90,12 @@ const getColumnDays = (tzOffset: number): number[] => {
 };
 
 // =============== AVAILABILITY CHECK ===============
+// API now returns availability as { hourIndex, preference } pairs
 const isPlayerAvailable = (player: PlayerSummary, hourIndex: number): boolean => {
-    let dateStr = "";
-    let hour = 0;
-    if (hourIndex < 4) {
-        dateStr = "2025-12-26";
-        hour = 20 + hourIndex;
-    } else {
-        const offsetIndex = hourIndex - 4;
-        const dayOffset = Math.floor(offsetIndex / 24);
-        hour = offsetIndex % 24;
-        dateStr = ["2025-12-27", "2025-12-28", "2025-12-29"][dayOffset] || "2025-12-29";
-    }
-    return !!player.availability.find(s => s.date === dateStr && hour >= s.startHour && hour < s.endHour);
+    // Check if player has this hourIndex in their availability with ok/preferred status
+    return player.availability.some((s: any) =>
+        s.hourIndex === hourIndex && (s.preference === 'ok' || s.preference === 'preferred')
+    );
 };
 
 // =============== MODAL COMPONENT ===============
