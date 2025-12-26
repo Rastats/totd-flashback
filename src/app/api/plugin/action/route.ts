@@ -282,6 +282,18 @@ export async function POST(request: NextRequest) {
                     redoMaps.splice(redoIdx, 1);
                     updateData.redo_map_ids = redoMaps;
                     updateData.redo_remaining = Math.max(0, (state.redo_remaining || 0) - 1);
+
+                    // Also update maps_remaining on the redo penalty for website display
+                    const activePenalties = [...(state.penalties_active || [])];
+                    for (const penalty of activePenalties) {
+                        if (penalty.penalty_id === 7 || penalty.penalty_id === 10) {
+                            if (penalty.maps_remaining !== undefined && penalty.maps_remaining > 0) {
+                                penalty.maps_remaining = Math.max(0, penalty.maps_remaining - 1);
+                            }
+                        }
+                    }
+                    updateData.penalties_active = activePenalties;
+
                     message = `Redo map ${data.map_index} completed, ${updateData.redo_remaining} remaining`;
                 } else {
                     message = `Map ${data.map_index} not in redo list`;
