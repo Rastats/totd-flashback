@@ -50,8 +50,10 @@ const getPlayerColor = (name: string): string => {
 };
 
 // =============== TIME UTILITIES ===============
+// Event: Dec 26 20:00 CET to Dec 29 17:00 CET (69 hours, indices 0-68)
 const getLocalTimeForHourIndex = (hourIndex: number, tzOffset: number): { day: number; hour: number } => {
-    const cetTotalHours = 21 * 24 + 21 + hourIndex;
+    // hourIndex 0 = Dec 26 20:00 CET
+    const cetTotalHours = 26 * 24 + 20 + hourIndex; // Day 26, hour 20 + index
     const cetDay = Math.floor(cetTotalHours / 24);
     const cetHour = cetTotalHours % 24;
     const offsetDiff = tzOffset - 1;
@@ -65,7 +67,7 @@ const getHourIndexForLocal = (localDay: number, localHour: number, tzOffset: num
     const offsetDiff = tzOffset - 1;
     const totalLocalHours = localDay * 24 + localHour;
     const totalCetHours = totalLocalHours - offsetDiff;
-    const startTotalHours = 21 * 24 + 21;
+    const startTotalHours = 26 * 24 + 20; // Dec 26, 20:00 CET
     return totalCetHours - startTotalHours;
 };
 
