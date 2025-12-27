@@ -74,7 +74,16 @@ export async function POST(
     request: Request,
     { params }: { params: Promise<{ teamId: string }> }
 ) {
-    const { teamId } = await params;
+    const { teamId: rawTeamId } = await params;
+
+    // Parse teamId to integer (handle both 'team1' and '1' formats)
+    const teamNumber = rawTeamId.startsWith('team')
+        ? parseInt(rawTeamId.replace('team', ''))
+        : parseInt(rawTeamId);
+
+    if (isNaN(teamNumber)) {
+        return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 });
+    }
 
     try {
         const body = await request.json();
@@ -106,7 +115,7 @@ export async function POST(
         const { error: deleteError } = await supabase
             .from('team_planning')
             .delete()
-            .eq('team_id', teamId);
+            .eq('team_id', teamNumber);
 
         if (deleteError) {
             console.error('Error deleting old slots:', deleteError);
@@ -120,7 +129,7 @@ export async function POST(
                 return supabase
                     .from('team_planning')
                     .insert({
-                        team_id: teamId,
+                        team_id: teamNumber,
                         hour_index: hourIdx,
                         main_player_id: slot.mainPlayerId,
                         main_player_name: slot.mainPlayerId ? playerNames[slot.mainPlayerId] || null : null,
@@ -132,7 +141,7 @@ export async function POST(
 
         await Promise.all(insertPromises);
 
-        return NextResponse.json({ success: true, teamId });
+        return NextResponse.json({ success: true, teamId: rawTeamId });
     } catch (err: any) {
         console.error('Captain API Save Error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
