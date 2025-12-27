@@ -6,7 +6,16 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ teamId: string }> }
 ) {
-    const { teamId } = await params;
+    const { teamId: rawTeamId } = await params;
+
+    // Parse teamId to integer (handle both 'team1' and '1' formats)
+    const teamNumber = rawTeamId.startsWith('team')
+        ? parseInt(rawTeamId.replace('team', ''))
+        : parseInt(rawTeamId);
+
+    if (isNaN(teamNumber)) {
+        return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 });
+    }
 
     try {
         // 1. Get Players (filtered for this team + jokers) directly from Supabase
@@ -17,7 +26,7 @@ export async function GET(
                 availability_slots (*)
             `)
             .eq('status', 'approved')
-            .in('team_id', [parseInt(teamId), 0])
+            .in('team_id', [teamNumber, 0])
             .order('trackmania_name');
 
         if (playersError) throw playersError;
@@ -37,7 +46,7 @@ export async function GET(
         const { data: slotsData, error: slotsError } = await supabase
             .from('team_planning')
             .select('hour_index, main_player_id, sub_player_id, main_player_name, sub_player_name')
-            .eq('team_id', teamId)
+            .eq('team_id', teamNumber)
             .order('hour_index');
 
         if (slotsError) throw slotsError;
@@ -54,12 +63,12 @@ export async function GET(
         }
 
         const planning: TeamPlanning = {
-            teamId,
+            teamId: rawTeamId,
             slots
         };
 
         return NextResponse.json({
-            teamId,
+            teamId: rawTeamId,
             players: teamPlayers,
             planning
         });
