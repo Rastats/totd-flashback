@@ -25,26 +25,28 @@ const TIMEZONES = [
 ];
 
 // Get columns (days) to display based on timezone
+// Event: Dec 26 20:00 CET to Dec 29 17:00 CET
 function getColumnDays(tzOffset: number): number[] {
-    if (tzOffset >= 10) return [22, 23, 24, 25]; // Far east
-    if (tzOffset <= -5) return [20, 21, 22, 23, 24]; // Americas (show more days)
-    return [21, 22, 23, 24]; // Europe
+    if (tzOffset >= 10) return [27, 28, 29, 30]; // Far east
+    if (tzOffset <= -5) return [25, 26, 27, 28, 29]; // Americas (show more days)
+    return [26, 27, 28, 29]; // Europe
 }
 
 // Convert local day+hour to hourIndex (CET-based event index 0-68)
+// Event starts Dec 26 20:00 CET
 function getHourIndexForLocal(localDay: number, localHour: number, tzOffset: number): number {
     const offsetDiff = tzOffset - 1; // CET is +1
     const totalLocalHours = localDay * 24 + localHour;
     const totalCetHours = totalLocalHours - offsetDiff;
     const cetDay = Math.floor(totalCetHours / 24);
     const cetHour = totalCetHours % 24;
-    return (cetDay - 21) * 24 + cetHour - 21;
+    return (cetDay - 26) * 24 + cetHour - 20; // Day 26, hour 20 = index 0
 }
 
 // Convert hourIndex to local day+hour for a timezone
 function getLocalTimeForHourIndex(hourIndex: number, tzOffset: number): { day: number; hour: number } {
-    // hourIndex 0 = Dec 21 21:00 CET
-    const cetTotalHours = 21 * 24 + 21 + hourIndex; // Day 21, hour 21 + index
+    // hourIndex 0 = Dec 26 20:00 CET
+    const cetTotalHours = 26 * 24 + 20 + hourIndex; // Day 26, hour 20 + index
     const cetDay = Math.floor(cetTotalHours / 24);
     const cetHour = cetTotalHours % 24;
 
@@ -86,7 +88,7 @@ export default function MyAvailabilityPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setPlayer(data.player);
-                    
+
                     // API returns hourIndex directly for each slot
                     const indices = new Set<number>(
                         (data.availability || []).map((s: { hourIndex: number }) => s.hourIndex)
@@ -114,7 +116,7 @@ export default function MyAvailabilityPage() {
     const toggleCell = (day: number, hour: number) => {
         const hourIndex = getHourIndexForLocal(day, hour, tzOffset);
         if (hourIndex < 0 || hourIndex > 68) return;
-        
+
         setSelectedIndices(prev => {
             const next = new Set(prev);
             if (next.has(hourIndex)) {
@@ -137,20 +139,20 @@ export default function MyAvailabilityPage() {
         setSaving(true);
         setError(null);
         setSuccess(false);
-        
+
         try {
             // Send hour indices directly in the new format
             const availability = Array.from(selectedIndices).map(hourIndex => ({
                 hourIndex,
                 preference: 'ok'
             }));
-            
+
             const res = await fetch("/api/my-availability", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ availability })
             });
-            
+
             if (res.ok) {
                 setSuccess(true);
             } else {
@@ -223,10 +225,10 @@ export default function MyAvailabilityPage() {
 
             {/* Player Info + Timezone Selector */}
             {player && (
-                <div style={{ 
-                    background: "#1e293b", 
-                    borderRadius: 8, 
-                    padding: 16, 
+                <div style={{
+                    background: "#1e293b",
+                    borderRadius: 8,
+                    padding: 16,
                     marginBottom: 24,
                     display: "flex",
                     justifyContent: "space-between",
@@ -243,7 +245,7 @@ export default function MyAvailabilityPage() {
                                     <span style={{ color: teamInfo.color }}>
                                         • {teamInfo.name}
                                     </span>
-                                    <Link 
+                                    <Link
                                         href={`/schedule/${teamInfo.id}`}
                                         style={{
                                             padding: "4px 10px",
@@ -312,8 +314,8 @@ export default function MyAvailabilityPage() {
             )}
 
             {/* Availability Grid */}
-            <div style={{ 
-                display: "grid", 
+            <div style={{
+                display: "grid",
                 gridTemplateColumns: `60px repeat(${columnDays.length}, 1fr)`,
                 background: "#1e293b",
                 borderRadius: 12,
@@ -322,10 +324,10 @@ export default function MyAvailabilityPage() {
                 {/* Header */}
                 <div style={{ background: "#0f172a", padding: 12, fontWeight: "bold", textAlign: "center" }}>Time</div>
                 {columnDays.map(day => (
-                    <div key={day} style={{ 
-                        background: "#0f172a", 
-                        padding: 12, 
-                        fontWeight: "bold", 
+                    <div key={day} style={{
+                        background: "#0f172a",
+                        padding: 12,
+                        fontWeight: "bold",
                         textAlign: "center",
                         borderLeft: "1px solid #334155"
                     }}>
@@ -336,10 +338,10 @@ export default function MyAvailabilityPage() {
                 {/* Hours Grid */}
                 {Array.from({ length: 24 }).map((_, hour) => (
                     <div key={hour} style={{ display: "contents" }}>
-                        <div style={{ 
-                            padding: 8, 
-                            textAlign: "right", 
-                            fontSize: 12, 
+                        <div style={{
+                            padding: 8,
+                            textAlign: "right",
+                            fontSize: 12,
                             color: "#94a3b8",
                             borderTop: "1px solid #334155"
                         }}>
@@ -358,7 +360,7 @@ export default function MyAvailabilityPage() {
                                         borderTop: "1px solid #334155",
                                         borderLeft: "1px solid #334155",
                                         minHeight: 28,
-                                        background: isInEvent 
+                                        background: isInEvent
                                             ? (isSelected ? "#22c55e" : "#1e293b")
                                             : "#0f172a",
                                         cursor: isInEvent ? "pointer" : "default",
